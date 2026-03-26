@@ -2,6 +2,16 @@ const fastify = require('fastify')({ logger: true });
 const OpenAI = require('openai');
 require('dotenv').config();
 
+// Register CORS for React Native/Frontend access
+fastify.register(require('@fastify/cors'), {
+  origin: true, // Allow all origins (standard for dev)
+});
+
+// Added root GET for easy health checking
+fastify.get('/', async () => {
+  return { status: 'Bessie Backend is running' };
+});
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
