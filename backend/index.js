@@ -19,10 +19,12 @@ const openai = new OpenAI({
 fastify.post('/api/chat', async (request, reply) => {
   try {
     const { text } = request.body;
-
+    
     if (!text) {
       return reply.code(400).send({ error: 'Text input is required' });
     }
+
+    fastify.log.info(`[Bessie] Incoming transcript: "${text}"`);
 
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -33,6 +35,7 @@ fastify.post('/api/chat', async (request, reply) => {
     });
 
     const aiResponse = response.choices[0].message.content;
+    fastify.log.info(`[Bessie] AI Output: "${aiResponse}"`);
 
     return { response: aiResponse };
   } catch (error) {
