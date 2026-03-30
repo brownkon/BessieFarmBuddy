@@ -1,77 +1,161 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, PermissionsAndroid, Platform, LogBox, Modal, FlatList, Pressable } from 'react-native';
-import Voice from '@react-native-voice/voice';
+import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, Platform, LogBox, Modal, FlatList, Pressable } from 'react-native';
+import { ExpoSpeechRecognitionModule } from 'expo-speech-recognition';
 import * as Speech from 'expo-speech';
 
-// Wake phrase — user says this to start a command (case-insensitive)
+// --- CONFIGURATION ---
 const WAKE_PHRASES = ['hey bessie', 'ok bessie', 'hey bess'];
-const BACKEND_URL = 'http://144.39.223.235:3000/api/chat';
+const configuredBackendUrl = 'http://144.39.223.235:3000';
+const getBackendCandidates = () => [
+  'http://144.39.223.235:3000',
+  'http://localhost:3000',
+];
 
 export default function App() {
   const [status, setStatus] = useState('Initializing...');
-  const [response, setResponse] = useState('');
-  const [isListening, setIsListening] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [partialTranscript, setPartialTranscript] = useState('');
+  const [serverMessage, setServerMessage] = useState('');
+  const [requestError, setRequestError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [recognizing, setRecognizing] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  const transcriptRef = useRef('');
+  
+  const [activeBackendUrl, setActiveBackendUrl] = useState(configuredBackendUrl);
+  
   const [preferredVoice, setPreferredVoice] = useState(null);
   const [availableVoices, setAvailableVoices] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  
+
+  // Track whether we're in "wake word" mode or "command" mode
+  const modeRef = useRef('wake'); // 'wake' | 'command'
+  const restartTimerRef = useRef(null);
+  const isStartingRef = useRef(false);
+
   // Ignore known library warnings related to NativeEventEmitter on RN 0.73+
   LogBox.ignoreLogs([
     '`new NativeEventEmitter()` was called with a non-null argument without the required `addListener` method',
     '`new NativeEventEmitter()` was called with a non-null argument without the required `removeListeners` method',
   ]);
 
-  // Track whether we're in "wake word" mode or "command" mode
-  const modeRef = useRef('wake'); // 'wake' | 'command'
-  const isStartingRef = useRef(false); // New: prevents double-starts
-  const restartTimerRef = useRef(null);
-  const lastPromptTimeRef = useRef(0);
-  const commandDebounceRef = useRef(null);
+  // --- SPEECH RECOGNITION EVENTS ---
   useEffect(() => {
-    Voice.onSpeechStart = (e) => {
-      console.log('[Diagnostic] Local: Speech Started', e);
-      if (modeRef.current === 'command') {
-        setStatus('👂 Listening...');
-      }
-    };
+    const startSub = ExpoSpeechRecognitionModule.addListener('start', () => {
+      setRecognizing(true);
+      setTranscript('');
+      transcriptRef.current = '';
+      setServerMessage('');
+      setRequestError('');
+      Speech.stop(); // Stop any currently playing TTS
+    });
 
-    Voice.onSpeechEnd = (e) => {
-      console.log('[Diagnostic] Local: Speech Ended', e);
-    };
-
-    Voice.onSpeechVolumeChanged = (e) => {
-      // Volume log is very spammy, only log once every 100 calls or if significant
-    };
-    
-    Voice.onSpeechPartialResults = (e) => {
-      // Only show partials when expecting a command or processing.
-      if (modeRef.current === 'command' && e.value && e.value[0]) {
-        setPartialTranscript(e.value[0]);
-      }
-    };
-
-    Voice.onSpeechResults = (e) => handleSpeechResults(e);
-
-    Voice.onSpeechError = async (e) => {
-      const code = e?.error?.code || e?.code;
-      // Filter out common "no match" and "timeout" errors from console logs
-      const isExpectedError = ['7', 7, '6', 6].includes(code);
-      if (!isExpectedError) {
-        console.log('Speech error:', code, e?.error?.message || e?.message);
-      }
-      scheduleRestart(code);
-    };
-
-    // Request mic permission up front, then start listening
-    requestMicPermission().then((granted) => {
-      if (granted) {
-        startWakeWordListening();
-      } else {
-        setStatus('Microphone permission denied. Please enable in Settings.');
+    const resultSub = ExpoSpeechRecognitionModule.addListener('result', (event) => {
+      const text = event.results?.[0]?.transcript;
+      if (text) {
+        setTranscript(text);
+        transcriptRef.current = text;
+        
+        // Handle Wake Word detection in real-time if in 'wake' mode
+        if (modeRef.current === 'wake') {
+          const lowerText = text.toLowerCase();
+          const foundPhrase = WAKE_PHRASES.find(phrase => lowerText.includes(phrase));
+          if (foundPhrase) {
+             // We found a wake phrase!
+             const splitIdx = lowerText.indexOf(foundPhrase);
+             const commandAfter = text.slice(splitIdx + foundPhrase.length).trim();
+             
+             if (commandAfter.length > 3 && event.results[0].isFinal) {
+               modeRef.current = 'command';
+               sendTranscriptToBackend(commandAfter);
+             } else if (!isStartingRef.current && event.results[0].isFinal) {
+               triggerCommandPrompt();
+             }
+          }
+        }
       }
     });
+
+    const endSub = ExpoSpeechRecognitionModule.addListener('end', () => {
+      setRecognizing(false);
+      
+      // Safety check for wake mode in case 'result' didn't trigger 'final' logic
+      if (modeRef.current === 'wake') {
+        const lowerText = transcriptRef.current.toLowerCase();
+        const foundPhrase = WAKE_PHRASES.find(phrase => lowerText.includes(phrase));
+        if (foundPhrase) {
+            const splitIdx = lowerText.indexOf(foundPhrase);
+            const commandAfter = transcriptRef.current.slice(splitIdx + foundPhrase.length).trim();
+            if (commandAfter.length > 3) {
+              sendTranscriptToBackend(commandAfter);
+            } else {
+              triggerCommandPrompt();
+            }
+            return;
+        }
+      }
+
+      if (modeRef.current === 'command' && transcriptRef.current) {
+        sendTranscriptToBackend(transcriptRef.current);
+        transcriptRef.current = ''; // Prevent duplicate sends
+      } else if (modeRef.current === 'wake') {
+        scheduleRestart('wake');
+      }
+    });
+
+    const errorSub = ExpoSpeechRecognitionModule.addListener('error', (event) => {
+      setRecognizing(false);
+      const message = event.error ? String(event.error) : 'Voice recognition error';
+      setRequestError(message);
+      if (modeRef.current === 'wake') {
+        scheduleRestart('error');
+      }
+    });
+
+    return () => {
+      startSub.remove();
+      resultSub.remove();
+      endSub.remove();
+      errorSub.remove();
+    };
+  }, []);
+
+  // --- LIFECYCLE / BACKEND SELECTION ---
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function pickReachableBackend() {
+      const candidates = getBackendCandidates();
+
+      for (const candidate of candidates) {
+        try {
+          const response = await fetch(`${candidate}/health`, { method: 'GET' });
+          if (response.ok) {
+            if (!cancelled) {
+              setActiveBackendUrl(candidate);
+              console.log(`[Diagnostic] Selected backend: ${candidate}`);
+            }
+            return;
+          }
+        } catch {
+          // Try the next candidate
+        }
+      }
+
+      if (!cancelled) {
+        setActiveBackendUrl(configuredBackendUrl);
+      }
+    }
+
+    void pickReachableBackend();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    // Initial start
+    startWakeWordListening();
 
     // Load available voices
     const loadVoices = async () => {
@@ -81,29 +165,21 @@ export default function App() {
           .filter(v => {
             const isEnglish = v.language.startsWith('en');
             if (!isEnglish) return false;
-
             if (Platform.OS === 'ios') {
-              // iOS: 'compact' voices are low-quality fallbacks. 
-              // 'Default', 'Enhanced', and 'Premium' are the good ones.
               return !v.identifier.toLowerCase().includes('compact');
             }
-            
-            // Android: localService usually indicates it's on-device.
-            // If localService isn't present, we'll keep it as a best-effort.
             return v.localService !== false; 
           })
           .sort((a, b) => a.name.localeCompare(b.name));
         
         setAvailableVoices(englishVoices);
 
-        // Auto-select "best" voice initially
         const topVoice = englishVoices.find(v => v.identifier.toLowerCase().includes('premium'))
           || englishVoices.find(v => v.identifier.toLowerCase().includes('enhanced'))
           || englishVoices.find(v => v.identifier.toLowerCase().includes('siri'))
           || englishVoices[0];
 
         if (topVoice) {
-          console.log(`[Diagnostic] Initial Voice: ${topVoice.identifier}`);
           setPreferredVoice(topVoice.identifier);
         }
       } catch (err) {
@@ -114,261 +190,144 @@ export default function App() {
 
     return () => {
       clearTimeout(restartTimerRef.current);
-      Voice.destroy().then(Voice.removeAllListeners);
+      ExpoSpeechRecognitionModule.stop();
     };
   }, []);
 
-  const requestMicPermission = async () => {
-    if (Platform.OS !== 'android') return true;
-    try {
-      const granted = await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-        {
-          title: 'Microphone Permission',
-          message: 'Bessie needs microphone access to hear your voice commands.',
-          buttonPositive: 'Allow',
-        }
-      );
-      return granted === PermissionsAndroid.RESULTS.GRANTED;
-    } catch (e) {
-      console.warn('Permission error:', e);
-      return false;
-    }
-  };
-
-  const startWakeWordListening = async (shouldCancel = false) => {
+  // --- ACTIONS ---
+  async function startWakeWordListening() {
     if (isStartingRef.current) return;
     isStartingRef.current = true;
 
     modeRef.current = 'wake';
-    setStatus('Ready for "Hey Bessie"');
-    setIsListening(true);
-    setPartialTranscript('');
+    setStatus('Say "Hey Bessie" to start...');
     
     try {
-      // Ensure engine is available
-      const isAvailable = await Voice.isAvailable();
-      if (!isAvailable) {
-        console.warn('[Diagnostic] Voice engine not available on this device');
+      const permission = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+      if (!permission.granted) {
+        setStatus('Microphone permission required.');
+        isStartingRef.current = false;
+        return;
       }
 
-      Voice.cancel().catch(() => {});
-      await Voice.start('en-US');
-    } catch (e) {
-      const code = e?.error?.code || e?.code;
-      const isExpectedError = ['7', 7, '6', 6].includes(code);
-      if (!isExpectedError && !e?.message?.includes('already started')) {
-        console.log('Error starting wake listening:', code, e?.message || e?.error?.message);
-      }
-      scheduleRestart(code);
+      ExpoSpeechRecognitionModule.start({
+        lang: 'en-US',
+        interimResults: true,
+        maxAlternatives: 1,
+      });
+    } catch (err) {
+      console.error('Failed to start wake word listening', err);
+      scheduleRestart('error');
     } finally {
       isStartingRef.current = false;
     }
-  };
+  }
 
-  const startCommandListening = async () => {
+  async function triggerCommandPrompt() {
+    isStartingRef.current = false; // Allow manual interruption
+    // Switch to command mode and speak prompt
+    modeRef.current = 'command';
+    setStatus('Readying...');
+    
+    // Stop current listening to speak clearly
+    ExpoSpeechRecognitionModule.stop();
+    
+    Speech.speak('Yes?', { 
+      rate: 1.1, 
+      voice: preferredVoice,
+      onDone: () => startCommandListening(),
+      onError: () => startCommandListening()
+    });
+  }
+
+  async function startCommandListening() {
     if (isStartingRef.current) return;
     isStartingRef.current = true;
 
     modeRef.current = 'command';
-    setStatus('Go ahead, I\'m listening...');
-    setIsListening(true);
-    setPartialTranscript(''); // Clear for new command
-    
+    setStatus('Listening for command...');
     try {
-      // Attempt to clear previous session, but don't hang if it fails
-      Voice.cancel().catch(() => {});
-      await new Promise(r => setTimeout(r, 150));
-      
-      console.log('[Diagnostic] Starting mic with mode:', modeRef.current);
-      await Voice.start('en-US');
-    } catch (e) {
-      console.log('[Diagnostic] Start Mic Error:', e?.message || e?.error?.message);
-      startWakeWordListening(true);
+      ExpoSpeechRecognitionModule.start({
+        lang: 'en-US',
+        interimResults: true,
+        maxAlternatives: 1,
+      });
+    } catch (err) {
+      console.error('Failed to start command listening', err);
+      startWakeWordListening();
     } finally {
       isStartingRef.current = false;
     }
-  };
+  }
 
-  /**
-   * Prompts the user (e.g. "Yes?") and then starts listening for a command.
-   * This is used by both the Manual Trigger and the Wake Phrase detection.
-   */
-  const triggerCommandPrompt = async (prompt = 'Yes?') => {
-    // Clear guards instantly
-    isStartingRef.current = false;
-    Voice.cancel().catch(() => {});
-    setPartialTranscript('');
-
-    setStatus('Preparing microphone...');
-    setIsListening(true);
-    
-    let called = false;
-    const safeStart = () => {
-      if (!called) {
-        called = true;
-        startCommandListening();
-      }
-    };
-
-    // Safety timeout: if TTS doesn't finish in 2s, start anyway
-    const timeoutId = setTimeout(() => {
-      console.log('[Diagnostic] Prompt callback timeout');
-      safeStart();
-    }, 2000);
-
-    Speech.speak(prompt, { 
-      rate: 1.1, 
-      voice: preferredVoice,
-      onDone: () => {
-        lastPromptTimeRef.current = Date.now();
-        clearTimeout(timeoutId);
-        safeStart();
-      },
-      onError: (err) => {
-        lastPromptTimeRef.current = Date.now();
-        console.log('[Diagnostic] Prompt TTS Error:', err);
-        clearTimeout(timeoutId);
-        safeStart();
-      }
-    });
-  };
-
-  const scheduleRestart = (code) => {
-    const isRetryable = code === '7' || code === 7 || code === '6' || code === 6;
-    
-    // Only set listening to false for "long" gaps or real errors.
-    // For normal timeouts (7/6), keep the indicator active to prevent flicker.
-    if (!isRetryable) {
-      setIsListening(false);
-    }
-    
+  function scheduleRestart(reason) {
     clearTimeout(restartTimerRef.current);
-    
-    // error 5 (CLIENT_ERROR) often needs a slightly longer cooldown
-    const delay = (code === '5' || code === 5) ? 1000 : 400;
-
     restartTimerRef.current = setTimeout(async () => {
-      // Don't restart mic if we're currently speaking a response
       const isSpeaking = await Speech.isSpeakingAsync();
       if (isSpeaking) {
-        scheduleRestart(code); // Check again in a bit
+        scheduleRestart(reason);
         return;
       }
-      startWakeWordListening(true);
-    }, delay);
-  };
+      startWakeWordListening();
+    }, 1000);
+  }
 
-  const handleSpeechResults = async (e) => {
-    // Safety: ignore results if they occurred during or immediately after our own prompt
-    const timeSincePrompt = Date.now() - lastPromptTimeRef.current;
-    if (timeSincePrompt < 500) {
-      console.log('[Diagnostic] Ignoring speech result because it occurred during own prompt');
-      return;
-    }
-
-    setIsListening(false);
-    const results = e.value || [];
-    const transcript = results[0]?.toLowerCase() || '';
-
-    if (modeRef.current === 'wake') {
-      const wakeDetected = WAKE_PHRASES.some((phrase) => transcript.includes(phrase));
-
-      if (wakeDetected) {
-        // Check if the command came in the same utterance (e.g. "Hey Bessie how is Cow 42?")
-        const command = extractCommandAfterWakePhrase(transcript, results[0]);
-        if (command && command.trim().length > 3) {
-          await processCommand(command.trim());
-        } else {
-          // Wake phrase only — speak prompt then start command listening
-          await triggerCommandPrompt('Yes?');
-        }
-      } else {
-        // Not a wake phrase, keep listening
-        startWakeWordListening();
-      }
-    } else if (modeRef.current === 'command') {
-      const command = results[0];
-      if (command && command.trim().length > 0) {
-        // Debounce: wait for a pause (1.5s) before processing the final command
-        clearTimeout(commandDebounceRef.current);
-        setPartialTranscript(command); // Show latest full segment as partial
-        
-        commandDebounceRef.current = setTimeout(async () => {
-          setIsListening(false);
-          Voice.stop().catch(() => {});
-          await processCommand(command.trim());
-        }, 1500); 
-      }
-    }
-  };
-
-  const extractCommandAfterWakePhrase = (lowerTranscript, originalTranscript) => {
-    for (const phrase of WAKE_PHRASES) {
-      const idx = lowerTranscript.indexOf(phrase);
-      if (idx !== -1) {
-        return originalTranscript.slice(idx + phrase.length);
-      }
-    }
-    return null;
-  };
-
-  const processCommand = async (text) => {
-    const url = BACKEND_URL;
-    console.log(`[Diagnostic] Sending text: "${text}" to ${url}`);
-    setStatus(`Thinking...`);
-    setIsProcessing(true);
+  async function sendTranscriptToBackend(finalTranscript) {
+    setLoading(true);
+    setServerMessage('Thinking...');
+    setStatus('Thinking...');
+    setRequestError('');
 
     try {
-      const res = await fetch(url, {
+      // We'll hit /api/voice-chat as per user snippet
+      const response = await fetch(`${activeBackendUrl}/api/voice-chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true' // Bypass ngrok warning just in case
         },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ transcript: finalTranscript }),
       });
 
-      console.log(`[Diagnostic] Response status: ${res.status} ${res.statusText}`);
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.error(`[Diagnostic] Backend returned ${res.status}: ${errorText}`);
-        setStatus(`Error: ${res.status}`);
-        startWakeWordListening();
-        return;
+      const rawBody = await response.text();
+      let data = {};
+      if (rawBody) {
+        try {
+          data = JSON.parse(rawBody);
+        } catch {
+          data = { summary: rawBody };
+        }
       }
 
-      const data = await res.json();
-      console.log(`[Diagnostic] Received data:`, data);
-
-      if (data.response) {
-        setResponse(data.response);
-        setStatus('Playing response...');
-        Speech.speak(data.response, {
-          rate: 1.0,
-          voice: preferredVoice, // Use the high-quality voice
-          onDone: () => startWakeWordListening(),
-          onError: () => startWakeWordListening(),
-        });
-      } else {
-        setStatus('Error from backend');
-        startWakeWordListening();
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${data?.error ?? data?.summary ?? 'Request failed'}`);
       }
-    } catch (err) {
-      console.error('[Diagnostic] Fetch Exception:', err);
-      console.error('[Diagnostic] Error Name:', err.name);
-      console.error('[Diagnostic] Error Message:', err.message);
-      setStatus('Network Error');
+
+      // Handle both 'summary' (from snippet) and 'response' (from current backend)
+      const receivedSummary = data.summary ?? data.response ?? 'No answer obtained.';
+      setServerMessage(receivedSummary);
+      setStatus('Playing response...');
+      
+      Speech.speak(receivedSummary, {
+        language: 'en-US',
+        rate: 1.0,
+        voice: preferredVoice,
+        onDone: () => startWakeWordListening(),
+        onError: () => startWakeWordListening(),
+      });
+
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      setRequestError(message);
+      setStatus('Error');
+      Alert.alert('Voice API failed', message);
       startWakeWordListening();
     } finally {
-      setIsProcessing(false);
+      setLoading(false);
     }
-  };
+  }
 
-  // Manual trigger for testing (simulates wake word detected)
-  const handleManualTrigger = async () => {
-    await triggerCommandPrompt('Yes?');
+  const handleManualTrigger = () => {
+    triggerCommandPrompt();
   };
 
   const selectVoice = (voiceId) => {
@@ -385,22 +344,26 @@ export default function App() {
       <View style={styles.statusBox}>
         <Text style={styles.statusLabel}>STATUS</Text>
         <Text style={styles.statusText}>{status}</Text>
-        {partialTranscript.length > 0 && (
-          <Text style={styles.partialTranscript}>"{partialTranscript}"</Text>
+        {transcript.length > 0 && (
+          <Text style={styles.partialTranscript}>"{transcript}"</Text>
         )}
-        {((isListening && modeRef.current === 'command') || isProcessing) && (
+        {(recognizing || loading) && (
           <ActivityIndicator size="small" color="#4ade80" style={styles.indicator} />
         )}
-        {isListening && modeRef.current === 'wake' && (
+        {recognizing && modeRef.current === 'wake' && (
           <View style={styles.wakeIndicator} />
         )}
       </View>
 
-      {response.length > 0 && (
+      {serverMessage.length > 0 && (
         <View style={styles.responseBox}>
-          <Text style={styles.responseLabel}>Last Response</Text>
-          <Text style={styles.responseText}>{response}</Text>
+          <Text style={styles.responseLabel}>Bessie Says</Text>
+          <Text style={styles.responseText}>{serverMessage}</Text>
         </View>
+      )}
+
+      {requestError.length > 0 && (
+        <Text style={{ color: '#ef4444', marginBottom: 10 }}>{requestError}</Text>
       )}
 
       <TouchableOpacity style={styles.button} onPress={handleManualTrigger}>
@@ -440,7 +403,7 @@ export default function App() {
                     styles.voiceItemText,
                     item.identifier === preferredVoice && styles.voiceItemTextActive
                   ]}>
-                    {item.name} ({item.quality})
+                    {item.name}
                   </Text>
                 </Pressable>
               )}
@@ -459,6 +422,21 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+  signOutButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: '#374151',
+    marginBottom: 20,
+  },
+  signOutText: {
+    color: '#9ca3af',
+    fontSize: 12,
+  },
+  authPlaceholder: {
+    marginBottom: 20,
+    alignItems: 'center',
+  },
   container: {
     flex: 1,
     padding: 32,
