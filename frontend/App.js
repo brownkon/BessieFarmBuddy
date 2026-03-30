@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, Platform, LogBox, Modal, FlatList, Pressable } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, Platform, LogBox, Modal, FlatList, Pressable, ScrollView } from 'react-native';
 import { ExpoSpeechRecognitionModule } from 'expo-speech-recognition';
 import * as Speech from 'expo-speech';
 
 // --- CONFIGURATION ---
-const WAKE_PHRASES = ['hey bessie', 'ok bessie', 'hey bess'];
+const WAKE_PHRASES = ['hey dairy', 'ok dairy', 'hey dair'];
 const configuredBackendUrl = 'http://144.39.223.235:3000';
 const getBackendCandidates = () => [
   'http://144.39.223.235:3000',
@@ -20,15 +20,27 @@ export default function App() {
   const [transcript, setTranscript] = useState('');
   const transcriptRef = useRef('');
   
-  const [activeBackendUrl, setActiveBackendUrl] = useState(configuredBackendUrl);
-  
-  const [preferredVoice, setPreferredVoice] = useState(null);
+  const [preferredVoice, _setPreferredVoice] = useState(null);
+  const preferredVoiceRef = useRef(null);
+  const setPreferredVoice = (v) => {
+    _setPreferredVoice(v);
+    preferredVoiceRef.current = v;
+  };
+
+  const [activeBackendUrl, _setActiveBackendUrl] = useState(configuredBackendUrl);
+  const activeBackendUrlRef = useRef(configuredBackendUrl);
+  const setActiveBackendUrl = (url) => {
+    _setActiveBackendUrl(url);
+    activeBackendUrlRef.current = url;
+  };
+
   const [availableVoices, setAvailableVoices] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
 
   // Track whether we're in "wake word" mode or "command" mode
-  const modeRef = useRef('wake'); // 'wake' | 'command'
+  const modeRef = useRef('wake'); // 'wake' | 'command' | 'transition'
   const restartTimerRef = useRef(null);
+  const listeningTimeoutRef = useRef(null);
   const isStartingRef = useRef(false);
 
   // Ignore known library warnings related to NativeEventEmitter on RN 0.73+
@@ -45,7 +57,7 @@ export default function App() {
       transcriptRef.current = '';
       setServerMessage('');
       setRequestError('');
-      Speech.stop(); // Stop any currently playing TTS
+      // Speech.stop(); // Temporarily removed to prevent potential background music interruption
     });
 
     const resultSub = ExpoSpeechRecognitionModule.addListener('result', (event) => {
@@ -58,17 +70,9 @@ export default function App() {
         if (modeRef.current === 'wake') {
           const lowerText = text.toLowerCase();
           const foundPhrase = WAKE_PHRASES.find(phrase => lowerText.includes(phrase));
-          if (foundPhrase) {
-             // We found a wake phrase!
-             const splitIdx = lowerText.indexOf(foundPhrase);
-             const commandAfter = text.slice(splitIdx + foundPhrase.length).trim();
-             
-             if (commandAfter.length > 3 && event.results[0].isFinal) {
-               modeRef.current = 'command';
-               sendTranscriptToBackend(commandAfter);
-             } else if (!isStartingRef.current && event.results[0].isFinal) {
-               triggerCommandPrompt();
-             }
+          if (foundPhrase && !isStartingRef.current && event.results[0].isFinal) {
+             // We found a wake phrase! Trigger a prompt regardless of what followed
+             triggerCommandPrompt();
           }
         }
       }
@@ -76,26 +80,32 @@ export default function App() {
 
     const endSub = ExpoSpeechRecognitionModule.addListener('end', () => {
       setRecognizing(false);
+      clearTimeout(listeningTimeoutRef.current);
+      
+      // If we are transitioning between wake and command mode, ignore this 'end' event.
+      // The wake session just finished, and triggerCommandPrompt is handling the "Yes" prompt.
+      if (modeRef.current === 'transition') {
+        return;
+      }
       
       // Safety check for wake mode in case 'result' didn't trigger 'final' logic
       if (modeRef.current === 'wake') {
         const lowerText = transcriptRef.current.toLowerCase();
         const foundPhrase = WAKE_PHRASES.find(phrase => lowerText.includes(phrase));
         if (foundPhrase) {
-            const splitIdx = lowerText.indexOf(foundPhrase);
-            const commandAfter = transcriptRef.current.slice(splitIdx + foundPhrase.length).trim();
-            if (commandAfter.length > 3) {
-              sendTranscriptToBackend(commandAfter);
-            } else {
-              triggerCommandPrompt();
-            }
+            triggerCommandPrompt();
             return;
         }
       }
 
-      if (modeRef.current === 'command' && transcriptRef.current) {
-        sendTranscriptToBackend(transcriptRef.current);
-        transcriptRef.current = ''; // Prevent duplicate sends
+      if (modeRef.current === 'command') {
+        if (transcriptRef.current) {
+          sendTranscriptToBackend(transcriptRef.current);
+          transcriptRef.current = ''; // Prevent duplicate sends
+        } else {
+          // No command heard during the command session (e.g. 5s silence), back to wake
+          startWakeWordListening();
+        }
       } else if (modeRef.current === 'wake') {
         scheduleRestart('wake');
       }
@@ -103,6 +113,7 @@ export default function App() {
 
     const errorSub = ExpoSpeechRecognitionModule.addListener('error', (event) => {
       setRecognizing(false);
+      clearTimeout(listeningTimeoutRef.current);
       const message = event.error ? String(event.error) : 'Voice recognition error';
       setRequestError(message);
       if (modeRef.current === 'wake') {
@@ -155,7 +166,47 @@ export default function App() {
 
   useEffect(() => {
     // Initial start
-    startWakeWordListening();
+    const setupAndStart = async () => {
+      if (Platform.OS === 'ios') {
+        try {
+          ExpoSpeechRecognitionModule.setCategoryIOS({
+            category: 'playAndRecord',
+            categoryOptions: [
+              'defaultToSpeaker',
+              'allowBluetooth',
+              'mixWithOthers',
+            ],
+            mode: 'measurement',
+          });
+        } catch (err) {
+          console.error('Failed to set audio category:', err);
+        }
+      }
+      
+      // Small delay to allow the audio session to settle
+      setTimeout(() => {
+        startWakeWordListening();
+      }, 500);
+    };
+
+    setupAndStart();
+
+    // Mapping for accents
+    const getAccentLabel = (lang) => {
+      const mapping = {
+        'en-US': '🇺🇸 US',
+        'en-GB': '🇬🇧 UK',
+        'en-AU': '🇦🇺 AU',
+        'en-IN': '🇮🇳 IN',
+        'en-IE': '🇮🇪 IE',
+        'en-ZA': '🇿🇦 ZA',
+        'en-CA': '🇨🇦 CA',
+        'en-NZ': '🇳🇿 NZ',
+        'en-SG': '🇸🇬 SG',
+      };
+      const code = lang.substring(0, 5);
+      return mapping[code] || code;
+    };
 
     // Load available voices
     const loadVoices = async () => {
@@ -163,24 +214,42 @@ export default function App() {
         const voices = await Speech.getAvailableVoicesAsync();
         const englishVoices = voices
           .filter(v => {
-            const isEnglish = v.language.startsWith('en');
+            const isEnglish = v.language.toLowerCase().startsWith('en');
             if (!isEnglish) return false;
+            
             if (Platform.OS === 'ios') {
-              return !v.identifier.toLowerCase().includes('compact');
+              // On iOS, "Enhanced" voices are the high-quality downloaded ones.
+              // We also filter out "compact" just in case.
+              const isEnhanced = v.quality === 'Enhanced' || v.quality === Speech.VoiceQuality?.Enhanced;
+              const isCompact = v.identifier.toLowerCase().includes('compact');
+              return isEnhanced && !isCompact;
             }
-            return v.localService !== false; 
+            
+            // On Android, localService indicates it's on-device.
+            // Some high-quality voices also have "enhanced" or "premium" in their identifier.
+            return v.localService !== false || v.identifier.toLowerCase().includes('enhanced');
           })
+          .map(v => ({
+            ...v,
+            accentLabel: getAccentLabel(v.language)
+          }))
           .sort((a, b) => a.name.localeCompare(b.name));
         
         setAvailableVoices(englishVoices);
 
-        const topVoice = englishVoices.find(v => v.identifier.toLowerCase().includes('premium'))
-          || englishVoices.find(v => v.identifier.toLowerCase().includes('enhanced'))
-          || englishVoices.find(v => v.identifier.toLowerCase().includes('siri'))
-          || englishVoices[0];
+        // Keep existing selection if it's still available, otherwise pick a default
+        if (englishVoices.length > 0) {
+          const alreadySelected = englishVoices.find(v => v.identifier === preferredVoice);
+          if (!alreadySelected) {
+            const topVoice = englishVoices.find(v => v.identifier.toLowerCase().includes('premium'))
+              || englishVoices.find(v => v.identifier.toLowerCase().includes('enhanced'))
+              || englishVoices.find(v => v.identifier.toLowerCase().includes('siri'))
+              || englishVoices[0];
 
-        if (topVoice) {
-          setPreferredVoice(topVoice.identifier);
+            if (topVoice) {
+              setPreferredVoice(topVoice.identifier);
+            }
+          }
         }
       } catch (err) {
         console.log('Error loading voices:', err);
@@ -200,7 +269,7 @@ export default function App() {
     isStartingRef.current = true;
 
     modeRef.current = 'wake';
-    setStatus('Say "Hey Bessie" to start...');
+    setStatus('Say "Hey Dairy" to start...');
     
     try {
       const permission = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
@@ -214,6 +283,16 @@ export default function App() {
         lang: 'en-US',
         interimResults: true,
         maxAlternatives: 1,
+        continuous: true,
+        iosCategory: {
+          category: 'playAndRecord',
+          categoryOptions: [
+            'defaultToSpeaker',
+            'allowBluetooth',
+            'mixWithOthers',
+          ],
+          mode: 'measurement',
+        }
       });
     } catch (err) {
       console.error('Failed to start wake word listening', err);
@@ -225,33 +304,60 @@ export default function App() {
 
   async function triggerCommandPrompt() {
     isStartingRef.current = false; // Allow manual interruption
-    // Switch to command mode and speak prompt
-    modeRef.current = 'command';
+    // Switch to transition mode while we speak the prompt
+    modeRef.current = 'transition';
     setStatus('Readying...');
+    
+    // Clear the wake word transcript so it's not sent to the backend
+    setTranscript('');
+    transcriptRef.current = '';
     
     // Stop current listening to speak clearly
     ExpoSpeechRecognitionModule.stop();
     
-    Speech.speak('Yes?', { 
+    Speech.speak('Yes', { 
       rate: 1.1, 
-      voice: preferredVoice,
+      voice: preferredVoiceRef.current,
       onDone: () => startCommandListening(),
       onError: () => startCommandListening()
     });
   }
 
-  async function startCommandListening() {
+  async function startCommandListening(isFollowUp = false) {
     if (isStartingRef.current) return;
     isStartingRef.current = true;
+    
+    clearTimeout(listeningTimeoutRef.current);
 
     modeRef.current = 'command';
-    setStatus('Listening for command...');
+    setStatus(isFollowUp ? 'Listening (5s follow-up)...' : 'Listening for command...');
+    
     try {
       ExpoSpeechRecognitionModule.start({
         lang: 'en-US',
         interimResults: true,
         maxAlternatives: 1,
+        continuous: true,
+        iosCategory: {
+          category: 'playAndRecord',
+          categoryOptions: [
+            'defaultToSpeaker',
+            'allowBluetooth',
+            'mixWithOthers',
+          ],
+          mode: 'measurement',
+        }
       });
+
+      if (isFollowUp) {
+        // Automatically stop after 5 seconds if silence detection hasn't already
+        listeningTimeoutRef.current = setTimeout(() => {
+          if (modeRef.current === 'command') {
+            console.log('[Bessie] Follow-up timeout reached. Stopping.');
+            ExpoSpeechRecognitionModule.stop();
+          }
+        }, 5000);
+      }
     } catch (err) {
       console.error('Failed to start command listening', err);
       startWakeWordListening();
@@ -280,7 +386,7 @@ export default function App() {
 
     try {
       // We'll hit /api/voice-chat as per user snippet
-      const response = await fetch(`${activeBackendUrl}/api/voice-chat`, {
+      const response = await fetch(`${activeBackendUrlRef.current}/api/voice-chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -308,10 +414,9 @@ export default function App() {
       setStatus('Playing response...');
       
       Speech.speak(receivedSummary, {
-        language: 'en-US',
         rate: 1.0,
-        voice: preferredVoice,
-        onDone: () => startWakeWordListening(),
+        voice: preferredVoiceRef.current,
+        onDone: () => startCommandListening(true), // Direct follow-up!
         onError: () => startWakeWordListening(),
       });
 
@@ -344,8 +449,12 @@ export default function App() {
       <View style={styles.statusBox}>
         <Text style={styles.statusLabel}>STATUS</Text>
         <Text style={styles.statusText}>{status}</Text>
-        {transcript.length > 0 && (
-          <Text style={styles.partialTranscript}>"{transcript}"</Text>
+        {modeRef.current === 'command' && transcript.length > 0 && (
+          <View style={styles.transcriptContainer}>
+            <ScrollView style={styles.transcriptScroll} contentContainerStyle={styles.transcriptScrollContent}>
+              <Text style={styles.partialTranscript}>"{transcript}"</Text>
+            </ScrollView>
+          </View>
         )}
         {(recognizing || loading) && (
           <ActivityIndicator size="small" color="#4ade80" style={styles.indicator} />
@@ -358,7 +467,11 @@ export default function App() {
       {serverMessage.length > 0 && (
         <View style={styles.responseBox}>
           <Text style={styles.responseLabel}>Bessie Says</Text>
-          <Text style={styles.responseText}>{serverMessage}</Text>
+          <View style={styles.responseTextContainer}>
+            <ScrollView style={styles.responseScroll} showsVerticalScrollIndicator={true}>
+              <Text style={styles.responseText}>{serverMessage}</Text>
+            </ScrollView>
+          </View>
         </View>
       )}
 
@@ -377,7 +490,7 @@ export default function App() {
         <Text style={styles.voiceButtonText}>🗣️ Change Voice</Text>
       </TouchableOpacity>
 
-      <Text style={styles.hint}>Say "Hey Bessie" to start hands-free</Text>
+      <Text style={styles.hint}>Say "Hey Dairy" to start hands-free</Text>
 
       <Modal
         animationType="slide"
@@ -399,12 +512,17 @@ export default function App() {
                   ]}
                   onPress={() => selectVoice(item.identifier)}
                 >
-                  <Text style={[
-                    styles.voiceItemText,
-                    item.identifier === preferredVoice && styles.voiceItemTextActive
-                  ]}>
-                    {item.name}
-                  </Text>
+                    <View style={styles.voiceItemInfo}>
+                      <Text style={[
+                        styles.voiceItemText,
+                        item.identifier === preferredVoice && styles.voiceItemTextActive
+                      ]}>
+                        {item.name}
+                      </Text>
+                      <Text style={styles.accentText}>
+                        {item.accentLabel}
+                      </Text>
+                    </View>
                 </Pressable>
               )}
             />
@@ -414,6 +532,15 @@ export default function App() {
             >
               <Text style={styles.closeButtonText}>Close</Text>
             </TouchableOpacity>
+
+            <View style={styles.helpBox}>
+              <Text style={styles.helpTitle}>💡 How to add more voices</Text>
+              <Text style={styles.helpText}>
+                {Platform.OS === 'ios' 
+                  ? "Go to Settings > Accessibility > Spoken Content > Voices to download new high-quality voices."
+                  : "Go to Settings > Accessibility > Text-to-speech output to install new voice data."}
+              </Text>
+            </View>
           </View>
         </View>
       </Modal>
@@ -479,13 +606,29 @@ const styles = StyleSheet.create({
     color: '#e5e7eb',
     textAlign: 'center',
   },
+  transcriptContainer: {
+    maxHeight: 100,
+    width: '100%',
+    marginTop: 8,
+  },
+  transcriptScroll: {
+    width: '100%',
+  },
+  transcriptScrollContent: {
+    alignItems: 'center',
+  },
   partialTranscript: {
     fontSize: 14,
     color: '#4ade80',
     fontStyle: 'italic',
-    marginTop: 8,
     textAlign: 'center',
     paddingHorizontal: 12,
+  },
+  responseTextContainer: {
+    maxHeight: 200, // Limit height to make it scrollable
+  },
+  responseScroll: {
+    width: '100%',
   },
   indicator: {
     marginTop: 12,
@@ -594,6 +737,39 @@ const styles = StyleSheet.create({
   closeButtonText: {
     color: '#ffffff',
     fontWeight: '600',
+  },
+  voiceItemInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  accentText: {
+    fontSize: 12,
+    color: '#9ca3af',
+    backgroundColor: '#1f2937',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    overflow: 'hidden',
+  },
+  helpBox: {
+    marginTop: 24,
+    padding: 16,
+    backgroundColor: '#111827',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#374151',
+  },
+  helpTitle: {
+    color: '#e5e7eb',
+    fontSize: 13,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  helpText: {
+    color: '#9ca3af',
+    fontSize: 12,
+    lineHeight: 18,
   }
 });
 
