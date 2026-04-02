@@ -3,8 +3,7 @@ import { StyleSheet, View, Text, TouchableOpacity, SafeAreaView } from 'react-na
 
 const TabBar = ({ activeTab, onTabPress }) => {
   const tabs = [
-    { id: 'text', icon: '💬', label: 'Text' },
-    { id: 'voice', icon: '🎙️', label: 'Voice' },
+    { id: 'chat', icon: '💬', label: 'Chat' },
     { id: 'settings', icon: '⚙️', label: 'Settings' },
   ];
 
