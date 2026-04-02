@@ -10,7 +10,7 @@ The app uses a hybrid architecture:
 
 ---
 
-## 🛠 Prerequisites
+## Prerequisites
 
 - **Node.js**: v18 or higher recommended.
 - **Expo CLI**: `npm install -g expo-cli`
@@ -19,7 +19,7 @@ The app uses a hybrid architecture:
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### 1. Backend Setup
 
@@ -73,19 +73,6 @@ The frontend is a React Native app built with Expo.
    ```bash
    npx expo start
    ```
-
----
-
-## 📦 Large File Management
-
-This repository uses `.gitignore` to exclude large binary files (like the Vosk model and its zip archives) that exceed GitHub's file size limits.
-
-If you encounter Git errors regarding large files, ensure you have run the following to untrack any accidentally committed binaries:
-```bash
-git rm -r --cached frontend/vosk-model*.zip
-git rm -r --cached -r frontend/android/app/src/main/assets/model-en-us
-git rm -r --cached -r frontend/ios/model-en-us
-```
 
 ---
 
