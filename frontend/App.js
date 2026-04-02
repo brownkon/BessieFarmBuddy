@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, Platform, LogBox, ScrollView, Alert, Animated } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, Platform, LogBox, ScrollView, Alert, Animated, TextInput, KeyboardAvoidingView, Keyboard, SafeAreaView, Dimensions, LayoutAnimation, UIManager } from 'react-native';
 import { registerRootComponent } from 'expo';
+import { StatusBar } from 'expo-status-bar';
 import * as Speech from 'expo-speech';
 import { Audio } from 'expo-av';
 
@@ -22,9 +23,20 @@ import { startDucking, stopDucking, cleanupAudio } from './src/utils/audioUtils'
 import Visualizer from './src/components/Visualizer';
 import LanguageSelectorModal from './src/components/LanguageSelectorModal';
 import VoiceSelectorModal from './src/components/VoiceSelectorModal';
+import ManualTextInput from './src/components/ManualTextInput';
+import StatusDisplay from './src/components/StatusDisplay';
+import ResponseDisplay from './src/components/ResponseDisplay';
+import TabBar from './src/components/TabBar';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 export default function App() {
-  const [transcript, setTranscript] = useState('');
+  const [voiceTranscript, setVoiceTranscript] = useState('');
+  const [textTranscript, setTextTranscript] = useState('');
   const transcriptRef = useRef('');
   const [activeBackendUrl, setActiveBackendUrl] = useState(configuredBackendUrl);
   const activeBackendUrlRef = useRef(configuredBackendUrl);
@@ -36,12 +48,17 @@ export default function App() {
 
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isLangModalVisible, setIsLangModalVisible] = useState(false);
+  const [manualText, setManualText] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [activeTab, setActiveTab] = useState('voice');
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   const modeRef = useRef('wake'); // 'wake' | 'command' | 'transition'
   const isStartingRef = useRef(false);
   const silentSoundRef = useRef(null);
   const speakTimeoutRef = useRef(null);
   const restartTimerRef = useRef(null);
+  const horizontalScrollRef = useRef(null);
 
   // Sync refs
   useEffect(() => { preferredVoiceRef.current = preferredVoice; }, [preferredVoice]);
@@ -52,11 +69,13 @@ export default function App() {
     setLoading,
     requestError,
     setRequestError,
-    serverMessage,
-    setServerMessage,
+    serverMessage: voiceServerMessage,
+    setServerMessage: setVoiceServerMessage,
     sendTranscriptToBackend,
     sendRecordingToBackend
   } = useWhisperApi(activeBackendUrl);
+
+  const [textServerMessage, setTextServerMessage] = useState('');
 
   const onWakeWord = useCallback((phrase) => {
     if (!isStartingRef.current) {
@@ -70,9 +89,9 @@ export default function App() {
     handleStopChat();
   }, []);
 
-  const onPartial = useCallback((txt) => setTranscript(txt), []);
+  const onPartial = useCallback((txt) => setVoiceTranscript(txt), []);
   const onResult = useCallback((txt) => {
-    setTranscript(txt);
+    setVoiceTranscript(txt);
     transcriptRef.current = txt;
   }, []);
 
@@ -118,7 +137,7 @@ export default function App() {
 
       modeRef.current = 'wake';
       setStatus('Say "Hey Dairy" to start...');
-      setTranscript('');
+      setVoiceTranscript('');
       transcriptRef.current = '';
       setRecognizing(true);
       await startVosk();
@@ -134,7 +153,7 @@ export default function App() {
     isStartingRef.current = false;
     modeRef.current = 'transition';
     setStatus('Readying...');
-    setTranscript('');
+    setVoiceTranscript('');
     transcriptRef.current = '';
 
     await stopVosk();
@@ -151,28 +170,26 @@ export default function App() {
   const startCommandListening = useCallback(async (isFollowUp = false) => {
     modeRef.current = 'command';
     setStatus(isFollowUp ? 'Listening (Whisper)...' : 'Listening... (Whisper)');
-    setTranscript('(Recording audio...)');
+    setVoiceTranscript('(Recording audio...)');
 
     await cleanupAudio(recordingRef, null, { stopVosk: false });
     await startVosk(EXIT_PHRASES); // Only listen for exit phrases locally during whisper
     await startRecording();
   }, [startVosk, startRecording, recordingRef]);
 
-  const stopAndSendRecording = useCallback(async () => {
+  const processBackendResult = useCallback(async (data, isText = false) => {
     try {
-      const uri = await stopAndGetURI();
-      if (!uri) {
-        startWakeWordListening();
-        return;
+      if (data.transcript) {
+        if (isText) setTextTranscript(data.transcript);
+        else setVoiceTranscript(data.transcript);
       }
 
-      void startDucking(silentSoundRef);
-      const data = await sendRecordingToBackend(uri, selectedLanguage.code);
-
-      if (data.transcript) setTranscript(data.transcript);
+      const summary = data.summary || data.response;
+      if (isText) setTextServerMessage(summary);
+      else setVoiceServerMessage(summary);
 
       // Handle AI response and TTS
-      if (data.summary) {
+      if (summary) {
         if (data.exit) {
           console.log('[Bessie] Exit phrase detected. Skipping speech and restarting wake listener.');
           void stopDucking(silentSoundRef);
@@ -185,7 +202,7 @@ export default function App() {
         const voiceId = bestVoiceMatch ? bestVoiceMatch.identifier : preferredVoiceRef.current;
 
         console.log(`[Speech] Starting speak summary... (Voice: ${voiceId})`);
-        
+
         // Safety timeout for speech hanging
         const speechSafetyTimeout = setTimeout(() => {
           if (modeRef.current === 'transition' || status === 'Playing response...') {
@@ -217,11 +234,56 @@ export default function App() {
         startWakeWordListening();
       }
     } catch (error) {
+      console.error('[Bessie] Error processing backend response:', error);
+      startWakeWordListening();
+    }
+  }, [availableVoices, selectedLanguage.voicePrefix, preferredVoiceRef, silentSoundRef, startWakeWordListening, startCommandListening, status]);
+
+  const stopAndSendRecording = useCallback(async () => {
+    try {
+      const uri = await stopAndGetURI();
+      if (!uri) {
+        startWakeWordListening();
+        return;
+      }
+
+      void startDucking(silentSoundRef);
+      const data = await sendRecordingToBackend(uri, selectedLanguage.code);
+      await processBackendResult(data);
+    } catch (error) {
       void stopDucking(silentSoundRef);
       Alert.alert('API failed', error.message);
       startWakeWordListening();
     }
-  }, [stopAndGetURI, sendRecordingToBackend, selectedLanguage.code, availableVoices, startWakeWordListening, startCommandListening]);
+  }, [stopAndGetURI, sendRecordingToBackend, selectedLanguage.code, processBackendResult, startWakeWordListening]);
+
+  const handleSendManualText = async () => {
+    if (!manualText.trim()) return;
+
+    const textToSend = manualText.trim();
+    setManualText('');
+    setIsTyping(false);
+    Keyboard.dismiss();
+
+    try {
+      setStatus('Sending text...');
+      setTextTranscript(textToSend);
+      transcriptRef.current = textToSend;
+
+      // Stop anything current
+      await cleanupAudio(recordingRef, null, { stopVosk: true });
+      void startDucking(silentSoundRef);
+
+      const data = await sendTranscriptToBackend(textToSend, selectedLanguage.code);
+      if (data) {
+        await processBackendResult(data, true);
+      }
+    } catch (error) {
+      void stopDucking(silentSoundRef);
+      Alert.alert('Text API failed', error.message);
+      startWakeWordListening();
+    }
+  };
 
   const handleStopChat = async () => {
     clearTimeout(restartTimerRef.current);
@@ -232,13 +294,30 @@ export default function App() {
     modeRef.current = 'wake';
     setStatus('Stopped');
     setVolume(0);
-    setTranscript('');
-    setServerMessage('');
+    setVoiceTranscript('');
+    setTextTranscript('');
+    setVoiceServerMessage('');
+    setTextServerMessage('');
 
     setTimeout(() => {
       void stopDucking(silentSoundRef);
       startWakeWordListening();
     }, 1200);
+  };
+
+  const onTabPress = (tabId) => {
+    setActiveTab(tabId);
+    const index = tabId === 'text' ? 0 : tabId === 'voice' ? 1 : 2;
+    horizontalScrollRef.current?.scrollTo({ x: index * SCREEN_WIDTH, animated: true });
+  };
+
+  const onHorizontalScroll = (event) => {
+    const x = event.nativeEvent.contentOffset.x;
+    const index = Math.round(x / SCREEN_WIDTH);
+    const newTab = index === 0 ? 'text' : index === 1 ? 'voice' : 'settings';
+    if (newTab !== activeTab) {
+      setActiveTab(newTab);
+    }
   };
 
   const scheduleRestart = () => {
@@ -305,58 +384,141 @@ export default function App() {
     };
   }, []);
 
-  // Start listening only when model is ready
-  useEffect(() => { if (isModelLoaded) startWakeWordListening(); }, [isModelLoaded]);
+  // Start/Stop listening based on tab and model state
+  useEffect(() => {
+    if (activeTab === 'voice' && isModelLoaded) {
+      startWakeWordListening();
+    } else {
+      cleanupAudio(recordingRef, null, { stopVosk: true });
+      void stopDucking(silentSoundRef);
+      setStatus('Paused');
+    }
+  }, [activeTab, isModelLoaded]);
 
+  // Keyboard listener as safety fallback
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setIsKeyboardVisible(true)
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setIsKeyboardVisible(false)
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>🐄 Bessie</Text>
-      <Text style={styles.subtitle}>Farm Voice Assistant</Text>
+    <SafeAreaView style={styles.container}>
+      <StatusBar style="light" backgroundColor="#0f1117" />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardAvoidingView}
+      >
+        <ScrollView
+          ref={horizontalScrollRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={onHorizontalScroll}
+          contentOffset={{ x: SCREEN_WIDTH, y: 0 }} // Start on 'voice' tab (index 1)
+          bounces={false}
+        >
+          {/* TEXT TAB */}
+          <View style={styles.page}>
+            <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+              <Text style={styles.header}>🐄 Bessie</Text>
+              <Text style={styles.subtitle}>Farm Chat</Text>
 
-      <View style={styles.statusBox}>
-        <Text style={styles.statusLabel}>STATUS</Text>
-        <Text style={styles.statusText}>{status}</Text>
-        {modeRef.current !== 'transition' && transcript.length > 0 && (
-          <ScrollView style={styles.transcriptContainer} contentContainerStyle={styles.transcriptScrollContent}>
-            <Text style={styles.partialTranscript}>“{transcript}”</Text>
-          </ScrollView>
-        )}
-        {(recognizing || loading || !!recording) && (
-          <View style={styles.centerRow}>
-            <ActivityIndicator size="small" color="#4ade80" />
-            <Visualizer volume={volume} isActive={!!recording} />
+              {textTranscript.length > 0 && (
+                <View style={styles.userMessageBox}>
+                  <Text style={styles.userMessageLabel}>You Said</Text>
+                  <Text style={styles.userMessageText}>{textTranscript}</Text>
+                </View>
+              )}
+              <ResponseDisplay
+                serverMessage={textServerMessage}
+                requestError={requestError}
+              />
+              <ManualTextInput
+                value={manualText}
+                onChangeText={setManualText}
+                onSend={handleSendManualText}
+                disabled={loading || !!recording}
+                onFocus={() => setIsKeyboardVisible(true)}
+                onBlur={() => setIsKeyboardVisible(false)}
+              />
+            </ScrollView>
           </View>
-        )}
-      </View>
 
-      {serverMessage.length > 0 && (
-        <View style={styles.responseBox}>
-          <Text style={styles.responseLabel}>Bessie Says</Text>
-          <ScrollView style={styles.responseTextContainer}>
-            <Text style={styles.responseText}>{serverMessage}</Text>
-          </ScrollView>
-        </View>
-      )}
+          {/* VOICE TAB */}
+          <View style={styles.page}>
+            <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+              <Text style={styles.header}>🐄 Bessie</Text>
+              <Text style={styles.subtitle}>Farm Voice Assistant</Text>
 
-      {requestError.length > 0 && <Text style={styles.errorText}>{requestError}</Text>}
+              <StatusDisplay
+                status={status}
+                mode={modeRef.current}
+                recognizing={recognizing}
+                loading={loading}
+                recording={recording}
+                volume={volume}
+                transcript={voiceTranscript}
+              />
+              <ResponseDisplay
+                serverMessage={voiceServerMessage}
+                requestError={requestError}
+              />
 
-      <TouchableOpacity style={styles.button} onPress={triggerCommandPrompt}>
-        <Text style={styles.buttonText}>🎙️ Manual Trigger</Text>
-      </TouchableOpacity>
+              <TouchableOpacity style={styles.button} onPress={triggerCommandPrompt}>
+                <Text style={styles.buttonText}>🎙️ Manual Trigger</Text>
+              </TouchableOpacity>
 
-      <TouchableOpacity style={styles.stopButton} onPress={handleStopChat}>
-        <Text style={styles.stopButtonText}>🛑 Stop Bessie</Text>
-      </TouchableOpacity>
+              <TouchableOpacity style={styles.stopButton} onPress={handleStopChat}>
+                <Text style={styles.stopButtonText}>🛑 Stop Bessie</Text>
+              </TouchableOpacity>
 
-      <TouchableOpacity style={styles.voiceButton} onPress={() => setIsLangModalVisible(true)}>
-        <Text style={styles.voiceButtonText}>🌐 Language: {selectedLanguage.label}</Text>
-      </TouchableOpacity>
+              <Text style={styles.hint}>Say "Hey Dairy" to start hands-free</Text>
+            </ScrollView>
+          </View>
 
-      <TouchableOpacity style={styles.voiceButton} onPress={() => setIsModalVisible(true)}>
-        <Text style={styles.voiceButtonText}>🗣️ Speaker Voice</Text>
-      </TouchableOpacity>
+          {/* SETTINGS TAB */}
+          <View style={styles.page}>
+            <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+              <Text style={styles.header}>🐄 Bessie</Text>
+              <Text style={styles.subtitle}>Configuration</Text>
 
-      <Text style={styles.hint}>Say "Hey Dairy" to start hands-free</Text>
+              <View style={styles.settingsPage}>
+                <Text style={styles.sectionHeader}>Bessie Settings</Text>
+
+                <View style={styles.settingCard}>
+                  <Text style={styles.settingLabel}>Language</Text>
+                  <TouchableOpacity style={styles.voiceButton} onPress={() => setIsLangModalVisible(true)}>
+                    <Text style={styles.voiceButtonText}>🌐 {selectedLanguage.label}</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.settingCard}>
+                  <Text style={styles.settingLabel}>Voice & Accessibility</Text>
+                  <TouchableOpacity style={styles.voiceButton} onPress={() => setIsModalVisible(true)}>
+                    <Text style={styles.voiceButtonText}>🗣️ Speaker Voice Profile</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.statusBox}>
+                  <Text style={styles.statusLabel}>Backend Endpoint</Text>
+                  <Text style={styles.statusText}>{activeBackendUrl}</Text>
+                </View>
+              </View>
+            </ScrollView>
+          </View>
+        </ScrollView>
+
+        {!isKeyboardVisible && <TabBar activeTab={activeTab} onTabPress={onTabPress} />}
+      </KeyboardAvoidingView>
 
       <LanguageSelectorModal
         isVisible={isLangModalVisible}
@@ -372,32 +534,43 @@ export default function App() {
         onSelect={(id) => { setPreferredVoice(id); setIsModalVisible(false); Speech.speak("Voice selected.", { voice: id }); }}
         onClose={() => setIsModalVisible(false)}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 32, backgroundColor: '#0f1117', alignItems: 'center', justifyContent: 'center' },
+  container: { flex: 1, backgroundColor: '#0f1117' },
+  keyboardAvoidingView: { flex: 1, backgroundColor: '#0f1117' },
+  page: { width: SCREEN_WIDTH, backgroundColor: '#0f1117' },
+  scrollContainer: {
+    flexGrow: 1,
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#0f1117'
+  },
   header: { fontSize: 40, fontWeight: 'bold', color: '#ffffff', marginBottom: 4 },
   subtitle: { fontSize: 14, color: '#6b7280', marginBottom: 40, letterSpacing: 2, textTransform: 'uppercase' },
+  button: { backgroundColor: '#16a34a', paddingVertical: 16, paddingHorizontal: 40, borderRadius: 50, marginBottom: 12, width: '100%', alignItems: 'center' },
+  buttonText: { color: '#ffffff', fontSize: 16, fontWeight: '600' },
+  stopButton: { backgroundColor: '#991b1b', paddingVertical: 14, paddingHorizontal: 40, borderRadius: 50, marginBottom: 20, borderWidth: 1, borderColor: '#7f1d1d', width: '100%', alignItems: 'center' },
+  stopButtonText: { color: '#fecaca', fontSize: 15, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 },
+  settingsPage: { width: '100%', alignItems: 'flex-start' },
+  sectionHeader: { fontSize: 20, fontWeight: '600', color: '#ffffff', marginBottom: 20, width: '100%' },
+  settingCard: { width: '100%', backgroundColor: '#1f2937', padding: 20, borderRadius: 16, marginBottom: 15, borderWidth: 1, borderColor: '#374151' },
+  settingLabel: { fontSize: 11, color: '#6b7280', letterSpacing: 1.5, marginBottom: 12, textTransform: 'uppercase' },
+  settingsRow: { flexDirection: 'row', gap: 10, width: '100%' },
+  voiceButton: { width: '100%', paddingVertical: 14, paddingHorizontal: 16, borderRadius: 12, borderWidth: 1, borderColor: '#4b5563', backgroundColor: '#111827', alignItems: 'center' },
+  voiceButtonText: { color: '#e5e7eb', fontSize: 14, textAlign: 'center' },
+  hint: { fontSize: 12, color: '#4b5563', textAlign: 'center', marginBottom: 20 },
+  errorText: { color: '#ef4444', marginBottom: 10 },
+  userMessageBox: { backgroundColor: '#111827', borderRadius: 16, padding: 20, width: '100%', marginBottom: 15, borderWidth: 1, borderColor: '#374151', alignSelf: 'flex-start' },
+  userMessageLabel: { fontSize: 11, color: '#9ca3af', letterSpacing: 1.5, marginBottom: 8, textTransform: 'uppercase' },
+  userMessageText: { fontSize: 15, color: '#ffffff' },
   statusBox: { backgroundColor: '#1f2937', borderRadius: 16, padding: 20, width: '100%', alignItems: 'center', marginBottom: 20, borderWidth: 1, borderColor: '#374151' },
   statusLabel: { fontSize: 11, color: '#6b7280', letterSpacing: 2, marginBottom: 8, textTransform: 'uppercase' },
-  statusText: { fontSize: 16, color: '#e5e7eb', textAlign: 'center' },
-  centerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 10 },
-  transcriptContainer: { maxHeight: 100, width: '100%', marginTop: 8 },
-  transcriptScrollContent: { alignItems: 'center' },
-  partialTranscript: { fontSize: 14, color: '#4ade80', fontStyle: 'italic', textAlign: 'center', paddingHorizontal: 12 },
-  responseBox: { backgroundColor: '#064e3b', borderRadius: 16, padding: 20, width: '100%', marginBottom: 30, borderWidth: 1, borderColor: '#065f46' },
-  responseLabel: { fontSize: 11, color: '#6ee7b7', letterSpacing: 2, marginBottom: 8, textTransform: 'uppercase' },
-  responseTextContainer: { maxHeight: 200 },
-  responseText: { fontSize: 15, color: '#d1fae5', lineHeight: 22 },
-  button: { backgroundColor: '#16a34a', paddingVertical: 16, paddingHorizontal: 40, borderRadius: 50, marginBottom: 12 },
-  buttonText: { color: '#ffffff', fontSize: 16, fontWeight: '600' },
-  stopButton: { backgroundColor: '#991b1b', paddingVertical: 14, paddingHorizontal: 40, borderRadius: 50, marginBottom: 20, borderWidth: 1, borderColor: '#7f1d1d', width: '80%', alignItems: 'center' },
-  stopButtonText: { color: '#fecaca', fontSize: 15, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 },
-  voiceButton: { paddingVertical: 12, paddingHorizontal: 20, borderRadius: 12, borderWidth: 1, borderColor: '#4b5563', marginBottom: 10 },
-  voiceButtonText: { color: '#9ca3af', fontSize: 14 },
-  hint: { fontSize: 12, color: '#4b5563', textAlign: 'center' },
+  statusText: { fontSize: 14, color: '#9ca3af', textAlign: 'center' },
+  hint: { fontSize: 12, color: '#4b5563', textAlign: 'center', marginBottom: 20 },
   errorText: { color: '#ef4444', marginBottom: 10 },
 });
 
