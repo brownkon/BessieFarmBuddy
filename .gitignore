@@ -42,3 +42,8 @@ temp/
 
 # Log files
 *.log
+
+# Vosk Models
+frontend/vosk-model-*.zip
+frontend/vosk-model-*/
+**/model-en-us/

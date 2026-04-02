@@ -1,0 +1,188 @@
+{
+  "info" : {
+    "arguments" : [
+      "devicectl",
+      "list",
+      "devices",
+      "--json-output",
+      "tmp_devices.json",
+      "--timeout",
+      "5"
+    ],
+    "commandType" : "devicectl.list.devices",
+    "environment" : {
+      "TERM" : "xterm-256color"
+    },
+    "jsonVersion" : 3,
+    "outcome" : "success",
+    "version" : "506.6"
+  },
+  "result" : {
+    "devices" : [
+      {
+        "capabilities" : [
+          {
+            "featureIdentifier" : "com.apple.coredevice.feature.acquireusageassertion",
+            "name" : "Acquire Usage Assertion"
+          },
+          {
+            "featureIdentifier" : "com.apple.coredevice.feature.connectdevice",
+            "name" : "Connect to Device"
+          },
+          {
+            "featureIdentifier" : "com.apple.coredevice.feature.tags",
+            "name" : "Modify Tags"
+          },
+          {
+            "featureIdentifier" : "com.apple.coredevice.feature.default.user.credentials",
+            "name" : "Modify credentials for default users for a device"
+          },
+          {
+            "featureIdentifier" : "com.apple.coredevice.feature.unpairdevice",
+            "name" : "Unpair Device"
+          }
+        ],
+        "connectionProperties" : {
+          "authenticationType" : "manualPairing",
+          "isMobileDeviceOnly" : false,
+          "lastConnectionDate" : "2025-12-02T22:51:37.806Z",
+          "pairingState" : "paired",
+          "potentialHostnames" : [
+            "AppleWatch-de-Konner.coredevice.local",
+            "CF884AFB-3DB2-5CDD-A37F-4D7B6C5D226E.coredevice.local",
+            "00008301-A88A646C269A202E.coredevice.local"
+          ],
+          "transportType" : "localNetwork",
+          "tunnelState" : "disconnected",
+          "tunnelTransportProtocol" : "tcp"
+        },
+        "deviceProperties" : {
+          "ddiServicesAvailable" : false,
+          "developerModeStatus" : "disabled",
+          "hasInternalOSBuild" : false,
+          "name" : "Apple Watch de Konner",
+          "osBuildUpdate" : "23S37",
+          "osVersionNumber" : "26.1",
+          "screenViewingURL" : "devices://device/open?id=CF884AFB-3DB2-5CDD-A37F-4D7B6C5D226E"
+        },
+        "hardwareProperties" : {
+          "cpuType" : {
+            "name" : "arm64_32",
+            "subType" : 1,
+            "type" : 33554444
+          },
+          "deviceType" : "appleWatch",
+          "ecid" : 12144629760824844334,
+          "hardwareModel" : "N143bAP",
+          "isProductionFused" : true,
+          "marketingName" : "Apple Watch SE",
+          "platform" : "watchOS",
+          "productType" : "Watch6,11",
+          "reality" : "physical",
+          "serialNumber" : "GCL7YF3F4T",
+          "thinningProductType" : "Watch6,11",
+          "udid" : "00008301-A88A646C269A202E"
+        },
+        "identifier" : "CF884AFB-3DB2-5CDD-A37F-4D7B6C5D226E",
+        "tags" : [
+
+        ],
+        "visibilityClass" : "default"
+      },
+      {
+        "capabilities" : [
+          {
+            "featureIdentifier" : "com.apple.coredevice.feature.acquireusageassertion",
+            "name" : "Acquire Usage Assertion"
+          },
+          {
+            "featureIdentifier" : "com.apple.coredevice.feature.connectdevice",
+            "name" : "Connect to Device"
+          },
+          {
+            "featureIdentifier" : "com.apple.coredevice.feature.tags",
+            "name" : "Modify Tags"
+          },
+          {
+            "featureIdentifier" : "com.apple.coredevice.feature.default.user.credentials",
+            "name" : "Modify credentials for default users for a device"
+          },
+          {
+            "featureIdentifier" : "com.apple.coredevice.feature.unpairdevice",
+            "name" : "Unpair Device"
+          }
+        ],
+        "connectionProperties" : {
+          "authenticationType" : "manualPairing",
+          "isMobileDeviceOnly" : false,
+          "lastConnectionDate" : "2026-03-31T21:15:00.000Z",
+          "pairingState" : "paired",
+          "potentialHostnames" : [
+            "Konners-iPhone.coredevice.local",
+            "A1B50C99-0034-50BC-9A90-DBE8D4EA83E0.coredevice.local",
+            "00008150-001679291407801C.coredevice.local"
+          ],
+          "transportType" : "wired",
+          "tunnelState" : "disconnected",
+          "tunnelTransportProtocol" : "tcp"
+        },
+        "deviceProperties" : {
+          "bootState" : "booted",
+          "bootedFromSnapshot" : true,
+          "bootedSnapshotName" : "com.apple.os.update-BFDE8EAA6C6621BA77570AFF9D608B84BF393B3604D8DD9673A0AF855B2F9EEF",
+          "ddiServicesAvailable" : false,
+          "developerModeStatus" : "enabled",
+          "hasInternalOSBuild" : false,
+          "name" : "Konner’s iPhone",
+          "osBuildUpdate" : "23D771330a",
+          "osVersionNumber" : "26.3.1 (a)",
+          "providerSpecificValues" : {
+            "hasAMRestorableDeviceRef" : "true"
+          },
+          "rootFileSystemIsWritable" : false,
+          "screenViewingURL" : "devices://device/open?id=A1B50C99-0034-50BC-9A90-DBE8D4EA83E0",
+          "supportsCheckedAllocations" : true
+        },
+        "hardwareProperties" : {
+          "cpuType" : {
+            "name" : "arm64e",
+            "subType" : 2,
+            "type" : 16777228
+          },
+          "deviceType" : "iPhone",
+          "ecid" : 6325666824290332,
+          "hardwareModel" : "V53AP",
+          "internalStorageCapacity" : 256000000000,
+          "isProductionFused" : true,
+          "marketingName" : "iPhone 17 Pro",
+          "platform" : "iOS",
+          "productType" : "iPhone18,1",
+          "reality" : "physical",
+          "serialNumber" : "F907Q76GMQ",
+          "supportedCPUTypes" : [
+            {
+              "name" : "arm64e",
+              "subType" : 2,
+              "type" : 16777228
+            },
+            {
+              "name" : "arm64",
+              "subType" : 0,
+              "type" : 16777228
+            }
+          ],
+          "supportedDeviceFamilies" : [
+            1
+          ],
+          "thinningProductType" : "iPhone18,1",
+          "udid" : "00008150-001679291407801C"
+        },
+        "identifier" : "A1B50C99-0034-50BC-9A90-DBE8D4EA83E0",
+        "tags" : [
+
+        ],
+        "visibilityClass" : "default"
+      }
+    ]
+  }
+}

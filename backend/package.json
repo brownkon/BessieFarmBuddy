@@ -13,8 +13,10 @@
   "description": "",
   "dependencies": {
     "@fastify/cors": "^11.2.0",
+    "@fastify/multipart": "^9.4.0",
     "dotenv": "^17.3.1",
     "fastify": "^5.8.2",
+    "fs-extra": "^11.3.4",
     "openai": "^6.32.0"
   }
 }

@@ -1,0 +1,2514 @@
+diff --git a/node_modules/react-native-vosk/android/build/.transforms/25cd92510e7907adeb85532fa3acb034/results.bin b/node_modules/react-native-vosk/android/build/.transforms/25cd92510e7907adeb85532fa3acb034/results.bin
+new file mode 100644
+index 0000000..0d259dd
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/.transforms/25cd92510e7907adeb85532fa3acb034/results.bin
+@@ -0,0 +1 @@
++o/classes
+diff --git a/node_modules/react-native-vosk/android/build/.transforms/25cd92510e7907adeb85532fa3acb034/transformed/classes/classes_dex/classes.dex b/node_modules/react-native-vosk/android/build/.transforms/25cd92510e7907adeb85532fa3acb034/transformed/classes/classes_dex/classes.dex
+new file mode 100644
+index 0000000..0672a87
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/.transforms/25cd92510e7907adeb85532fa3acb034/transformed/classes/classes_dex/classes.dex differ
+diff --git a/node_modules/react-native-vosk/android/build/.transforms/8a6708ada4b5b97481ac9bf56f23f670/results.bin b/node_modules/react-native-vosk/android/build/.transforms/8a6708ada4b5b97481ac9bf56f23f670/results.bin
+new file mode 100644
+index 0000000..0d259dd
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/.transforms/8a6708ada4b5b97481ac9bf56f23f670/results.bin
+@@ -0,0 +1 @@
++o/classes
+diff --git a/node_modules/react-native-vosk/android/build/.transforms/8a6708ada4b5b97481ac9bf56f23f670/transformed/classes/classes_dex/classes.dex b/node_modules/react-native-vosk/android/build/.transforms/8a6708ada4b5b97481ac9bf56f23f670/transformed/classes/classes_dex/classes.dex
+new file mode 100644
+index 0000000..0672a87
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/.transforms/8a6708ada4b5b97481ac9bf56f23f670/transformed/classes/classes_dex/classes.dex differ
+diff --git a/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/README b/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/README
+new file mode 100644
+index 0000000..a7f7931
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/README
+@@ -0,0 +1,9 @@
++US English model for mobile Vosk applications
++
++Copyright 2020 Alpha Cephei Inc
++
++Accuracy: 10.38 (tedlium test) 9.85 (librispeech test-clean)
++Speed: 0.11xRT (desktop)
++Latency: 0.15s (right context)
++
++
+diff --git a/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/am/final.mdl b/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/am/final.mdl
+new file mode 100644
+index 0000000..5596b31
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/am/final.mdl differ
+diff --git a/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/conf/mfcc.conf b/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/conf/mfcc.conf
+new file mode 100644
+index 0000000..eaa40c5
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/conf/mfcc.conf
+@@ -0,0 +1,7 @@
++--sample-frequency=16000
++--use-energy=false
++--num-mel-bins=40
++--num-ceps=40
++--low-freq=20
++--high-freq=7600
++--allow-downsample=true
+diff --git a/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/conf/model.conf b/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/conf/model.conf
+new file mode 100644
+index 0000000..9d5b0da
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/conf/model.conf
+@@ -0,0 +1,10 @@
++--min-active=200
++--max-active=3000
++--beam=10.0
++--lattice-beam=2.0
++--acoustic-scale=1.0
++--frame-subsampling-factor=3
++--endpoint.silence-phones=1:2:3:4:5:6:7:8:9:10
++--endpoint.rule2.min-trailing-silence=0.5
++--endpoint.rule3.min-trailing-silence=0.75
++--endpoint.rule4.min-trailing-silence=1.0
+diff --git a/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/graph/Gr.fst b/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/graph/Gr.fst
+new file mode 100644
+index 0000000..1f292e6
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/graph/Gr.fst differ
+diff --git a/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/graph/HCLr.fst b/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/graph/HCLr.fst
+new file mode 100644
+index 0000000..9797b26
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/graph/HCLr.fst differ
+diff --git a/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/graph/disambig_tid.int b/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/graph/disambig_tid.int
+new file mode 100644
+index 0000000..762fd5f
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/graph/disambig_tid.int
+@@ -0,0 +1,17 @@
++10015
++10016
++10017
++10018
++10019
++10020
++10021
++10022
++10023
++10024
++10025
++10026
++10027
++10028
++10029
++10030
++10031
+diff --git a/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/graph/phones/word_boundary.int b/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/graph/phones/word_boundary.int
+new file mode 100644
+index 0000000..df23fd7
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/graph/phones/word_boundary.int
+@@ -0,0 +1,166 @@
++1 nonword
++2 begin
++3 end
++4 internal
++5 singleton
++6 nonword
++7 begin
++8 end
++9 internal
++10 singleton
++11 begin
++12 end
++13 internal
++14 singleton
++15 begin
++16 end
++17 internal
++18 singleton
++19 begin
++20 end
++21 internal
++22 singleton
++23 begin
++24 end
++25 internal
++26 singleton
++27 begin
++28 end
++29 internal
++30 singleton
++31 begin
++32 end
++33 internal
++34 singleton
++35 begin
++36 end
++37 internal
++38 singleton
++39 begin
++40 end
++41 internal
++42 singleton
++43 begin
++44 end
++45 internal
++46 singleton
++47 begin
++48 end
++49 internal
++50 singleton
++51 begin
++52 end
++53 internal
++54 singleton
++55 begin
++56 end
++57 internal
++58 singleton
++59 begin
++60 end
++61 internal
++62 singleton
++63 begin
++64 end
++65 internal
++66 singleton
++67 begin
++68 end
++69 internal
++70 singleton
++71 begin
++72 end
++73 internal
++74 singleton
++75 begin
++76 end
++77 internal
++78 singleton
++79 begin
++80 end
++81 internal
++82 singleton
++83 begin
++84 end
++85 internal
++86 singleton
++87 begin
++88 end
++89 internal
++90 singleton
++91 begin
++92 end
++93 internal
++94 singleton
++95 begin
++96 end
++97 internal
++98 singleton
++99 begin
++100 end
++101 internal
++102 singleton
++103 begin
++104 end
++105 internal
++106 singleton
++107 begin
++108 end
++109 internal
++110 singleton
++111 begin
++112 end
++113 internal
++114 singleton
++115 begin
++116 end
++117 internal
++118 singleton
++119 begin
++120 end
++121 internal
++122 singleton
++123 begin
++124 end
++125 internal
++126 singleton
++127 begin
++128 end
++129 internal
++130 singleton
++131 begin
++132 end
++133 internal
++134 singleton
++135 begin
++136 end
++137 internal
++138 singleton
++139 begin
++140 end
++141 internal
++142 singleton
++143 begin
++144 end
++145 internal
++146 singleton
++147 begin
++148 end
++149 internal
++150 singleton
++151 begin
++152 end
++153 internal
++154 singleton
++155 begin
++156 end
++157 internal
++158 singleton
++159 begin
++160 end
++161 internal
++162 singleton
++163 begin
++164 end
++165 internal
++166 singleton
+diff --git a/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/ivector/final.dubm b/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/ivector/final.dubm
+new file mode 100644
+index 0000000..db789eb
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/ivector/final.dubm differ
+diff --git a/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/ivector/final.ie b/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/ivector/final.ie
+new file mode 100644
+index 0000000..93737bf
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/ivector/final.ie differ
+diff --git a/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/ivector/final.mat b/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/ivector/final.mat
+new file mode 100644
+index 0000000..c3ec635
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/ivector/final.mat differ
+diff --git a/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/ivector/global_cmvn.stats b/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/ivector/global_cmvn.stats
+new file mode 100644
+index 0000000..b9d92ef
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/ivector/global_cmvn.stats
+@@ -0,0 +1,3 @@
++ [
++  1.682383e+11 -1.1595e+10 -1.521733e+10 4.32034e+09 -2.257938e+10 -1.969666e+10 -2.559265e+10 -1.535687e+10 -1.276854e+10 -4.494483e+09 -1.209085e+10 -5.64008e+09 -1.134847e+10 -3.419512e+09 -1.079542e+10 -4.145463e+09 -6.637486e+09 -1.11318e+09 -3.479773e+09 -1.245932e+08 -1.386961e+09 6.560655e+07 -2.436518e+08 -4.032432e+07 4.620046e+08 -7.714964e+07 9.551484e+08 -4.119761e+08 8.208582e+08 -7.117156e+08 7.457703e+08 -4.3106e+08 1.202726e+09 2.904036e+08 1.231931e+09 3.629848e+08 6.366939e+08 -4.586172e+08 -5.267629e+08 -3.507819e+08 1.679838e+09 
++  1.741141e+13 8.92488e+11 8.743834e+11 8.848896e+11 1.190313e+12 1.160279e+12 1.300066e+12 1.005678e+12 9.39335e+11 8.089614e+11 7.927041e+11 6.882427e+11 6.444235e+11 5.151451e+11 4.825723e+11 3.210106e+11 2.720254e+11 1.772539e+11 1.248102e+11 6.691599e+10 3.599804e+10 1.207574e+10 1.679301e+09 4.594778e+08 5.821614e+09 1.451758e+10 2.55803e+10 3.43277e+10 4.245286e+10 4.784859e+10 4.988591e+10 4.925451e+10 5.074584e+10 4.9557e+10 4.407876e+10 3.421443e+10 3.138606e+10 2.539716e+10 1.948134e+10 1.381167e+10 0 ]
+diff --git a/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/ivector/online_cmvn.conf b/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/ivector/online_cmvn.conf
+new file mode 100644
+index 0000000..7748a4a
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/ivector/online_cmvn.conf
+@@ -0,0 +1 @@
++# configuration file for apply-cmvn-online, used in the script ../local/run_online_decoding.sh
+diff --git a/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/ivector/splice.conf b/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/ivector/splice.conf
+new file mode 100644
+index 0000000..960cd2e
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/ivector/splice.conf
+@@ -0,0 +1,2 @@
++--left-context=3
++--right-context=3
+diff --git a/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/uuid b/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/uuid
+new file mode 100644
+index 0000000..e6602cb
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/uuid
+@@ -0,0 +1 @@
++8e3cebf0-2bb4-4624-b1f3-b68af6e80073
+\ No newline at end of file
+diff --git a/node_modules/react-native-vosk/android/build/generated/source/buildConfig/debug/com/vosk/BuildConfig.java b/node_modules/react-native-vosk/android/build/generated/source/buildConfig/debug/com/vosk/BuildConfig.java
+new file mode 100644
+index 0000000..2ba6174
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/generated/source/buildConfig/debug/com/vosk/BuildConfig.java
+@@ -0,0 +1,10 @@
++/**
++ * Automatically generated file. DO NOT MODIFY
++ */
++package com.vosk;
++
++public final class BuildConfig {
++  public static final boolean DEBUG = Boolean.parseBoolean("true");
++  public static final String LIBRARY_PACKAGE_NAME = "com.vosk";
++  public static final String BUILD_TYPE = "debug";
++}
+diff --git a/node_modules/react-native-vosk/android/build/generated/source/codegen/java/com/vosk/NativeVoskSpec.java b/node_modules/react-native-vosk/android/build/generated/source/codegen/java/com/vosk/NativeVoskSpec.java
+new file mode 100644
+index 0000000..8f0f17c
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/generated/source/codegen/java/com/vosk/NativeVoskSpec.java
+@@ -0,0 +1,60 @@
++
++/**
++ * This code was generated by [react-native-codegen](https://www.npmjs.com/package/react-native-codegen).
++ *
++ * Do not edit this file as changes may cause incorrect behavior and will be lost
++ * once the code is regenerated.
++ *
++ * @generated by codegen project: GenerateModuleJavaSpec.js
++ *
++ * @nolint
++ */
++
++package com.vosk;
++
++import com.facebook.proguard.annotations.DoNotStrip;
++import com.facebook.react.bridge.Promise;
++import com.facebook.react.bridge.ReactApplicationContext;
++import com.facebook.react.bridge.ReactContextBaseJavaModule;
++import com.facebook.react.bridge.ReactMethod;
++import com.facebook.react.bridge.ReadableMap;
++import com.facebook.react.turbomodule.core.interfaces.TurboModule;
++import javax.annotation.Nonnull;
++import javax.annotation.Nullable;
++
++public abstract class NativeVoskSpec extends ReactContextBaseJavaModule implements TurboModule {
++  public static final String NAME = "Vosk";
++
++  public NativeVoskSpec(ReactApplicationContext reactContext) {
++    super(reactContext);
++  }
++
++  @Override
++  public @Nonnull String getName() {
++    return NAME;
++  }
++
++  @ReactMethod
++  @DoNotStrip
++  public abstract void loadModel(String path, Promise promise);
++
++  @ReactMethod
++  @DoNotStrip
++  public abstract void unload();
++
++  @ReactMethod
++  @DoNotStrip
++  public abstract void start(@Nullable ReadableMap options, Promise promise);
++
++  @ReactMethod
++  @DoNotStrip
++  public abstract void stop();
++
++  @ReactMethod
++  @DoNotStrip
++  public abstract void addListener(String eventType);
++
++  @ReactMethod
++  @DoNotStrip
++  public abstract void removeListeners(double count);
++}
+diff --git a/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/CMakeLists.txt b/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/CMakeLists.txt
+new file mode 100644
+index 0000000..ac809af
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/CMakeLists.txt
+@@ -0,0 +1,49 @@
++# Copyright (c) Meta Platforms, Inc. and affiliates.
++#
++# This source code is licensed under the MIT license found in the
++# LICENSE file in the root directory of this source tree.
++
++cmake_minimum_required(VERSION 3.13)
++set(CMAKE_VERBOSE_MAKEFILE on)
++
++file(GLOB react_codegen_SRCS CONFIGURE_DEPENDS *.cpp react/renderer/components/VoskSpec/*.cpp)
++
++add_library(
++  react_codegen_VoskSpec
++  SHARED
++  ${react_codegen_SRCS}
++)
++
++target_include_directories(react_codegen_VoskSpec PUBLIC . react/renderer/components/VoskSpec)
++
++target_link_libraries(
++  react_codegen_VoskSpec
++  fbjni
++  folly_runtime
++  glog
++  jsi
++  react_codegen_rncore
++  react_debug
++  react_nativemodule_core
++  react_render_componentregistry
++  react_render_core
++  react_render_debug
++  react_render_graphics
++  react_render_imagemanager
++  react_render_mapbuffer
++  react_utils
++  rrc_image
++  rrc_view
++  turbomodulejsijni
++  yoga
++)
++
++target_compile_options(
++  react_codegen_VoskSpec
++  PRIVATE
++  -DLOG_TAG=\"ReactNative\"
++  -fexceptions
++  -frtti
++  -std=c++20
++  -Wall
++)
+diff --git a/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/VoskSpec-generated.cpp b/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/VoskSpec-generated.cpp
+new file mode 100644
+index 0000000..5e675bc
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/VoskSpec-generated.cpp
+@@ -0,0 +1,62 @@
++
++/**
++ * This code was generated by [react-native-codegen](https://www.npmjs.com/package/react-native-codegen).
++ *
++ * Do not edit this file as changes may cause incorrect behavior and will be lost
++ * once the code is regenerated.
++ *
++ * @generated by codegen project: GenerateModuleJniCpp.js
++ */
++
++#include "VoskSpec.h"
++
++namespace facebook::react {
++
++static facebook::jsi::Value __hostFunction_NativeVoskSpecJSI_loadModel(facebook::jsi::Runtime& rt, TurboModule &turboModule, const facebook::jsi::Value* args, size_t count) {
++  static jmethodID cachedMethodId = nullptr;
++  return static_cast<JavaTurboModule &>(turboModule).invokeJavaMethod(rt, PromiseKind, "loadModel", "(Ljava/lang/String;Lcom/facebook/react/bridge/Promise;)V", args, count, cachedMethodId);
++}
++
++static facebook::jsi::Value __hostFunction_NativeVoskSpecJSI_unload(facebook::jsi::Runtime& rt, TurboModule &turboModule, const facebook::jsi::Value* args, size_t count) {
++  static jmethodID cachedMethodId = nullptr;
++  return static_cast<JavaTurboModule &>(turboModule).invokeJavaMethod(rt, VoidKind, "unload", "()V", args, count, cachedMethodId);
++}
++
++static facebook::jsi::Value __hostFunction_NativeVoskSpecJSI_start(facebook::jsi::Runtime& rt, TurboModule &turboModule, const facebook::jsi::Value* args, size_t count) {
++  static jmethodID cachedMethodId = nullptr;
++  return static_cast<JavaTurboModule &>(turboModule).invokeJavaMethod(rt, PromiseKind, "start", "(Lcom/facebook/react/bridge/ReadableMap;Lcom/facebook/react/bridge/Promise;)V", args, count, cachedMethodId);
++}
++
++static facebook::jsi::Value __hostFunction_NativeVoskSpecJSI_stop(facebook::jsi::Runtime& rt, TurboModule &turboModule, const facebook::jsi::Value* args, size_t count) {
++  static jmethodID cachedMethodId = nullptr;
++  return static_cast<JavaTurboModule &>(turboModule).invokeJavaMethod(rt, VoidKind, "stop", "()V", args, count, cachedMethodId);
++}
++
++static facebook::jsi::Value __hostFunction_NativeVoskSpecJSI_addListener(facebook::jsi::Runtime& rt, TurboModule &turboModule, const facebook::jsi::Value* args, size_t count) {
++  static jmethodID cachedMethodId = nullptr;
++  return static_cast<JavaTurboModule &>(turboModule).invokeJavaMethod(rt, VoidKind, "addListener", "(Ljava/lang/String;)V", args, count, cachedMethodId);
++}
++
++static facebook::jsi::Value __hostFunction_NativeVoskSpecJSI_removeListeners(facebook::jsi::Runtime& rt, TurboModule &turboModule, const facebook::jsi::Value* args, size_t count) {
++  static jmethodID cachedMethodId = nullptr;
++  return static_cast<JavaTurboModule &>(turboModule).invokeJavaMethod(rt, VoidKind, "removeListeners", "(D)V", args, count, cachedMethodId);
++}
++
++NativeVoskSpecJSI::NativeVoskSpecJSI(const JavaTurboModule::InitParams &params)
++  : JavaTurboModule(params) {
++  methodMap_["loadModel"] = MethodMetadata {1, __hostFunction_NativeVoskSpecJSI_loadModel};
++  methodMap_["unload"] = MethodMetadata {0, __hostFunction_NativeVoskSpecJSI_unload};
++  methodMap_["start"] = MethodMetadata {1, __hostFunction_NativeVoskSpecJSI_start};
++  methodMap_["stop"] = MethodMetadata {0, __hostFunction_NativeVoskSpecJSI_stop};
++  methodMap_["addListener"] = MethodMetadata {1, __hostFunction_NativeVoskSpecJSI_addListener};
++  methodMap_["removeListeners"] = MethodMetadata {1, __hostFunction_NativeVoskSpecJSI_removeListeners};
++}
++
++std::shared_ptr<TurboModule> VoskSpec_ModuleProvider(const std::string &moduleName, const JavaTurboModule::InitParams &params) {
++  if (moduleName == "Vosk") {
++    return std::make_shared<NativeVoskSpecJSI>(params);
++  }
++  return nullptr;
++}
++
++} // namespace facebook::react
+diff --git a/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/VoskSpec.h b/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/VoskSpec.h
+new file mode 100644
+index 0000000..02098ca
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/VoskSpec.h
+@@ -0,0 +1,31 @@
++
++/**
++ * This code was generated by [react-native-codegen](https://www.npmjs.com/package/react-native-codegen).
++ *
++ * Do not edit this file as changes may cause incorrect behavior and will be lost
++ * once the code is regenerated.
++ *
++ * @generated by codegen project: GenerateModuleJniH.js
++ */
++
++#pragma once
++
++#include <ReactCommon/JavaTurboModule.h>
++#include <ReactCommon/TurboModule.h>
++#include <jsi/jsi.h>
++
++namespace facebook::react {
++
++/**
++ * JNI C++ class for module 'NativeVosk'
++ */
++class JSI_EXPORT NativeVoskSpecJSI : public JavaTurboModule {
++public:
++  NativeVoskSpecJSI(const JavaTurboModule::InitParams &params);
++};
++
++
++JSI_EXPORT
++std::shared_ptr<TurboModule> VoskSpec_ModuleProvider(const std::string &moduleName, const JavaTurboModule::InitParams &params);
++
++} // namespace facebook::react
+diff --git a/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/react/renderer/components/VoskSpec/ComponentDescriptors.cpp b/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/react/renderer/components/VoskSpec/ComponentDescriptors.cpp
+new file mode 100644
+index 0000000..dad21b7
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/react/renderer/components/VoskSpec/ComponentDescriptors.cpp
+@@ -0,0 +1,22 @@
++
++/**
++ * This code was generated by [react-native-codegen](https://www.npmjs.com/package/react-native-codegen).
++ *
++ * Do not edit this file as changes may cause incorrect behavior and will be lost
++ * once the code is regenerated.
++ *
++ * @generated by codegen project: GenerateComponentDescriptorCpp.js
++ */
++
++#include <react/renderer/components/VoskSpec/ComponentDescriptors.h>
++#include <react/renderer/core/ConcreteComponentDescriptor.h>
++#include <react/renderer/componentregistry/ComponentDescriptorProviderRegistry.h>
++
++namespace facebook::react {
++
++void VoskSpec_registerComponentDescriptorsFromCodegen(
++  std::shared_ptr<const ComponentDescriptorProviderRegistry> registry) {
++
++}
++
++} // namespace facebook::react
+diff --git a/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/react/renderer/components/VoskSpec/ComponentDescriptors.h b/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/react/renderer/components/VoskSpec/ComponentDescriptors.h
+new file mode 100644
+index 0000000..8658d6e
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/react/renderer/components/VoskSpec/ComponentDescriptors.h
+@@ -0,0 +1,24 @@
++
++/**
++ * This code was generated by [react-native-codegen](https://www.npmjs.com/package/react-native-codegen).
++ *
++ * Do not edit this file as changes may cause incorrect behavior and will be lost
++ * once the code is regenerated.
++ *
++ * @generated by codegen project: GenerateComponentDescriptorH.js
++ */
++
++#pragma once
++
++#include <react/renderer/components/VoskSpec/ShadowNodes.h>
++#include <react/renderer/core/ConcreteComponentDescriptor.h>
++#include <react/renderer/componentregistry/ComponentDescriptorProviderRegistry.h>
++
++namespace facebook::react {
++
++
++
++void VoskSpec_registerComponentDescriptorsFromCodegen(
++  std::shared_ptr<const ComponentDescriptorProviderRegistry> registry);
++
++} // namespace facebook::react
+diff --git a/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/react/renderer/components/VoskSpec/EventEmitters.cpp b/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/react/renderer/components/VoskSpec/EventEmitters.cpp
+new file mode 100644
+index 0000000..72da999
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/react/renderer/components/VoskSpec/EventEmitters.cpp
+@@ -0,0 +1,16 @@
++
++/**
++ * This code was generated by [react-native-codegen](https://www.npmjs.com/package/react-native-codegen).
++ *
++ * Do not edit this file as changes may cause incorrect behavior and will be lost
++ * once the code is regenerated.
++ *
++ * @generated by codegen project: GenerateEventEmitterCpp.js
++ */
++
++#include <react/renderer/components/VoskSpec/EventEmitters.h>
++
++
++namespace facebook::react {
++
++} // namespace facebook::react
+diff --git a/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/react/renderer/components/VoskSpec/EventEmitters.h b/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/react/renderer/components/VoskSpec/EventEmitters.h
+new file mode 100644
+index 0000000..2845a63
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/react/renderer/components/VoskSpec/EventEmitters.h
+@@ -0,0 +1,17 @@
++
++/**
++ * This code was generated by [react-native-codegen](https://www.npmjs.com/package/react-native-codegen).
++ *
++ * Do not edit this file as changes may cause incorrect behavior and will be lost
++ * once the code is regenerated.
++ *
++ * @generated by codegen project: GenerateEventEmitterH.js
++ */
++#pragma once
++
++#include <react/renderer/components/view/ViewEventEmitter.h>
++
++
++namespace facebook::react {
++
++} // namespace facebook::react
+diff --git a/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/react/renderer/components/VoskSpec/Props.cpp b/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/react/renderer/components/VoskSpec/Props.cpp
+new file mode 100644
+index 0000000..59dfae5
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/react/renderer/components/VoskSpec/Props.cpp
+@@ -0,0 +1,19 @@
++
++/**
++ * This code was generated by [react-native-codegen](https://www.npmjs.com/package/react-native-codegen).
++ *
++ * Do not edit this file as changes may cause incorrect behavior and will be lost
++ * once the code is regenerated.
++ *
++ * @generated by codegen project: GeneratePropsCpp.js
++ */
++
++#include <react/renderer/components/VoskSpec/Props.h>
++#include <react/renderer/core/PropsParserContext.h>
++#include <react/renderer/core/propsConversions.h>
++
++namespace facebook::react {
++
++
++
++} // namespace facebook::react
+diff --git a/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/react/renderer/components/VoskSpec/Props.h b/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/react/renderer/components/VoskSpec/Props.h
+new file mode 100644
+index 0000000..870864b
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/react/renderer/components/VoskSpec/Props.h
+@@ -0,0 +1,18 @@
++
++/**
++ * This code was generated by [react-native-codegen](https://www.npmjs.com/package/react-native-codegen).
++ *
++ * Do not edit this file as changes may cause incorrect behavior and will be lost
++ * once the code is regenerated.
++ *
++ * @generated by codegen project: GeneratePropsH.js
++ */
++#pragma once
++
++
++
++namespace facebook::react {
++
++
++
++} // namespace facebook::react
+diff --git a/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/react/renderer/components/VoskSpec/ShadowNodes.cpp b/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/react/renderer/components/VoskSpec/ShadowNodes.cpp
+new file mode 100644
+index 0000000..f7254f7
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/react/renderer/components/VoskSpec/ShadowNodes.cpp
+@@ -0,0 +1,17 @@
++
++/**
++ * This code was generated by [react-native-codegen](https://www.npmjs.com/package/react-native-codegen).
++ *
++ * Do not edit this file as changes may cause incorrect behavior and will be lost
++ * once the code is regenerated.
++ *
++ * @generated by codegen project: GenerateShadowNodeCpp.js
++ */
++
++#include <react/renderer/components/VoskSpec/ShadowNodes.h>
++
++namespace facebook::react {
++
++
++
++} // namespace facebook::react
+diff --git a/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/react/renderer/components/VoskSpec/ShadowNodes.h b/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/react/renderer/components/VoskSpec/ShadowNodes.h
+new file mode 100644
+index 0000000..e883e03
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/react/renderer/components/VoskSpec/ShadowNodes.h
+@@ -0,0 +1,23 @@
++
++/**
++ * This code was generated by [react-native-codegen](https://www.npmjs.com/package/react-native-codegen).
++ *
++ * Do not edit this file as changes may cause incorrect behavior and will be lost
++ * once the code is regenerated.
++ *
++ * @generated by codegen project: GenerateShadowNodeH.js
++ */
++
++#pragma once
++
++#include <react/renderer/components/VoskSpec/EventEmitters.h>
++#include <react/renderer/components/VoskSpec/Props.h>
++#include <react/renderer/components/VoskSpec/States.h>
++#include <react/renderer/components/view/ConcreteViewShadowNode.h>
++#include <jsi/jsi.h>
++
++namespace facebook::react {
++
++
++
++} // namespace facebook::react
+diff --git a/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/react/renderer/components/VoskSpec/States.cpp b/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/react/renderer/components/VoskSpec/States.cpp
+new file mode 100644
+index 0000000..915113e
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/react/renderer/components/VoskSpec/States.cpp
+@@ -0,0 +1,16 @@
++
++/**
++ * This code was generated by [react-native-codegen](https://www.npmjs.com/package/react-native-codegen).
++ *
++ * Do not edit this file as changes may cause incorrect behavior and will be lost
++ * once the code is regenerated.
++ *
++ * @generated by codegen project: GenerateStateCpp.js
++ */
++#include <react/renderer/components/VoskSpec/States.h>
++
++namespace facebook::react {
++
++
++
++} // namespace facebook::react
+diff --git a/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/react/renderer/components/VoskSpec/States.h b/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/react/renderer/components/VoskSpec/States.h
+new file mode 100644
+index 0000000..aeb63ea
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/react/renderer/components/VoskSpec/States.h
+@@ -0,0 +1,21 @@
++/**
++ * This code was generated by [react-native-codegen](https://www.npmjs.com/package/react-native-codegen).
++ *
++ * Do not edit this file as changes may cause incorrect behavior and will be lost
++ * once the code is regenerated.
++ *
++ * @generated by codegen project: GenerateStateH.js
++ */
++#pragma once
++
++#ifdef ANDROID
++#include <folly/dynamic.h>
++#include <react/renderer/mapbuffer/MapBuffer.h>
++#include <react/renderer/mapbuffer/MapBufferBuilder.h>
++#endif
++
++namespace facebook::react {
++
++
++
++} // namespace facebook::react
+\ No newline at end of file
+diff --git a/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/react/renderer/components/VoskSpec/VoskSpecJSI-generated.cpp b/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/react/renderer/components/VoskSpec/VoskSpecJSI-generated.cpp
+new file mode 100644
+index 0000000..82b0f8c
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/react/renderer/components/VoskSpec/VoskSpecJSI-generated.cpp
+@@ -0,0 +1,64 @@
++/**
++ * This code was generated by [react-native-codegen](https://www.npmjs.com/package/react-native-codegen).
++ *
++ * Do not edit this file as changes may cause incorrect behavior and will be lost
++ * once the code is regenerated.
++ *
++ * @generated by codegen project: GenerateModuleCpp.js
++ */
++
++#include "VoskSpecJSI.h"
++
++namespace facebook::react {
++
++static jsi::Value __hostFunction_NativeVoskCxxSpecJSI_loadModel(jsi::Runtime &rt, TurboModule &turboModule, const jsi::Value* args, size_t count) {
++  return static_cast<NativeVoskCxxSpecJSI *>(&turboModule)->loadModel(
++    rt,
++    args[0].asString(rt)
++  );
++}
++static jsi::Value __hostFunction_NativeVoskCxxSpecJSI_unload(jsi::Runtime &rt, TurboModule &turboModule, const jsi::Value* args, size_t count) {
++  static_cast<NativeVoskCxxSpecJSI *>(&turboModule)->unload(
++    rt
++  );
++  return jsi::Value::undefined();
++}
++static jsi::Value __hostFunction_NativeVoskCxxSpecJSI_start(jsi::Runtime &rt, TurboModule &turboModule, const jsi::Value* args, size_t count) {
++  return static_cast<NativeVoskCxxSpecJSI *>(&turboModule)->start(
++    rt,
++    count <= 0 || args[0].isNull() || args[0].isUndefined() ? std::nullopt : std::make_optional(args[0].asObject(rt))
++  );
++}
++static jsi::Value __hostFunction_NativeVoskCxxSpecJSI_stop(jsi::Runtime &rt, TurboModule &turboModule, const jsi::Value* args, size_t count) {
++  static_cast<NativeVoskCxxSpecJSI *>(&turboModule)->stop(
++    rt
++  );
++  return jsi::Value::undefined();
++}
++static jsi::Value __hostFunction_NativeVoskCxxSpecJSI_addListener(jsi::Runtime &rt, TurboModule &turboModule, const jsi::Value* args, size_t count) {
++  static_cast<NativeVoskCxxSpecJSI *>(&turboModule)->addListener(
++    rt,
++    args[0].asString(rt)
++  );
++  return jsi::Value::undefined();
++}
++static jsi::Value __hostFunction_NativeVoskCxxSpecJSI_removeListeners(jsi::Runtime &rt, TurboModule &turboModule, const jsi::Value* args, size_t count) {
++  static_cast<NativeVoskCxxSpecJSI *>(&turboModule)->removeListeners(
++    rt,
++    args[0].asNumber()
++  );
++  return jsi::Value::undefined();
++}
++
++NativeVoskCxxSpecJSI::NativeVoskCxxSpecJSI(std::shared_ptr<CallInvoker> jsInvoker)
++  : TurboModule("Vosk", jsInvoker) {
++  methodMap_["loadModel"] = MethodMetadata {1, __hostFunction_NativeVoskCxxSpecJSI_loadModel};
++  methodMap_["unload"] = MethodMetadata {0, __hostFunction_NativeVoskCxxSpecJSI_unload};
++  methodMap_["start"] = MethodMetadata {1, __hostFunction_NativeVoskCxxSpecJSI_start};
++  methodMap_["stop"] = MethodMetadata {0, __hostFunction_NativeVoskCxxSpecJSI_stop};
++  methodMap_["addListener"] = MethodMetadata {1, __hostFunction_NativeVoskCxxSpecJSI_addListener};
++  methodMap_["removeListeners"] = MethodMetadata {1, __hostFunction_NativeVoskCxxSpecJSI_removeListeners};
++}
++
++
++} // namespace facebook::react
+diff --git a/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/react/renderer/components/VoskSpec/VoskSpecJSI.h b/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/react/renderer/components/VoskSpec/VoskSpecJSI.h
+new file mode 100644
+index 0000000..916681d
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/generated/source/codegen/jni/react/renderer/components/VoskSpec/VoskSpecJSI.h
+@@ -0,0 +1,208 @@
++/**
++ * This code was generated by [react-native-codegen](https://www.npmjs.com/package/react-native-codegen).
++ *
++ * Do not edit this file as changes may cause incorrect behavior and will be lost
++ * once the code is regenerated.
++ *
++ * @generated by codegen project: GenerateModuleH.js
++ */
++
++#pragma once
++
++#include <ReactCommon/TurboModule.h>
++#include <react/bridging/Bridging.h>
++
++namespace facebook::react {
++
++
++  
++#pragma mark - VoskBaseVoskOptions
++
++template <typename P0, typename P1>
++struct [[deprecated("Use VoskVoskOptions instead.")]] VoskBaseVoskOptions {
++  P0 grammar;
++  P1 timeout;
++  bool operator==(const VoskBaseVoskOptions &other) const {
++    return grammar == other.grammar && timeout == other.timeout;
++  }
++};
++
++template <typename P0, typename P1>
++struct [[deprecated("Use VoskVoskOptionsBridging instead.")]] VoskBaseVoskOptionsBridging {
++  static VoskBaseVoskOptions<P0, P1> fromJs(
++      jsi::Runtime &rt,
++      const jsi::Object &value,
++      const std::shared_ptr<CallInvoker> &jsInvoker) {
++    VoskBaseVoskOptions<P0, P1> result{
++      bridging::fromJs<P0>(rt, value.getProperty(rt, "grammar"), jsInvoker),
++      bridging::fromJs<P1>(rt, value.getProperty(rt, "timeout"), jsInvoker)};
++    return result;
++  }
++
++#ifdef DEBUG
++  static jsi::Array grammarToJs(jsi::Runtime &rt, P0 value) {
++    return bridging::toJs(rt, value);
++  }
++
++  static double timeoutToJs(jsi::Runtime &rt, P1 value) {
++    return bridging::toJs(rt, value);
++  }
++#endif
++
++  static jsi::Object toJs(
++      jsi::Runtime &rt,
++      const VoskBaseVoskOptions<P0, P1> &value,
++      const std::shared_ptr<CallInvoker> &jsInvoker) {
++    auto result = facebook::jsi::Object(rt);
++    if (value.grammar) {
++      result.setProperty(rt, "grammar", bridging::toJs(rt, value.grammar.value(), jsInvoker));
++    }
++    if (value.timeout) {
++      result.setProperty(rt, "timeout", bridging::toJs(rt, value.timeout.value(), jsInvoker));
++    }
++    return result;
++  }
++};
++
++
++#pragma mark - VoskVoskOptions
++
++template <typename P0, typename P1>
++struct VoskVoskOptions {
++  P0 grammar;
++  P1 timeout;
++  bool operator==(const VoskVoskOptions &other) const {
++    return grammar == other.grammar && timeout == other.timeout;
++  }
++};
++
++template <typename T>
++struct VoskVoskOptionsBridging {
++  static T types;
++
++  static T fromJs(
++      jsi::Runtime &rt,
++      const jsi::Object &value,
++      const std::shared_ptr<CallInvoker> &jsInvoker) {
++    T result{
++      bridging::fromJs<decltype(types.grammar)>(rt, value.getProperty(rt, "grammar"), jsInvoker),
++      bridging::fromJs<decltype(types.timeout)>(rt, value.getProperty(rt, "timeout"), jsInvoker)};
++    return result;
++  }
++
++#ifdef DEBUG
++  static jsi::Array grammarToJs(jsi::Runtime &rt, decltype(types.grammar) value) {
++    return bridging::toJs(rt, value);
++  }
++
++  static double timeoutToJs(jsi::Runtime &rt, decltype(types.timeout) value) {
++    return bridging::toJs(rt, value);
++  }
++#endif
++
++  static jsi::Object toJs(
++      jsi::Runtime &rt,
++      const T &value,
++      const std::shared_ptr<CallInvoker> &jsInvoker) {
++    auto result = facebook::jsi::Object(rt);
++    if (value.grammar) {
++      result.setProperty(rt, "grammar", bridging::toJs(rt, value.grammar.value(), jsInvoker));
++    }
++    if (value.timeout) {
++      result.setProperty(rt, "timeout", bridging::toJs(rt, value.timeout.value(), jsInvoker));
++    }
++    return result;
++  }
++};
++
++class JSI_EXPORT NativeVoskCxxSpecJSI : public TurboModule {
++protected:
++  NativeVoskCxxSpecJSI(std::shared_ptr<CallInvoker> jsInvoker);
++
++public:
++  virtual jsi::Value loadModel(jsi::Runtime &rt, jsi::String path) = 0;
++  virtual void unload(jsi::Runtime &rt) = 0;
++  virtual jsi::Value start(jsi::Runtime &rt, std::optional<jsi::Object> options) = 0;
++  virtual void stop(jsi::Runtime &rt) = 0;
++  virtual void addListener(jsi::Runtime &rt, jsi::String eventType) = 0;
++  virtual void removeListeners(jsi::Runtime &rt, double count) = 0;
++
++};
++
++template <typename T>
++class JSI_EXPORT NativeVoskCxxSpec : public TurboModule {
++public:
++  jsi::Value get(jsi::Runtime &rt, const jsi::PropNameID &propName) override {
++    return delegate_.get(rt, propName);
++  }
++
++  static constexpr std::string_view kModuleName = "Vosk";
++
++protected:
++  NativeVoskCxxSpec(std::shared_ptr<CallInvoker> jsInvoker)
++    : TurboModule(std::string{NativeVoskCxxSpec::kModuleName}, jsInvoker),
++      delegate_(reinterpret_cast<T*>(this), jsInvoker) {}
++
++private:
++  class Delegate : public NativeVoskCxxSpecJSI {
++  public:
++    Delegate(T *instance, std::shared_ptr<CallInvoker> jsInvoker) :
++      NativeVoskCxxSpecJSI(std::move(jsInvoker)), instance_(instance) {}
++
++    jsi::Value loadModel(jsi::Runtime &rt, jsi::String path) override {
++      static_assert(
++          bridging::getParameterCount(&T::loadModel) == 2,
++          "Expected loadModel(...) to have 2 parameters");
++
++      return bridging::callFromJs<jsi::Value>(
++          rt, &T::loadModel, jsInvoker_, instance_, std::move(path));
++    }
++    void unload(jsi::Runtime &rt) override {
++      static_assert(
++          bridging::getParameterCount(&T::unload) == 1,
++          "Expected unload(...) to have 1 parameters");
++
++      return bridging::callFromJs<void>(
++          rt, &T::unload, jsInvoker_, instance_);
++    }
++    jsi::Value start(jsi::Runtime &rt, std::optional<jsi::Object> options) override {
++      static_assert(
++          bridging::getParameterCount(&T::start) == 2,
++          "Expected start(...) to have 2 parameters");
++
++      return bridging::callFromJs<jsi::Value>(
++          rt, &T::start, jsInvoker_, instance_, std::move(options));
++    }
++    void stop(jsi::Runtime &rt) override {
++      static_assert(
++          bridging::getParameterCount(&T::stop) == 1,
++          "Expected stop(...) to have 1 parameters");
++
++      return bridging::callFromJs<void>(
++          rt, &T::stop, jsInvoker_, instance_);
++    }
++    void addListener(jsi::Runtime &rt, jsi::String eventType) override {
++      static_assert(
++          bridging::getParameterCount(&T::addListener) == 2,
++          "Expected addListener(...) to have 2 parameters");
++
++      return bridging::callFromJs<void>(
++          rt, &T::addListener, jsInvoker_, instance_, std::move(eventType));
++    }
++    void removeListeners(jsi::Runtime &rt, double count) override {
++      static_assert(
++          bridging::getParameterCount(&T::removeListeners) == 2,
++          "Expected removeListeners(...) to have 2 parameters");
++
++      return bridging::callFromJs<void>(
++          rt, &T::removeListeners, jsInvoker_, instance_, std::move(count));
++    }
++
++  private:
++    T *instance_;
++  };
++
++  Delegate delegate_;
++};
++
++} // namespace facebook::react
+diff --git a/node_modules/react-native-vosk/android/build/generated/source/codegen/schema.json b/node_modules/react-native-vosk/android/build/generated/source/codegen/schema.json
+new file mode 100644
+index 0000000..0e50d2a
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/generated/source/codegen/schema.json
+@@ -0,0 +1,142 @@
++{
++  "modules": {
++    "NativeVosk": {
++      "type": "NativeModule",
++      "aliasMap": {
++        "VoskOptions": {
++          "type": "ObjectTypeAnnotation",
++          "properties": [
++            {
++              "name": "grammar",
++              "optional": true,
++              "typeAnnotation": {
++                "type": "ArrayTypeAnnotation",
++                "elementType": {
++                  "type": "StringTypeAnnotation"
++                }
++              }
++            },
++            {
++              "name": "timeout",
++              "optional": true,
++              "typeAnnotation": {
++                "type": "NumberTypeAnnotation"
++              }
++            }
++          ]
++        }
++      },
++      "enumMap": {},
++      "spec": {
++        "properties": [
++          {
++            "name": "loadModel",
++            "optional": false,
++            "typeAnnotation": {
++              "type": "FunctionTypeAnnotation",
++              "returnTypeAnnotation": {
++                "type": "PromiseTypeAnnotation",
++                "elementType": {
++                  "type": "VoidTypeAnnotation"
++                }
++              },
++              "params": [
++                {
++                  "name": "path",
++                  "optional": false,
++                  "typeAnnotation": {
++                    "type": "StringTypeAnnotation"
++                  }
++                }
++              ]
++            }
++          },
++          {
++            "name": "unload",
++            "optional": false,
++            "typeAnnotation": {
++              "type": "FunctionTypeAnnotation",
++              "returnTypeAnnotation": {
++                "type": "VoidTypeAnnotation"
++              },
++              "params": []
++            }
++          },
++          {
++            "name": "start",
++            "optional": false,
++            "typeAnnotation": {
++              "type": "FunctionTypeAnnotation",
++              "returnTypeAnnotation": {
++                "type": "PromiseTypeAnnotation",
++                "elementType": {
++                  "type": "VoidTypeAnnotation"
++                }
++              },
++              "params": [
++                {
++                  "name": "options",
++                  "optional": true,
++                  "typeAnnotation": {
++                    "type": "TypeAliasTypeAnnotation",
++                    "name": "VoskOptions"
++                  }
++                }
++              ]
++            }
++          },
++          {
++            "name": "stop",
++            "optional": false,
++            "typeAnnotation": {
++              "type": "FunctionTypeAnnotation",
++              "returnTypeAnnotation": {
++                "type": "VoidTypeAnnotation"
++              },
++              "params": []
++            }
++          },
++          {
++            "name": "addListener",
++            "optional": false,
++            "typeAnnotation": {
++              "type": "FunctionTypeAnnotation",
++              "returnTypeAnnotation": {
++                "type": "VoidTypeAnnotation"
++              },
++              "params": [
++                {
++                  "name": "eventType",
++                  "optional": false,
++                  "typeAnnotation": {
++                    "type": "StringTypeAnnotation"
++                  }
++                }
++              ]
++            }
++          },
++          {
++            "name": "removeListeners",
++            "optional": false,
++            "typeAnnotation": {
++              "type": "FunctionTypeAnnotation",
++              "returnTypeAnnotation": {
++                "type": "VoidTypeAnnotation"
++              },
++              "params": [
++                {
++                  "name": "count",
++                  "optional": false,
++                  "typeAnnotation": {
++                    "type": "NumberTypeAnnotation"
++                  }
++                }
++              ]
++            }
++          }
++        ]
++      },
++      "moduleName": "Vosk"
++    }
++  }
++}
+\ No newline at end of file
+diff --git a/node_modules/react-native-vosk/android/build/intermediates/aapt_friendly_merged_manifests/debug/aapt/AndroidManifest.xml b/node_modules/react-native-vosk/android/build/intermediates/aapt_friendly_merged_manifests/debug/aapt/AndroidManifest.xml
+new file mode 100644
+index 0000000..9d0c4b6
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/intermediates/aapt_friendly_merged_manifests/debug/aapt/AndroidManifest.xml
+@@ -0,0 +1,9 @@
++<?xml version="1.0" encoding="utf-8"?>
++<manifest xmlns:android="http://schemas.android.com/apk/res/android"
++    package="com.vosk" >
++
++    <uses-sdk android:minSdkVersion="23" />
++
++    <uses-permission android:name="android.permission.RECORD_AUDIO" />
++
++</manifest>
+\ No newline at end of file
+diff --git a/node_modules/react-native-vosk/android/build/intermediates/aapt_friendly_merged_manifests/debug/aapt/output-metadata.json b/node_modules/react-native-vosk/android/build/intermediates/aapt_friendly_merged_manifests/debug/aapt/output-metadata.json
+new file mode 100644
+index 0000000..47efb20
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/intermediates/aapt_friendly_merged_manifests/debug/aapt/output-metadata.json
+@@ -0,0 +1,18 @@
++{
++  "version": 3,
++  "artifactType": {
++    "type": "AAPT_FRIENDLY_MERGED_MANIFESTS",
++    "kind": "Directory"
++  },
++  "applicationId": "com.vosk",
++  "variantName": "debug",
++  "elements": [
++    {
++      "type": "SINGLE",
++      "filters": [],
++      "attributes": [],
++      "outputFile": "AndroidManifest.xml"
++    }
++  ],
++  "elementType": "File"
++}
+\ No newline at end of file
+diff --git a/node_modules/react-native-vosk/android/build/intermediates/aar_metadata/debug/aar-metadata.properties b/node_modules/react-native-vosk/android/build/intermediates/aar_metadata/debug/aar-metadata.properties
+new file mode 100644
+index 0000000..1211b1e
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/intermediates/aar_metadata/debug/aar-metadata.properties
+@@ -0,0 +1,6 @@
++aarFormatVersion=1.0
++aarMetadataVersion=1.0
++minCompileSdk=1
++minCompileSdkExtension=0
++minAndroidGradlePluginVersion=1.0.0
++coreLibraryDesugaringEnabled=false
+diff --git a/node_modules/react-native-vosk/android/build/intermediates/annotation_processor_list/debug/annotationProcessors.json b/node_modules/react-native-vosk/android/build/intermediates/annotation_processor_list/debug/annotationProcessors.json
+new file mode 100644
+index 0000000..9e26dfe
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/intermediates/annotation_processor_list/debug/annotationProcessors.json
+@@ -0,0 +1 @@
++{}
+\ No newline at end of file
+diff --git a/node_modules/react-native-vosk/android/build/intermediates/compile_library_classes_jar/debug/classes.jar b/node_modules/react-native-vosk/android/build/intermediates/compile_library_classes_jar/debug/classes.jar
+new file mode 100644
+index 0000000..f46e129
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/intermediates/compile_library_classes_jar/debug/classes.jar differ
+diff --git a/node_modules/react-native-vosk/android/build/intermediates/compile_r_class_jar/debug/R.jar b/node_modules/react-native-vosk/android/build/intermediates/compile_r_class_jar/debug/R.jar
+new file mode 100644
+index 0000000..5f5e14a
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/intermediates/compile_r_class_jar/debug/R.jar differ
+diff --git a/node_modules/react-native-vosk/android/build/intermediates/compile_symbol_list/debug/R.txt b/node_modules/react-native-vosk/android/build/intermediates/compile_symbol_list/debug/R.txt
+new file mode 100644
+index 0000000..e69de29
+diff --git a/node_modules/react-native-vosk/android/build/intermediates/incremental/debug/packageDebugResources/compile-file-map.properties b/node_modules/react-native-vosk/android/build/intermediates/incremental/debug/packageDebugResources/compile-file-map.properties
+new file mode 100644
+index 0000000..f73cc1e
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/intermediates/incremental/debug/packageDebugResources/compile-file-map.properties
+@@ -0,0 +1 @@
++#Tue Mar 31 16:04:06 MDT 2026
+diff --git a/node_modules/react-native-vosk/android/build/intermediates/incremental/debug/packageDebugResources/merger.xml b/node_modules/react-native-vosk/android/build/intermediates/incremental/debug/packageDebugResources/merger.xml
+new file mode 100644
+index 0000000..fe8582c
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/intermediates/incremental/debug/packageDebugResources/merger.xml
+@@ -0,0 +1,2 @@
++<?xml version="1.0" encoding="utf-8"?>
++<merger version="3"><dataSet aapt-namespace="http://schemas.android.com/apk/res-auto" config="main$Generated" generated="true" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/src/main/res"/></dataSet><dataSet aapt-namespace="http://schemas.android.com/apk/res-auto" config="main" generated-set="main$Generated" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/src/main/res"/></dataSet><dataSet aapt-namespace="http://schemas.android.com/apk/res-auto" config="debug$Generated" generated="true" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/src/debug/res"/></dataSet><dataSet aapt-namespace="http://schemas.android.com/apk/res-auto" config="debug" generated-set="debug$Generated" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/src/debug/res"/></dataSet><dataSet aapt-namespace="http://schemas.android.com/apk/res-auto" config="generated$Generated" generated="true" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/build/generated/res/resValues/debug"/></dataSet><dataSet aapt-namespace="http://schemas.android.com/apk/res-auto" config="generated" generated-set="generated$Generated" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/build/generated/res/resValues/debug"/></dataSet><mergedItems/></merger>
+\ No newline at end of file
+diff --git a/node_modules/react-native-vosk/android/build/intermediates/incremental/packageDebugAssets/merger.xml b/node_modules/react-native-vosk/android/build/intermediates/incremental/packageDebugAssets/merger.xml
+new file mode 100644
+index 0000000..a31561c
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/intermediates/incremental/packageDebugAssets/merger.xml
+@@ -0,0 +1,2 @@
++<?xml version="1.0" encoding="utf-8"?>
++<merger version="3"><dataSet config="main" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/src/main/assets"/><source path="/Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/build/generated/assets"><file name="model-en-us/am/final.mdl" path="/Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/am/final.mdl"/><file name="model-en-us/graph/HCLr.fst" path="/Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/graph/HCLr.fst"/><file name="model-en-us/graph/disambig_tid.int" path="/Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/graph/disambig_tid.int"/><file name="model-en-us/graph/phones/word_boundary.int" path="/Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/graph/phones/word_boundary.int"/><file name="model-en-us/graph/Gr.fst" path="/Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/graph/Gr.fst"/><file name="model-en-us/README" path="/Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/README"/><file name="model-en-us/ivector/global_cmvn.stats" path="/Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/ivector/global_cmvn.stats"/><file name="model-en-us/ivector/splice.conf" path="/Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/ivector/splice.conf"/><file name="model-en-us/ivector/final.mat" path="/Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/ivector/final.mat"/><file name="model-en-us/ivector/online_cmvn.conf" path="/Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/ivector/online_cmvn.conf"/><file name="model-en-us/ivector/final.ie" path="/Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/ivector/final.ie"/><file name="model-en-us/ivector/final.dubm" path="/Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/ivector/final.dubm"/><file name="model-en-us/uuid" path="/Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/uuid"/><file name="model-en-us/conf/mfcc.conf" path="/Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/conf/mfcc.conf"/><file name="model-en-us/conf/model.conf" path="/Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/build/generated/assets/model-en-us/conf/model.conf"/></source></dataSet><dataSet config="debug" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/src/debug/assets"/></dataSet><dataSet config="generated" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/build/intermediates/shader_assets/debug/out"/></dataSet></merger>
+\ No newline at end of file
+diff --git a/node_modules/react-native-vosk/android/build/intermediates/java_res/debug/out/META-INF/react-native-vosk_debug.kotlin_module b/node_modules/react-native-vosk/android/build/intermediates/java_res/debug/out/META-INF/react-native-vosk_debug.kotlin_module
+new file mode 100644
+index 0000000..1e9f2ca
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/intermediates/java_res/debug/out/META-INF/react-native-vosk_debug.kotlin_module differ
+diff --git a/node_modules/react-native-vosk/android/build/intermediates/javac/debug/classes/com/vosk/BuildConfig.class b/node_modules/react-native-vosk/android/build/intermediates/javac/debug/classes/com/vosk/BuildConfig.class
+new file mode 100644
+index 0000000..740e727
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/intermediates/javac/debug/classes/com/vosk/BuildConfig.class differ
+diff --git a/node_modules/react-native-vosk/android/build/intermediates/javac/debug/classes/com/vosk/NativeVoskSpec.class b/node_modules/react-native-vosk/android/build/intermediates/javac/debug/classes/com/vosk/NativeVoskSpec.class
+new file mode 100644
+index 0000000..33e49f5
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/intermediates/javac/debug/classes/com/vosk/NativeVoskSpec.class differ
+diff --git a/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/README b/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/README
+new file mode 100644
+index 0000000..a7f7931
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/README
+@@ -0,0 +1,9 @@
++US English model for mobile Vosk applications
++
++Copyright 2020 Alpha Cephei Inc
++
++Accuracy: 10.38 (tedlium test) 9.85 (librispeech test-clean)
++Speed: 0.11xRT (desktop)
++Latency: 0.15s (right context)
++
++
+diff --git a/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/am/final.mdl b/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/am/final.mdl
+new file mode 100644
+index 0000000..5596b31
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/am/final.mdl differ
+diff --git a/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/conf/mfcc.conf b/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/conf/mfcc.conf
+new file mode 100644
+index 0000000..eaa40c5
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/conf/mfcc.conf
+@@ -0,0 +1,7 @@
++--sample-frequency=16000
++--use-energy=false
++--num-mel-bins=40
++--num-ceps=40
++--low-freq=20
++--high-freq=7600
++--allow-downsample=true
+diff --git a/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/conf/model.conf b/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/conf/model.conf
+new file mode 100644
+index 0000000..9d5b0da
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/conf/model.conf
+@@ -0,0 +1,10 @@
++--min-active=200
++--max-active=3000
++--beam=10.0
++--lattice-beam=2.0
++--acoustic-scale=1.0
++--frame-subsampling-factor=3
++--endpoint.silence-phones=1:2:3:4:5:6:7:8:9:10
++--endpoint.rule2.min-trailing-silence=0.5
++--endpoint.rule3.min-trailing-silence=0.75
++--endpoint.rule4.min-trailing-silence=1.0
+diff --git a/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/graph/Gr.fst b/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/graph/Gr.fst
+new file mode 100644
+index 0000000..1f292e6
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/graph/Gr.fst differ
+diff --git a/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/graph/HCLr.fst b/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/graph/HCLr.fst
+new file mode 100644
+index 0000000..9797b26
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/graph/HCLr.fst differ
+diff --git a/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/graph/disambig_tid.int b/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/graph/disambig_tid.int
+new file mode 100644
+index 0000000..762fd5f
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/graph/disambig_tid.int
+@@ -0,0 +1,17 @@
++10015
++10016
++10017
++10018
++10019
++10020
++10021
++10022
++10023
++10024
++10025
++10026
++10027
++10028
++10029
++10030
++10031
+diff --git a/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/graph/phones/word_boundary.int b/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/graph/phones/word_boundary.int
+new file mode 100644
+index 0000000..df23fd7
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/graph/phones/word_boundary.int
+@@ -0,0 +1,166 @@
++1 nonword
++2 begin
++3 end
++4 internal
++5 singleton
++6 nonword
++7 begin
++8 end
++9 internal
++10 singleton
++11 begin
++12 end
++13 internal
++14 singleton
++15 begin
++16 end
++17 internal
++18 singleton
++19 begin
++20 end
++21 internal
++22 singleton
++23 begin
++24 end
++25 internal
++26 singleton
++27 begin
++28 end
++29 internal
++30 singleton
++31 begin
++32 end
++33 internal
++34 singleton
++35 begin
++36 end
++37 internal
++38 singleton
++39 begin
++40 end
++41 internal
++42 singleton
++43 begin
++44 end
++45 internal
++46 singleton
++47 begin
++48 end
++49 internal
++50 singleton
++51 begin
++52 end
++53 internal
++54 singleton
++55 begin
++56 end
++57 internal
++58 singleton
++59 begin
++60 end
++61 internal
++62 singleton
++63 begin
++64 end
++65 internal
++66 singleton
++67 begin
++68 end
++69 internal
++70 singleton
++71 begin
++72 end
++73 internal
++74 singleton
++75 begin
++76 end
++77 internal
++78 singleton
++79 begin
++80 end
++81 internal
++82 singleton
++83 begin
++84 end
++85 internal
++86 singleton
++87 begin
++88 end
++89 internal
++90 singleton
++91 begin
++92 end
++93 internal
++94 singleton
++95 begin
++96 end
++97 internal
++98 singleton
++99 begin
++100 end
++101 internal
++102 singleton
++103 begin
++104 end
++105 internal
++106 singleton
++107 begin
++108 end
++109 internal
++110 singleton
++111 begin
++112 end
++113 internal
++114 singleton
++115 begin
++116 end
++117 internal
++118 singleton
++119 begin
++120 end
++121 internal
++122 singleton
++123 begin
++124 end
++125 internal
++126 singleton
++127 begin
++128 end
++129 internal
++130 singleton
++131 begin
++132 end
++133 internal
++134 singleton
++135 begin
++136 end
++137 internal
++138 singleton
++139 begin
++140 end
++141 internal
++142 singleton
++143 begin
++144 end
++145 internal
++146 singleton
++147 begin
++148 end
++149 internal
++150 singleton
++151 begin
++152 end
++153 internal
++154 singleton
++155 begin
++156 end
++157 internal
++158 singleton
++159 begin
++160 end
++161 internal
++162 singleton
++163 begin
++164 end
++165 internal
++166 singleton
+diff --git a/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/ivector/final.dubm b/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/ivector/final.dubm
+new file mode 100644
+index 0000000..db789eb
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/ivector/final.dubm differ
+diff --git a/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/ivector/final.ie b/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/ivector/final.ie
+new file mode 100644
+index 0000000..93737bf
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/ivector/final.ie differ
+diff --git a/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/ivector/final.mat b/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/ivector/final.mat
+new file mode 100644
+index 0000000..c3ec635
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/ivector/final.mat differ
+diff --git a/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/ivector/global_cmvn.stats b/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/ivector/global_cmvn.stats
+new file mode 100644
+index 0000000..b9d92ef
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/ivector/global_cmvn.stats
+@@ -0,0 +1,3 @@
++ [
++  1.682383e+11 -1.1595e+10 -1.521733e+10 4.32034e+09 -2.257938e+10 -1.969666e+10 -2.559265e+10 -1.535687e+10 -1.276854e+10 -4.494483e+09 -1.209085e+10 -5.64008e+09 -1.134847e+10 -3.419512e+09 -1.079542e+10 -4.145463e+09 -6.637486e+09 -1.11318e+09 -3.479773e+09 -1.245932e+08 -1.386961e+09 6.560655e+07 -2.436518e+08 -4.032432e+07 4.620046e+08 -7.714964e+07 9.551484e+08 -4.119761e+08 8.208582e+08 -7.117156e+08 7.457703e+08 -4.3106e+08 1.202726e+09 2.904036e+08 1.231931e+09 3.629848e+08 6.366939e+08 -4.586172e+08 -5.267629e+08 -3.507819e+08 1.679838e+09 
++  1.741141e+13 8.92488e+11 8.743834e+11 8.848896e+11 1.190313e+12 1.160279e+12 1.300066e+12 1.005678e+12 9.39335e+11 8.089614e+11 7.927041e+11 6.882427e+11 6.444235e+11 5.151451e+11 4.825723e+11 3.210106e+11 2.720254e+11 1.772539e+11 1.248102e+11 6.691599e+10 3.599804e+10 1.207574e+10 1.679301e+09 4.594778e+08 5.821614e+09 1.451758e+10 2.55803e+10 3.43277e+10 4.245286e+10 4.784859e+10 4.988591e+10 4.925451e+10 5.074584e+10 4.9557e+10 4.407876e+10 3.421443e+10 3.138606e+10 2.539716e+10 1.948134e+10 1.381167e+10 0 ]
+diff --git a/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/ivector/online_cmvn.conf b/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/ivector/online_cmvn.conf
+new file mode 100644
+index 0000000..7748a4a
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/ivector/online_cmvn.conf
+@@ -0,0 +1 @@
++# configuration file for apply-cmvn-online, used in the script ../local/run_online_decoding.sh
+diff --git a/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/ivector/splice.conf b/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/ivector/splice.conf
+new file mode 100644
+index 0000000..960cd2e
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/ivector/splice.conf
+@@ -0,0 +1,2 @@
++--left-context=3
++--right-context=3
+diff --git a/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/uuid b/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/uuid
+new file mode 100644
+index 0000000..e6602cb
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/intermediates/library_assets/debug/out/model-en-us/uuid
+@@ -0,0 +1 @@
++8e3cebf0-2bb4-4624-b1f3-b68af6e80073
+\ No newline at end of file
+diff --git a/node_modules/react-native-vosk/android/build/intermediates/local_only_symbol_list/debug/R-def.txt b/node_modules/react-native-vosk/android/build/intermediates/local_only_symbol_list/debug/R-def.txt
+new file mode 100644
+index 0000000..78ac5b8
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/intermediates/local_only_symbol_list/debug/R-def.txt
+@@ -0,0 +1,2 @@
++R_DEF: Internal format may change without notice
++local
+diff --git a/node_modules/react-native-vosk/android/build/intermediates/manifest_merge_blame_file/debug/manifest-merger-blame-debug-report.txt b/node_modules/react-native-vosk/android/build/intermediates/manifest_merge_blame_file/debug/manifest-merger-blame-debug-report.txt
+new file mode 100644
+index 0000000..fc7bda1
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/intermediates/manifest_merge_blame_file/debug/manifest-merger-blame-debug-report.txt
+@@ -0,0 +1,11 @@
++1<?xml version="1.0" encoding="utf-8"?>
++2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
++3    package="com.vosk" >
++4
++5    <uses-sdk android:minSdkVersion="23" />
++6
++7    <uses-permission android:name="android.permission.RECORD_AUDIO" />
++7-->/Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/src/main/AndroidManifest.xml:2:3-69
++7-->/Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/src/main/AndroidManifest.xml:2:20-66
++8
++9</manifest>
+diff --git a/node_modules/react-native-vosk/android/build/intermediates/merged_manifest/debug/AndroidManifest.xml b/node_modules/react-native-vosk/android/build/intermediates/merged_manifest/debug/AndroidManifest.xml
+new file mode 100644
+index 0000000..9d0c4b6
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/intermediates/merged_manifest/debug/AndroidManifest.xml
+@@ -0,0 +1,9 @@
++<?xml version="1.0" encoding="utf-8"?>
++<manifest xmlns:android="http://schemas.android.com/apk/res/android"
++    package="com.vosk" >
++
++    <uses-sdk android:minSdkVersion="23" />
++
++    <uses-permission android:name="android.permission.RECORD_AUDIO" />
++
++</manifest>
+\ No newline at end of file
+diff --git a/node_modules/react-native-vosk/android/build/intermediates/navigation_json/debug/navigation.json b/node_modules/react-native-vosk/android/build/intermediates/navigation_json/debug/navigation.json
+new file mode 100644
+index 0000000..0637a08
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/intermediates/navigation_json/debug/navigation.json
+@@ -0,0 +1 @@
++[]
+\ No newline at end of file
+diff --git a/node_modules/react-native-vosk/android/build/intermediates/runtime_library_classes_jar/debug/classes.jar b/node_modules/react-native-vosk/android/build/intermediates/runtime_library_classes_jar/debug/classes.jar
+new file mode 100644
+index 0000000..bd8e83f
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/intermediates/runtime_library_classes_jar/debug/classes.jar differ
+diff --git a/node_modules/react-native-vosk/android/build/intermediates/symbol_list_with_package_name/debug/package-aware-r.txt b/node_modules/react-native-vosk/android/build/intermediates/symbol_list_with_package_name/debug/package-aware-r.txt
+new file mode 100644
+index 0000000..a8095fc
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/intermediates/symbol_list_with_package_name/debug/package-aware-r.txt
+@@ -0,0 +1 @@
++com.vosk
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab
+new file mode 100644
+index 0000000..ab986f7
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab.keystream b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab.keystream
+new file mode 100644
+index 0000000..e2ee2e8
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab.keystream differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab.keystream.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab.keystream.len
+new file mode 100644
+index 0000000..f652e4f
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab.keystream.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab.len
+new file mode 100644
+index 0000000..01bdaa1
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab.values.at b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab.values.at
+new file mode 100644
+index 0000000..a1c7613
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab.values.at differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab_i b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab_i
+new file mode 100644
+index 0000000..5a46b9c
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab_i differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab_i.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab_i.len
+new file mode 100644
+index 0000000..131e265
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab_i.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab
+new file mode 100644
+index 0000000..c462f73
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab.keystream b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab.keystream
+new file mode 100644
+index 0000000..66d0819
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab.keystream differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab.keystream.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab.keystream.len
+new file mode 100644
+index 0000000..1e42780
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab.keystream.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab.len
+new file mode 100644
+index 0000000..93a595b
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab.values.at b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab.values.at
+new file mode 100644
+index 0000000..8f28327
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab.values.at differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab_i b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab_i
+new file mode 100644
+index 0000000..f332138
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab_i differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab_i.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab_i.len
+new file mode 100644
+index 0000000..131e265
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab_i.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab
+new file mode 100644
+index 0000000..ae2d2c0
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab.keystream b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab.keystream
+new file mode 100644
+index 0000000..66d0819
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab.keystream differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab.keystream.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab.keystream.len
+new file mode 100644
+index 0000000..1e42780
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab.keystream.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab.len
+new file mode 100644
+index 0000000..93a595b
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab.values.at b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab.values.at
+new file mode 100644
+index 0000000..2840e62
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab.values.at differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab_i b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab_i
+new file mode 100644
+index 0000000..f332138
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab_i differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab_i.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab_i.len
+new file mode 100644
+index 0000000..131e265
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab_i.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/constants.tab b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/constants.tab
+new file mode 100644
+index 0000000..466cf9f
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/constants.tab differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/constants.tab.keystream b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/constants.tab.keystream
+new file mode 100644
+index 0000000..732597c
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/constants.tab.keystream differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/constants.tab.keystream.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/constants.tab.keystream.len
+new file mode 100644
+index 0000000..c2e8349
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/constants.tab.keystream.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/constants.tab.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/constants.tab.len
+new file mode 100644
+index 0000000..2a17e6e
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/constants.tab.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/constants.tab.values.at b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/constants.tab.values.at
+new file mode 100644
+index 0000000..599c5d7
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/constants.tab.values.at differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/constants.tab_i b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/constants.tab_i
+new file mode 100644
+index 0000000..b4e7de0
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/constants.tab_i differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/constants.tab_i.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/constants.tab_i.len
+new file mode 100644
+index 0000000..131e265
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/constants.tab_i.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab
+new file mode 100644
+index 0000000..4d4dd7a
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.keystream b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.keystream
+new file mode 100644
+index 0000000..2cd2525
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.keystream differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.keystream.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.keystream.len
+new file mode 100644
+index 0000000..1e61406
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.keystream.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.len
+new file mode 100644
+index 0000000..93a595b
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.values.at b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.values.at
+new file mode 100644
+index 0000000..ba42f2b
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.values.at differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab_i b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab_i
+new file mode 100644
+index 0000000..abbecd3
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab_i differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab_i.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab_i.len
+new file mode 100644
+index 0000000..131e265
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab_i.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/java-sources-proto-map.tab b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/java-sources-proto-map.tab
+new file mode 100644
+index 0000000..bdf584a
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/java-sources-proto-map.tab differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/java-sources-proto-map.tab.keystream b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/java-sources-proto-map.tab.keystream
+new file mode 100644
+index 0000000..b726df1
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/java-sources-proto-map.tab.keystream differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/java-sources-proto-map.tab.keystream.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/java-sources-proto-map.tab.keystream.len
+new file mode 100644
+index 0000000..e534549
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/java-sources-proto-map.tab.keystream.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/java-sources-proto-map.tab.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/java-sources-proto-map.tab.len
+new file mode 100644
+index 0000000..2a17e6e
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/java-sources-proto-map.tab.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/java-sources-proto-map.tab.values.at b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/java-sources-proto-map.tab.values.at
+new file mode 100644
+index 0000000..d5ecd96
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/java-sources-proto-map.tab.values.at differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/java-sources-proto-map.tab_i b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/java-sources-proto-map.tab_i
+new file mode 100644
+index 0000000..c00120c
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/java-sources-proto-map.tab_i differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/java-sources-proto-map.tab_i.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/java-sources-proto-map.tab_i.len
+new file mode 100644
+index 0000000..131e265
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/java-sources-proto-map.tab_i.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab
+new file mode 100644
+index 0000000..636ce61
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.keystream b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.keystream
+new file mode 100644
+index 0000000..3245799
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.keystream differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.keystream.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.keystream.len
+new file mode 100644
+index 0000000..25c4d2f
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.keystream.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.len
+new file mode 100644
+index 0000000..93a595b
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.values.at b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.values.at
+new file mode 100644
+index 0000000..4dbf85c
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.values.at differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab_i b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab_i
+new file mode 100644
+index 0000000..e4bbb7f
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab_i differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab_i.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab_i.len
+new file mode 100644
+index 0000000..131e265
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab_i.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab
+new file mode 100644
+index 0000000..ef667b2
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab.keystream b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab.keystream
+new file mode 100644
+index 0000000..74d4450
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab.keystream differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab.keystream.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab.keystream.len
+new file mode 100644
+index 0000000..23267c8
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab.keystream.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab.len
+new file mode 100644
+index 0000000..a9f80ae
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab.values.at b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab.values.at
+new file mode 100644
+index 0000000..260a540
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab.values.at differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab_i b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab_i
+new file mode 100644
+index 0000000..a9c965b
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab_i differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab_i.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab_i.len
+new file mode 100644
+index 0000000..131e265
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab_i.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab
+new file mode 100644
+index 0000000..c646557
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab.keystream b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab.keystream
+new file mode 100644
+index 0000000..270753d
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab.keystream differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab.keystream.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab.keystream.len
+new file mode 100644
+index 0000000..0455898
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab.keystream.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab.len
+new file mode 100644
+index 0000000..ec8f944
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab.values.at b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab.values.at
+new file mode 100644
+index 0000000..3ecc902
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab.values.at differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab_i b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab_i
+new file mode 100644
+index 0000000..311dbb6
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab_i differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab_i.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab_i.len
+new file mode 100644
+index 0000000..131e265
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab_i.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab
+new file mode 100644
+index 0000000..e384355
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab.keystream b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab.keystream
+new file mode 100644
+index 0000000..d6f2004
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab.keystream differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab.keystream.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab.keystream.len
+new file mode 100644
+index 0000000..a8206a1
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab.keystream.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab.len
+new file mode 100644
+index 0000000..a9f80ae
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab.values.at b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab.values.at
+new file mode 100644
+index 0000000..3e1dec3
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab.values.at differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab_i b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab_i
+new file mode 100644
+index 0000000..8c647de
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab_i differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab_i.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab_i.len
+new file mode 100644
+index 0000000..131e265
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab_i.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/counters.tab b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/counters.tab
+new file mode 100644
+index 0000000..2ceb12b
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/counters.tab
+@@ -0,0 +1,2 @@
++2
++0
+\ No newline at end of file
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab
+new file mode 100644
+index 0000000..43af85a
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab.keystream b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab.keystream
+new file mode 100644
+index 0000000..e2ee2e8
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab.keystream differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab.keystream.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab.keystream.len
+new file mode 100644
+index 0000000..f652e4f
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab.keystream.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab.len
+new file mode 100644
+index 0000000..01bdaa1
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab.values.at b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab.values.at
+new file mode 100644
+index 0000000..7d30a43
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab.values.at differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab_i b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab_i
+new file mode 100644
+index 0000000..5a46b9c
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab_i differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab_i.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab_i.len
+new file mode 100644
+index 0000000..131e265
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab_i.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab
+new file mode 100644
+index 0000000..8f41d4c
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.keystream b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.keystream
+new file mode 100644
+index 0000000..100d205
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.keystream differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.keystream.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.keystream.len
+new file mode 100644
+index 0000000..ccfcbf4
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.keystream.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.len
+new file mode 100644
+index 0000000..01bdaa1
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.values.at b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.values.at
+new file mode 100644
+index 0000000..301407e
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.values.at differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab_i b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab_i
+new file mode 100644
+index 0000000..f768a77
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab_i differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab_i.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab_i.len
+new file mode 100644
+index 0000000..131e265
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab_i.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab
+new file mode 100644
+index 0000000..0d215ae
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab.keystream b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab.keystream
+new file mode 100644
+index 0000000..e4f225e
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab.keystream differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab.keystream.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab.keystream.len
+new file mode 100644
+index 0000000..762628e
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab.keystream.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab.len
+new file mode 100644
+index 0000000..82d60e4
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab.values.at b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab.values.at
+new file mode 100644
+index 0000000..84f16e4
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab.values.at differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab_i b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab_i
+new file mode 100644
+index 0000000..90257cd
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab_i differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab_i.len b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab_i.len
+new file mode 100644
+index 0000000..131e265
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab_i.len differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/last-build.bin b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/last-build.bin
+new file mode 100644
+index 0000000..6c1e153
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/cacheable/last-build.bin differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/classpath-snapshot/shrunk-classpath-snapshot.bin b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/classpath-snapshot/shrunk-classpath-snapshot.bin
+new file mode 100644
+index 0000000..7f1036c
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/classpath-snapshot/shrunk-classpath-snapshot.bin differ
+diff --git a/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/local-state/build-history.bin b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/local-state/build-history.bin
+new file mode 100644
+index 0000000..e5c39a8
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/kotlin/compileDebugKotlin/local-state/build-history.bin differ
+diff --git a/node_modules/react-native-vosk/android/build/outputs/logs/manifest-merger-debug-report.txt b/node_modules/react-native-vosk/android/build/outputs/logs/manifest-merger-debug-report.txt
+new file mode 100644
+index 0000000..aa90830
+--- /dev/null
++++ b/node_modules/react-native-vosk/android/build/outputs/logs/manifest-merger-debug-report.txt
+@@ -0,0 +1,20 @@
++-- Merging decision tree log ---
++manifest
++ADDED from /Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/src/main/AndroidManifest.xml:1:1-3:12
++INJECTED from /Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/src/main/AndroidManifest.xml:1:1-3:12
++	package
++		INJECTED from /Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/src/main/AndroidManifest.xml
++	xmlns:android
++		ADDED from /Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/src/main/AndroidManifest.xml:1:11-69
++uses-permission#android.permission.RECORD_AUDIO
++ADDED from /Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/src/main/AndroidManifest.xml:2:3-69
++	android:name
++		ADDED from /Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/src/main/AndroidManifest.xml:2:20-66
++uses-sdk
++INJECTED from /Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/src/main/AndroidManifest.xml reason: use-sdk injection requested
++INJECTED from /Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/src/main/AndroidManifest.xml
++INJECTED from /Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/src/main/AndroidManifest.xml
++	android:targetSdkVersion
++		INJECTED from /Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/src/main/AndroidManifest.xml
++	android:minSdkVersion
++		INJECTED from /Users/konnerbrown/Desktop/Sandbox/Bessie/frontend/node_modules/react-native-vosk/android/src/main/AndroidManifest.xml
+diff --git a/node_modules/react-native-vosk/android/build/tmp/compileDebugJavaWithJavac/previous-compilation-data.bin b/node_modules/react-native-vosk/android/build/tmp/compileDebugJavaWithJavac/previous-compilation-data.bin
+new file mode 100644
+index 0000000..d6ecba0
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/tmp/compileDebugJavaWithJavac/previous-compilation-data.bin differ
+diff --git a/node_modules/react-native-vosk/android/build/tmp/kotlin-classes/debug/META-INF/react-native-vosk_debug.kotlin_module b/node_modules/react-native-vosk/android/build/tmp/kotlin-classes/debug/META-INF/react-native-vosk_debug.kotlin_module
+new file mode 100644
+index 0000000..1e9f2ca
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/tmp/kotlin-classes/debug/META-INF/react-native-vosk_debug.kotlin_module differ
+diff --git a/node_modules/react-native-vosk/android/build/tmp/kotlin-classes/debug/com/vosk/VoskModule$Companion.class b/node_modules/react-native-vosk/android/build/tmp/kotlin-classes/debug/com/vosk/VoskModule$Companion.class
+new file mode 100644
+index 0000000..61b2c31
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/tmp/kotlin-classes/debug/com/vosk/VoskModule$Companion.class differ
+diff --git a/node_modules/react-native-vosk/android/build/tmp/kotlin-classes/debug/com/vosk/VoskModule$makeGrammar$1.class b/node_modules/react-native-vosk/android/build/tmp/kotlin-classes/debug/com/vosk/VoskModule$makeGrammar$1.class
+new file mode 100644
+index 0000000..907e7d1
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/tmp/kotlin-classes/debug/com/vosk/VoskModule$makeGrammar$1.class differ
+diff --git a/node_modules/react-native-vosk/android/build/tmp/kotlin-classes/debug/com/vosk/VoskModule.class b/node_modules/react-native-vosk/android/build/tmp/kotlin-classes/debug/com/vosk/VoskModule.class
+new file mode 100644
+index 0000000..f85c86a
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/tmp/kotlin-classes/debug/com/vosk/VoskModule.class differ
+diff --git a/node_modules/react-native-vosk/android/build/tmp/kotlin-classes/debug/com/vosk/VoskPackage.class b/node_modules/react-native-vosk/android/build/tmp/kotlin-classes/debug/com/vosk/VoskPackage.class
+new file mode 100644
+index 0000000..ba318ed
+Binary files /dev/null and b/node_modules/react-native-vosk/android/build/tmp/kotlin-classes/debug/com/vosk/VoskPackage.class differ
+diff --git a/node_modules/react-native-vosk/android/src/main/java/com/vosk/VoskModule.kt b/node_modules/react-native-vosk/android/src/main/java/com/vosk/VoskModule.kt
+index c2c4d64..08bbcae 100644
+--- a/node_modules/react-native-vosk/android/src/main/java/com/vosk/VoskModule.kt
++++ b/node_modules/react-native-vosk/android/src/main/java/com/vosk/VoskModule.kt
+@@ -37,7 +37,7 @@ class VoskModule(reactContext: ReactApplicationContext) :
+ 
+     // Send event if data found
+     if (!text.isNullOrEmpty()) {
+-      emitOnResult(text)
++      sendEvent("onResult", text)
+     }
+   }
+ 
+@@ -47,7 +47,7 @@ class VoskModule(reactContext: ReactApplicationContext) :
+ 
+     // Send event if data found
+     if (!text.isNullOrEmpty()) {
+-      emitOnFinalResult(text)
++      sendEvent("onFinalResult", text)
+     }
+   }
+ 
+@@ -57,17 +57,17 @@ class VoskModule(reactContext: ReactApplicationContext) :
+ 
+     // Send event if data found
+     if (!text.isNullOrEmpty()) {
+-      emitOnPartialResult(text)
++      sendEvent("onPartialResult", text)
+     }
+   }
+ 
+   override fun onError(e: Exception) {
+-    emitOnError(e.toString())
++    sendEvent("onError", e.toString())
+   }
+ 
+   override fun onTimeout() {
+     cleanRecognizer()
+-    emitOnTimeout()
++    sendEvent("onTimeout")
+   }
+ 
+   /**
+diff --git a/node_modules/react-native-vosk/app.plugin.js b/node_modules/react-native-vosk/app.plugin.js
+index 7b4a5b2..e9ead4e 100644
+--- a/node_modules/react-native-vosk/app.plugin.js
++++ b/node_modules/react-native-vosk/app.plugin.js
+@@ -1,3 +1,4 @@
+ // Root Expo config plugin entry so users can declare simply:
+ // plugins: [ ["react-native-vosk", { models: [...], iOSMicrophonePermission: "..." }] ]
+-module.exports = require('./plugin/build/withVosk');
++const plugin = require('./plugin/build/withVosk');
++module.exports = plugin.default || plugin;
+diff --git a/node_modules/react-native-vosk/ios/Vosk.h b/node_modules/react-native-vosk/ios/Vosk.h
+index 62987ba..d83e1db 100644
+--- a/node_modules/react-native-vosk/ios/Vosk.h
++++ b/node_modules/react-native-vosk/ios/Vosk.h
+@@ -1,9 +1,23 @@
+-#import <VoskSpec/VoskSpec.h>
++#if __has_include(<React/RCTEventEmitter.h>)
++#import <React/RCTEventEmitter.h>
++#elif __has_include(<React/RCTEventEmitter.h>)
++#import <React/RCTEventEmitter.h>
++#else
++#import <React/RCTEventEmitter.h>
++#endif
+ #import <Foundation/Foundation.h>
+ 
++#if __has_include(<VoskSpec/VoskSpec.h>)
++#import <VoskSpec/VoskSpec.h>
++#define HAS_VOSK_SPEC 1
++#endif
++
+ NS_ASSUME_NONNULL_BEGIN
+ 
+-@interface Vosk : NativeVoskSpecBase <NativeVoskSpec>
++@interface Vosk : RCTEventEmitter
++#ifdef HAS_VOSK_SPEC
++<NativeVoskSpec>
++#endif
+ 
+ @end
+ 
+diff --git a/node_modules/react-native-vosk/ios/Vosk.mm b/node_modules/react-native-vosk/ios/Vosk.mm
+index 4556403..527d7d4 100644
+--- a/node_modules/react-native-vosk/ios/Vosk.mm
++++ b/node_modules/react-native-vosk/ios/Vosk.mm
+@@ -80,7 +80,11 @@ - (void)loadModel:(nonnull NSString *)path
+ }
+ 
+ // Make the options nullable to avoid issues with codegen and optional fields
++#ifdef HAS_VOSK_SPEC
+ - (void)start:(JS::NativeVosk::VoskOptions *_Nullable)options
++#else
++- (void)start:(NSDictionary *)options
++#endif
+       resolve:(nonnull RCTPromiseResolveBlock)resolve
+        reject:(nonnull RCTPromiseRejectBlock)reject {
+   if (_currentModel == nil) {
+@@ -105,9 +109,11 @@ - (void)start:(JS::NativeVosk::VoskOptions *_Nullable)options
+   
+   AVAudioSession *audioSession = [AVAudioSession sharedInstance];
+ 
+-  // Extract options (grammar, timeout) from the codegen structure
++  // Extract options (grammar, timeout)
+   NSArray<NSString *> *grammar = nil;
+   double timeoutMs = -1;
++
++#ifdef HAS_VOSK_SPEC
+   if (options && options->grammar()) {
+     auto gVec = options->grammar();
+     if (gVec) {
+@@ -123,6 +129,14 @@ - (void)start:(JS::NativeVosk::VoskOptions *_Nullable)options
+   if (options && options->timeout()) {
+     timeoutMs = *(options->timeout());
+   }
++#else
++  if (options && [options isKindOfClass:[NSDictionary class]]) {
++    grammar = options[@"grammar"];
++    if (options[@"timeout"]) {
++      timeoutMs = [options[@"timeout"] doubleValue];
++    }
++  }
++#endif
+ 
+   CFAbsoluteTime tStart = CFAbsoluteTimeGetCurrent();
+   // Configure session category first (allowed even before permission)
+@@ -138,14 +152,14 @@ - (void)start:(JS::NativeVosk::VoskOptions *_Nullable)options
+     }
+     if (catErr) {
+       NSString *msg = [NSString stringWithFormat:@"Audio session category error: %@", catErr.localizedDescription];
+-      [self emitOnError:msg];
++      [self sendEventWithName:@"onError" body:msg];
+       _isStarting = NO;
+       reject(@"start", msg, catErr);
+       return;
+     }
+   } @catch (NSException *ex) {
+     NSString *msg = [NSString stringWithFormat:@"Exception setting category: %@", ex.reason ?: @"unknown"]; 
+-    [self emitOnError:msg];
++    [self sendEventWithName:@"onError" body:msg];
+     _isStarting = NO;
+     reject(@"start", msg, nil);
+     return;
+@@ -156,7 +170,7 @@ - (void)start:(JS::NativeVosk::VoskOptions *_Nullable)options
+     if (!granted) {
+       dispatch_async(dispatch_get_main_queue(), ^{
+         NSString *msg = @"Microphone permission denied";
+-        [self emitOnError:msg];
++        [self sendEventWithName:@"onError" body:msg];
+         self->_isStarting = NO;
+         reject(@"start", msg, nil);
+       });
+@@ -166,7 +180,7 @@ - (void)start:(JS::NativeVosk::VoskOptions *_Nullable)options
+       NSError *actErr = nil;
+       if (![audioSession setActive:YES error:&actErr]) {
+         NSString *msg = [NSString stringWithFormat:@"Failed to activate audio session: %@", actErr.localizedDescription];
+-        [self emitOnError:msg];
++        [self sendEventWithName:@"onError" body:msg];
+         self->_isStarting = NO;
+         reject(@"start", msg, actErr);
+         return;
+@@ -198,7 +212,7 @@ - (void)start:(JS::NativeVosk::VoskOptions *_Nullable)options
+         NSLog(@"[Vosk] Recognizer init: %.2f ms", (tRec1 - tRec0) * 1000.0);
+         if (!self->_recognizer) {
+           dispatch_async(dispatch_get_main_queue(), ^{
+-            [self emitOnError:@"Recognizer initialization failed (null)"];
++            [self sendEventWithName:@"onError" body:@"Recognizer initialization failed (null)"];
+             reject(@"start", @"Recognizer initialization failed", nil);
+             self->_isStarting = NO;
+           });
+@@ -211,7 +225,7 @@ - (void)start:(JS::NativeVosk::VoskOptions *_Nullable)options
+           NSError *startErr = nil;
+           if (![self->_audioEngine startAndReturnError:&startErr]) {
+             NSString *msg = [NSString stringWithFormat:@"Failed to start audio engine: %@", startErr.localizedDescription];
+-            [self emitOnError:msg];
++            [self sendEventWithName:@"onError" body:msg];
+             [self stopInternalWithoutEvents:YES];
+             self->_isStarting = NO;
+             reject(@"start", msg, startErr);
+@@ -224,7 +238,7 @@ - (void)start:(JS::NativeVosk::VoskOptions *_Nullable)options
+               uint64_t delayNs = (uint64_t)(timeoutMs * 1000000.0);
+               __weak __typeof(self) weakSelfTimeout = self;
+               dispatch_source_set_timer(self->_timeoutSource, dispatch_time(DISPATCH_TIME_NOW, delayNs), DISPATCH_TIME_FOREVER, 5 * NSEC_PER_MSEC);
+-              dispatch_source_set_event_handler(self->_timeoutSource, ^{ __strong __typeof(self) selfT = weakSelfTimeout; if (!selfT || !selfT->_isRunning) return; [selfT stopInternalWithoutEvents:YES]; dispatch_async(dispatch_get_main_queue(), ^{ [selfT emitOnTimeout]; }); });
++              dispatch_source_set_event_handler(self->_timeoutSource, ^{ __strong __typeof(self) selfT = weakSelfTimeout; if (!selfT || !selfT->_isRunning) return; [selfT stopInternalWithoutEvents:YES]; dispatch_async(dispatch_get_main_queue(), ^{ [selfT sendEventWithName:@"onTimeout" body:nil]; }); });
+               dispatch_resume(self->_timeoutSource);
+             }
+           }
+@@ -281,12 +295,12 @@ - (void)scheduleTapInstallationWithBufferSize:(AVAudioFrameCount)bufferSize {
+         } else { return; }
+         const char *cstr = NULL; BOOL isFinal = NO; if (accepted) { cstr = vosk_recognizer_result(recognizer); isFinal = YES; } else { cstr = vosk_recognizer_partial_result(recognizer); }
+         NSString *json = cstr ? [NSString stringWithUTF8String:cstr] : nil;
+-        dispatch_async(dispatch_get_main_queue(), ^{ if (!json) return; NSData *data = [json dataUsingEncoding:NSUTF8StringEncoding]; NSDictionary *parsed = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:nil] : nil; if (![parsed isKindOfClass:[NSDictionary class]]) { if (isFinal) { [self emitOnResult:json]; } else { [self emitOnPartialResult:json]; } return; } NSString *text = parsed[@"text"]; NSString *partial = parsed[@"partial"]; if (isFinal) { if (text.length > 0) { [self emitOnResult:text]; } self->_lastPartial = nil; } else { if (partial.length > 0 && (!self->_lastPartial || ![self->_lastPartial isEqualToString:partial])) { [self emitOnPartialResult:partial]; } self->_lastPartial = partial ?: self->_lastPartial; } });
++        dispatch_async(dispatch_get_main_queue(), ^{ if (!json) return; NSData *data = [json dataUsingEncoding:NSUTF8StringEncoding]; NSDictionary *parsed = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:nil] : nil; if (![parsed isKindOfClass:[NSDictionary class]]) { if (isFinal) { [self sendEventWithName:@"onResult" body:json]; } else { [self sendEventWithName:@"onPartialResult" body:json]; } return; } NSString *text = parsed[@"text"]; NSString *partial = parsed[@"partial"]; if (isFinal) { if (text.length > 0) { [self sendEventWithName:@"onResult" body:text]; } self->_lastPartial = nil; } else { if (partial.length > 0 && (!self->_lastPartial || ![self->_lastPartial isEqualToString:partial])) { [self sendEventWithName:@"onPartialResult" body:partial]; } self->_lastPartial = partial ?: self->_lastPartial; } });
+       });
+     }];
+     _tapInstalled = YES; _pendingTap = NO; NSLog(@"[Vosk] Tap installed successfully after %d retries.", _tapRetryCount);
+   } @catch (NSException *ex) {
+-    [self emitOnError:[NSString stringWithFormat:@"Failed to install tap (retry phase): %@", ex.reason ?: @"unknown"]];
++    [self sendEventWithName:@"onError" body:[NSString stringWithFormat:@"Failed to install tap (retry phase): %@", ex.reason ?: @"unknown"]];
+     _pendingTap = NO; [self stopInternalWithoutEvents:YES];
+   }
+ }
+@@ -313,10 +327,12 @@ - (void)addListener:(nonnull NSString *)eventType {
+ - (void)removeListeners:(double)count {
+ }
+ 
++#ifdef HAS_VOSK_SPEC
+ - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:
+     (const facebook::react::ObjCTurboModule::InitParams &)params {
+   return std::make_shared<facebook::react::NativeVoskSpecJSI>(params);
+ }
++#endif
+ 
+ // Internal cleanup
+ - (void)stopInternalWithoutEvents:(BOOL)withoutEvents {
+@@ -336,7 +352,7 @@ - (void)stopInternalWithoutEvents:(BOOL)withoutEvents {
+   if (_audioEngine.isRunning) {
+     [_audioEngine stop];
+     if (!withoutEvents) {
+-      [self emitOnFinalResult:_lastPartial];
++      [self sendEventWithName:@"onFinalResult" body:_lastPartial];
+     }
+     _lastPartial = nil;
+   }
+diff --git a/node_modules/react-native-vosk/lib/commonjs/NativeVosk.js b/node_modules/react-native-vosk/lib/commonjs/NativeVosk.js
+index 4aa6b2c..8505bb5 100644
+--- a/node_modules/react-native-vosk/lib/commonjs/NativeVosk.js
++++ b/node_modules/react-native-vosk/lib/commonjs/NativeVosk.js
+@@ -4,6 +4,17 @@ Object.defineProperty(exports, "__esModule", {
+   value: true
+ });
+ exports.default = void 0;
+-var _reactNative = require("react-native");
+-var _default = exports.default = _reactNative.TurboModuleRegistry.getEnforcing('Vosk');
++// Lazy load react-native to avoid syntax errors in Node environment during Expo config phase
++let _reactNative;
++function getReactNative() {
++  if (!_reactNative) {
++    try {
++      _reactNative = require("react-native");
++    } catch (e) {
++      _reactNative = { TurboModuleRegistry: { getEnforcing: () => ({}) } };
++    }
++  }
++  return _reactNative;
++}
++var _default = exports.default = getReactNative().TurboModuleRegistry.getEnforcing('Vosk');
+ //# sourceMappingURL=NativeVosk.js.map
+\ No newline at end of file
+diff --git a/node_modules/react-native-vosk/lib/commonjs/index.js b/node_modules/react-native-vosk/lib/commonjs/index.js
+index 7239f34..182237a 100644
+--- a/node_modules/react-native-vosk/lib/commonjs/index.js
++++ b/node_modules/react-native-vosk/lib/commonjs/index.js
+@@ -12,7 +12,19 @@ exports.onTimeout = onTimeout;
+ exports.start = start;
+ exports.stop = stop;
+ exports.unload = unload;
+-var _reactNative = require("react-native");
++// Lazy load react-native to avoid syntax errors in Node environment during Expo config phase
++let _reactNative;
++function getReactNative() {
++  if (!_reactNative) {
++    try {
++      _reactNative = require("react-native");
++    } catch (e) {
++      // Mock for Node environment if react-native fails to load (e.g. Flow syntax issues)
++      _reactNative = { Platform: { OS: 'ios' }, PermissionsAndroid: {}, NativeEventEmitter: class {} };
++    }
++  }
++  return _reactNative;
++}
+ var _NativeVosk = _interopRequireDefault(require("./NativeVosk"));
+ function _interopRequireDefault(e) { return e && e.__esModule ? e : { default: e }; }
+ /**
+@@ -49,9 +61,9 @@ function unload() {
+  * @private
+  */
+ async function requestRecordPermission() {
+-  if (_reactNative.Platform.OS === 'ios') return true;
+-  const granted = await _reactNative.PermissionsAndroid.request(_reactNative.PermissionsAndroid.PERMISSIONS.RECORD_AUDIO);
+-  return granted === _reactNative.PermissionsAndroid.RESULTS.GRANTED;
++  if (getReactNative().Platform.OS === 'ios') return true;
++  const granted = await getReactNative().PermissionsAndroid.request(getReactNative().PermissionsAndroid.PERMISSIONS.RECORD_AUDIO);
++  return granted === getReactNative().PermissionsAndroid.RESULTS.GRANTED;
+ }
+ 
+ /**
+diff --git a/node_modules/react-native-vosk/src/NativeVosk.ts b/node_modules/react-native-vosk/src/NativeVosk.ts
+index fe1dce5..94f9fd7 100644
+--- a/node_modules/react-native-vosk/src/NativeVosk.ts
++++ b/node_modules/react-native-vosk/src/NativeVosk.ts
+@@ -1,4 +1,4 @@
+-import type { TurboModule, CodegenTypes } from 'react-native';
++import type { TurboModule } from 'react-native';
+ import { TurboModuleRegistry } from 'react-native';
+ 
+ export type VoskOptions = {
+@@ -22,12 +22,6 @@ export interface Spec extends TurboModule {
+ 
+   addListener: (eventType: string) => void;
+   removeListeners: (count: number) => void;
+-
+-  readonly onResult: CodegenTypes.EventEmitter<string>;
+-  readonly onPartialResult: CodegenTypes.EventEmitter<string>;
+-  readonly onFinalResult: CodegenTypes.EventEmitter<string>;
+-  readonly onError: CodegenTypes.EventEmitter<string>;
+-  readonly onTimeout: CodegenTypes.EventEmitter<void>;
+ }
+ 
+ export default TurboModuleRegistry.getEnforcing<Spec>('Vosk');
+diff --git a/node_modules/react-native-vosk/src/index.ts b/node_modules/react-native-vosk/src/index.ts
+index a9a83b1..f7c5b5a 100644
+--- a/node_modules/react-native-vosk/src/index.ts
++++ b/node_modules/react-native-vosk/src/index.ts
+@@ -1,6 +1,8 @@
+-import { PermissionsAndroid, Platform } from 'react-native';
++import { PermissionsAndroid, Platform, NativeEventEmitter } from 'react-native';
+ import Vosk, { type VoskOptions } from './NativeVosk';
+ 
++const eventEmitter = new NativeEventEmitter(Vosk as any);
++
+ /**
+  * Loads the model from specified path
+  *
+@@ -80,7 +82,7 @@ export function stop() {
+  * @returns A subscription to the event
+  */
+ export function onError(cb: (e: any) => void) {
+-  return Vosk.onError(cb);
++  return eventEmitter.addListener('onError', cb);
+ }
+ 
+ /** Event listener for timeout event
+@@ -89,7 +91,7 @@ export function onError(cb: (e: any) => void) {
+  * @returns A subscription to the event
+  */
+ export function onTimeout(cb: () => void) {
+-  return Vosk.onTimeout(cb);
++  return eventEmitter.addListener('onTimeout', cb);
+ }
+ 
+ /** Event listener for partial result event
+@@ -98,7 +100,7 @@ export function onTimeout(cb: () => void) {
+  * @returns A subscription to the event
+  */
+ export function onPartialResult(cb: (e: string) => void) {
+-  return Vosk.onPartialResult(cb);
++  return eventEmitter.addListener('onPartialResult', cb);
+ }
+ 
+ /** Event listener for final result event
+@@ -107,7 +109,7 @@ export function onPartialResult(cb: (e: string) => void) {
+  * @returns A subscription to the event
+  */
+ export function onFinalResult(cb: (e: string) => void) {
+-  return Vosk.onFinalResult(cb);
++  return eventEmitter.addListener('onFinalResult', cb);
+ }
+ 
+ /** Event listener for result event
+@@ -116,5 +118,5 @@ export function onFinalResult(cb: (e: string) => void) {
+  * @returns A subscription to the event
+  */
+ export function onResult(cb: (e: string) => void) {
+-  return Vosk.onResult(cb);
++  return eventEmitter.addListener('onResult', cb);
+ }
