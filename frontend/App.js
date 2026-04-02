@@ -101,7 +101,7 @@ export default function App() {
   } = useAudioRecording(onSilence);
 
   // --- ACTIONS ---
-  async function startWakeWordListening() {
+  const startWakeWordListening = useCallback(async () => {
     if (isStartingRef.current || !isModelLoaded) return;
     isStartingRef.current = true;
 
@@ -128,9 +128,9 @@ export default function App() {
     } finally {
       isStartingRef.current = false;
     }
-  }
+  }, [isModelLoaded, startVosk, recordingRef, silentSoundRef, scheduleRestart]);
 
-  async function triggerCommandPrompt() {
+  const triggerCommandPrompt = useCallback(async () => {
     isStartingRef.current = false;
     modeRef.current = 'transition';
     setStatus('Readying...');
@@ -146,9 +146,9 @@ export default function App() {
       onDone: () => setTimeout(() => startCommandListening(), 300),
       onError: () => setTimeout(() => startCommandListening(), 300)
     });
-  }
+  }, [stopVosk, startCommandListening]);
 
-  async function startCommandListening(isFollowUp = false) {
+  const startCommandListening = useCallback(async (isFollowUp = false) => {
     modeRef.current = 'command';
     setStatus(isFollowUp ? 'Listening (Whisper)...' : 'Listening... (Whisper)');
     setTranscript('(Recording audio...)');
@@ -156,7 +156,7 @@ export default function App() {
     await cleanupAudio(recordingRef, null, { stopVosk: false });
     await startVosk(EXIT_PHRASES); // Only listen for exit phrases locally during whisper
     await startRecording();
-  }
+  }, [startVosk, startRecording, recordingRef]);
 
   const stopAndSendRecording = useCallback(async () => {
     try {
@@ -165,31 +165,56 @@ export default function App() {
         startWakeWordListening();
         return;
       }
-      
+
       void startDucking(silentSoundRef);
       const data = await sendRecordingToBackend(uri, selectedLanguage.code);
-      
+
       if (data.transcript) setTranscript(data.transcript);
 
       // Handle AI response and TTS
       if (data.summary) {
+        if (data.exit) {
+          console.log('[Bessie] Exit phrase detected. Skipping speech and restarting wake listener.');
+          void stopDucking(silentSoundRef);
+          startWakeWordListening();
+          return;
+        }
+
         setStatus('Playing response...');
         const bestVoiceMatch = availableVoices.find(v => v.language.startsWith(selectedLanguage.voicePrefix));
         const voiceId = bestVoiceMatch ? bestVoiceMatch.identifier : preferredVoiceRef.current;
 
+        console.log(`[Speech] Starting speak summary... (Voice: ${voiceId})`);
+        
+        // Safety timeout for speech hanging
+        const speechSafetyTimeout = setTimeout(() => {
+          if (modeRef.current === 'transition' || status === 'Playing response...') {
+            console.warn('[Speech] Safety backup triggered - speech took too long or failed to fire onDone.');
+            startWakeWordListening();
+          }
+        }, 15000);
+
         Speech.speak(data.summary, {
           rate: 1.0,
           voice: voiceId,
+          onStart: () => console.log('[Speech] onStart triggered'),
           onDone: () => {
+            console.log('[Speech] onDone triggered');
+            clearTimeout(speechSafetyTimeout);
             void stopDucking(silentSoundRef);
             if (data.exit) startWakeWordListening();
             else speakTimeoutRef.current = setTimeout(() => startCommandListening(true), 500);
           },
-          onError: () => {
+          onError: (e) => {
+            console.error('[Speech] onError triggered:', e);
+            clearTimeout(speechSafetyTimeout);
             void stopDucking(silentSoundRef);
             startWakeWordListening();
           },
         });
+      } else {
+        // No summary, just go back to wake
+        startWakeWordListening();
       }
     } catch (error) {
       void stopDucking(silentSoundRef);

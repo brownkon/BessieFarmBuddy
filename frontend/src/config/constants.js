@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 
 export const WAKE_PHRASES = ['hey dairy', 'hey dearie', 'hey deairy', 'hey bessie', 'hey bessy', 'hey dary', 'bessie'];
-export const EXIT_PHRASES = ['thank you', 'stop', 'bye', 'goodbye', 'thanks', 'dismissed', 'stop dialogue', 'stop talking', 'cancel', 'finished', 'done'];
+export const EXIT_PHRASES = ['thanks dairy', 'bye dairy', 'goodbye dairy', 'thanks bessie', 'bye bessie', 'goodbye bessie', 'stop talking', 'stop talking dairy', 'stop talking bessie', 'bye dearie', 'thanks dearie', 'bye deairy', 'thanks deairy'];
 
 export const configuredBackendUrl = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://144.39.117.142:3000';
 

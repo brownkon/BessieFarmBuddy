@@ -59,6 +59,7 @@ async function processWhisperVoice(tempFilePath, language, fs) {
         - Keep responses extremely concise (1-2 sentences max) when possible. 
         - NO follow-up questions like "How can I assist you?" or "Is there anything else?". 
         - If the user says "thank you", "stop", "bye", or indicates they are done, call the 'terminate_conversation' tool immediately.
+        - IMPORTANT: NEVER mention the tool name "terminate_conversation" in your audible response.
         - Current language: ${language}. Always respond in ${language}.`
       },
       { role: 'user', content: transcript }
@@ -79,6 +80,11 @@ async function processWhisperVoice(tempFilePath, language, fs) {
   const message = response.choices[0].message;
   let aiResponse = message.content || "";
   let shouldExit = false;
+
+  // Safety filter: if the AI accidentally writes the tool name in the content
+  if (aiResponse.includes('terminate_conversation')) {
+    aiResponse = transcript.toLowerCase().includes('thank') ? "You're welcome! Talk soon." : "Goodbye.";
+  }
 
   if (message.tool_calls && message.tool_calls.length > 0) {
     const toolCall = message.tool_calls.find(tc => tc.function.name === 'terminate_conversation');

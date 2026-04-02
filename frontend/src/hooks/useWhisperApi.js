@@ -70,15 +70,31 @@ export const useWhisperApi = (activeBackendUrl) => {
             if (data.summary) setServerMessage(data.summary);
             resolve(data);
           } else {
+            console.log(`[WhisperAPI] Error Status: ${xhr.status}`);
             reject(new Error(data?.error ?? `Request failed with status ${xhr.status}`));
           }
         } catch (e) {
+          console.log(`[WhisperAPI] Parse Error: ${e.message}`);
           reject(new Error(`Failed to parse response: ${xhr.responseText.substring(0, 50)}`));
         }
       };
 
-      xhr.onerror = () => reject(new Error('Network request failed'));
-      xhr.onabort = () => reject(new Error('Request aborted'));
+      xhr.onerror = (e) => {
+        console.log('[WhisperAPI] Network error');
+        reject(new Error('Network request failed'));
+      };
+      
+      xhr.ontimeout = () => {
+        console.log('[WhisperAPI] Timeout');
+        reject(new Error('Request timed out'));
+      };
+
+      xhr.onabort = () => {
+        console.log('[WhisperAPI] Aborted');
+        reject(new Error('Request aborted'));
+      };
+
+      xhr.timeout = 25000; // 25 second timeout
       xhr.send(formData);
     });
   };
