@@ -120,6 +120,7 @@ export const useVosk = (onWakeWord, onExit, onPartial, onResult) => {
     try {
       setRecognizing(true);
       try { await Vosk.stop(); } catch (e) {} // Defensive stop
+      await new Promise(r => setTimeout(r, 200)); // Breather for native module
       await Vosk.start({ grammar });
     } catch (err) {
       console.warn('[Vosk] Failed to start:', err);
