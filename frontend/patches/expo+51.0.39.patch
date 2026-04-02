@@ -1,0 +1,67 @@
+diff --git a/node_modules/expo/android/.gradle/8.9/checksums/checksums.lock b/node_modules/expo/android/.gradle/8.9/checksums/checksums.lock
+new file mode 100644
+index 0000000..b537ad4
+Binary files /dev/null and b/node_modules/expo/android/.gradle/8.9/checksums/checksums.lock differ
+diff --git a/node_modules/expo/android/.gradle/8.9/dependencies-accessors/gc.properties b/node_modules/expo/android/.gradle/8.9/dependencies-accessors/gc.properties
+new file mode 100644
+index 0000000..e69de29
+diff --git a/node_modules/expo/android/.gradle/8.9/fileChanges/last-build.bin b/node_modules/expo/android/.gradle/8.9/fileChanges/last-build.bin
+new file mode 100644
+index 0000000..f76dd23
+Binary files /dev/null and b/node_modules/expo/android/.gradle/8.9/fileChanges/last-build.bin differ
+diff --git a/node_modules/expo/android/.gradle/8.9/fileHashes/fileHashes.lock b/node_modules/expo/android/.gradle/8.9/fileHashes/fileHashes.lock
+new file mode 100644
+index 0000000..eece6e3
+Binary files /dev/null and b/node_modules/expo/android/.gradle/8.9/fileHashes/fileHashes.lock differ
+diff --git a/node_modules/expo/android/.gradle/8.9/gc.properties b/node_modules/expo/android/.gradle/8.9/gc.properties
+new file mode 100644
+index 0000000..e69de29
+diff --git a/node_modules/expo/android/.gradle/buildOutputCleanup/buildOutputCleanup.lock b/node_modules/expo/android/.gradle/buildOutputCleanup/buildOutputCleanup.lock
+new file mode 100644
+index 0000000..29e772d
+Binary files /dev/null and b/node_modules/expo/android/.gradle/buildOutputCleanup/buildOutputCleanup.lock differ
+diff --git a/node_modules/expo/android/.gradle/buildOutputCleanup/cache.properties b/node_modules/expo/android/.gradle/buildOutputCleanup/cache.properties
+new file mode 100644
+index 0000000..2bf309f
+--- /dev/null
++++ b/node_modules/expo/android/.gradle/buildOutputCleanup/cache.properties
+@@ -0,0 +1,2 @@
++#Tue Mar 31 14:18:10 MDT 2026
++gradle.version=8.9
+diff --git a/node_modules/expo/android/.gradle/vcs-1/gc.properties b/node_modules/expo/android/.gradle/vcs-1/gc.properties
+new file mode 100644
+index 0000000..e69de29
+diff --git a/node_modules/expo/android/.project b/node_modules/expo/android/.project
+new file mode 100644
+index 0000000..5a38414
+--- /dev/null
++++ b/node_modules/expo/android/.project
+@@ -0,0 +1,28 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<projectDescription>
++	<name>expo</name>
++	<comment>Project expo created by Buildship.</comment>
++	<projects>
++	</projects>
++	<buildSpec>
++		<buildCommand>
++			<name>org.eclipse.buildship.core.gradleprojectbuilder</name>
++			<arguments>
++			</arguments>
++		</buildCommand>
++	</buildSpec>
++	<natures>
++		<nature>org.eclipse.buildship.core.gradleprojectnature</nature>
++	</natures>
++	<filteredResources>
++		<filter>
++			<id>1773969001521</id>
++			<name></name>
++			<type>30</type>
++			<matcher>
++				<id>org.eclipse.core.resources.regexFilterMatcher</id>
++				<arguments>node_modules|\.git|__CREATED_BY_JAVA_LANGUAGE_SERVER__</arguments>
++			</matcher>
++		</filter>
++	</filteredResources>
++</projectDescription>

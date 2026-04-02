@@ -1,0 +1,13 @@
+diff --git a/node_modules/@expo/cli/build/src/start/platforms/ios/devicectl.js b/node_modules/@expo/cli/build/src/start/platforms/ios/devicectl.js
+index 85e97de..af95125 100644
+--- a/node_modules/@expo/cli/build/src/start/platforms/ios/devicectl.js
++++ b/node_modules/@expo/cli/build/src/start/platforms/ios/devicectl.js
+@@ -181,7 +181,7 @@ async function getConnectedAppleDevicesAsync() {
+     ]);
+     debug(devices.stdout);
+     const devicesJson = await _jsonFile().default.readAsync(tmpPath);
+-    if (((ref = devicesJson) == null ? void 0 : (ref1 = ref.info) == null ? void 0 : ref1.jsonVersion) !== 2) {
++    if (((ref = devicesJson) == null ? void 0 : (ref1 = ref.info) == null ? void 0 : ref1.jsonVersion) < 2) {
+         _log.warn("Unexpected devicectl JSON version output from devicectl. Connecting to physical Apple devices may not work as expected.");
+     }
+     assertDevicesJson(devicesJson);
