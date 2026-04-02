@@ -9,8 +9,26 @@ const StatusDisplay = ({
   recognizing, 
   loading, 
   recording, 
-  volume 
+  volume,
+  compact = false
 }) => {
+  if (compact) {
+    return (
+      <View style={styles.compactBox}>
+        {recording ? (
+          <View style={styles.centerRowCompact}>
+            <Visualizer volume={volume} isActive={!!recording} />
+            {transcript.length > 0 && (
+              <Text style={styles.partialTranscriptCompact} numberOfLines={1}>“{transcript}”</Text>
+            )}
+          </View>
+        ) : (
+          <Text style={styles.statusTextCompact}>{status}</Text>
+        )}
+      </View>
+    );
+  }
+
   return (
     <View style={styles.statusBox}>
       <Text style={styles.statusLabel}>STATUS</Text>
@@ -20,9 +38,10 @@ const StatusDisplay = ({
           <Text style={styles.partialTranscript}>“{transcript}”</Text>
         </View>
       )}
-      {(recognizing || loading || !!recording) && (
+      {/* Activity indicator removed as per user request to only show in message history */}
+
+      {recording && (
         <View style={styles.centerRow}>
-          <ActivityIndicator size="small" color="#4ade80" />
           <Visualizer volume={volume} isActive={!!recording} />
         </View>
       )}
@@ -52,6 +71,28 @@ const styles = StyleSheet.create({
     fontSize: 16, 
     color: '#e5e7eb', 
     textAlign: 'center' 
+  },
+  compactBox: {
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8
+  },
+  statusTextCompact: {
+    fontSize: 12,
+    color: '#6b7280',
+    letterSpacing: 1
+  },
+  centerRowCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10
+  },
+  partialTranscriptCompact: {
+    fontSize: 13,
+    color: '#4ade80',
+    fontStyle: 'italic',
+    // We'll use a fixed width or just let it overflow if managed by container
   },
   centerRow: { 
     flexDirection: 'row', 
