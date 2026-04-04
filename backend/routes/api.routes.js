@@ -4,6 +4,9 @@ const path = require('path');
 const os = require('os');
 
 async function apiRoutes(fastify, options) {
+  // Health check for frontend reachability
+  fastify.get('/health', async () => ({ status: 'ok' }));
+
   // Chat completion route
   fastify.post('/chat', async (request, reply) => {
     try {

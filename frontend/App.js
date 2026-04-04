@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, Platform, LogBox, ScrollView, Alert, Animated, TextInput, KeyboardAvoidingView, Keyboard, SafeAreaView, Dimensions, LayoutAnimation, UIManager } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, Platform, LogBox, ScrollView, Alert, Animated, TextInput, KeyboardAvoidingView, Keyboard, SafeAreaView, Dimensions, LayoutAnimation, UIManager, PanResponder } from 'react-native';
 import { registerRootComponent } from 'expo';
 import { StatusBar } from 'expo-status-bar';
 import * as Speech from 'expo-speech';
@@ -56,6 +56,30 @@ export default function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuAnim = useRef(new Animated.Value(-SCREEN_WIDTH * 0.8)).current;
   const scrollRef = useRef(null);
+  const swipeResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        // Trigger if starting from the left edge and moving right
+        return !isMenuOpen && 
+               evt.nativeEvent.pageX < 50 && 
+               gestureState.dx > 10 && 
+               Math.abs(gestureState.dy) < 30;
+      },
+      onPanResponderMove: (evt, gestureState) => {
+        if (gestureState.dx > 0) {
+          const val = -SCREEN_WIDTH * 0.8 + gestureState.dx;
+          menuAnim.setValue(val > 0 ? 0 : val);
+        }
+      },
+      onPanResponderRelease: (evt, gestureState) => {
+        if (gestureState.dx > SCREEN_WIDTH * 0.25) {
+          toggleMenu(true);
+        } else {
+          toggleMenu(false);
+        }
+      },
+    })
+  ).current;
 
   const modeRef = useRef('wake'); // 'wake' | 'command' | 'transition'
   const isStartingRef = useRef(false);
@@ -181,7 +205,7 @@ export default function App() {
     await startRecording();
   }, [startVosk, startRecording, recordingRef]);
 
-  const processBackendResult = useCallback(async (data) => {
+  const processBackendResult = useCallback(async (data, isHandsFree = true) => {
     try {
       const summary = data.summary || data.response;
       
@@ -211,7 +235,7 @@ export default function App() {
           voice: voiceId,
           onDone: () => {
             void stopDucking(silentSoundRef);
-            if (data.exit) startWakeWordListening();
+            if (data.exit || !isHandsFree) startWakeWordListening();
             else speakTimeoutRef.current = setTimeout(() => startCommandListening(true), 500);
           },
           onError: () => {
@@ -238,7 +262,7 @@ export default function App() {
 
       void startDucking(silentSoundRef);
       const data = await sendRecordingToBackend(uri, selectedLanguage.code);
-      await processBackendResult(data);
+      await processBackendResult(data, true);
     } catch (error) {
       void stopDucking(silentSoundRef);
       Alert.alert('API failed', error.message);
@@ -264,7 +288,8 @@ export default function App() {
 
       const data = await sendTranscriptToBackend(textToSend, selectedLanguage.code);
       if (data) {
-        await processBackendResult(data);
+        modeRef.current = 'wake';
+        await processBackendResult(data, false);
       }
     } catch (error) {
       void stopDucking(silentSoundRef);
@@ -385,7 +410,7 @@ export default function App() {
     };
   }, []);
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} {...swipeResponder.panHandlers}>
       <StatusBar style="light" backgroundColor="#0f1117" />
       
       {/* MAIN CONTENT */}
