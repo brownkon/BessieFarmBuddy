@@ -64,18 +64,26 @@ export const useVosk = (onWakeWord, onExit, onPartial, onResult) => {
         if (onResult) onResult(text);
 
         const lowerText = text.toLowerCase().trim().replace(/[.,!?]+$/, '');
-        const isLocalExit = EXIT_PHRASES.includes(lowerText);
         
-        if (isLocalExit) {
-          if (onExit) onExit(lowerText);
-        } else {
-          const foundPhrase = WAKE_PHRASES.find(phrase => {
-            const regex = new RegExp(`\\b${phrase}\\b`, 'i');
-            return regex.test(lowerText);
-          });
-          if (foundPhrase && onWakeWord) {
-            onWakeWord(foundPhrase);
-          }
+        // Match Exit Phrases
+        const foundExit = EXIT_PHRASES.find(phrase => {
+          const regex = new RegExp(`\\b${phrase}\\b`, 'i');
+          return regex.test(lowerText);
+        });
+
+        if (foundExit) {
+          if (onExit) onExit(foundExit);
+          return;
+        }
+
+        // Match Wake Phrases
+        const foundWake = WAKE_PHRASES.find(phrase => {
+          const regex = new RegExp(`\\b${phrase}\\b`, 'i');
+          return regex.test(lowerText);
+        });
+
+        if (foundWake && onWakeWord) {
+          onWakeWord(foundWake);
         }
       }
     });
@@ -115,13 +123,18 @@ export const useVosk = (onWakeWord, onExit, onPartial, onResult) => {
     };
   }, [onWakeWord, onExit, onPartial, onResult]);
 
-  const startVosk = async (grammar = [...WAKE_PHRASES, ...EXIT_PHRASES]) => {
+  const startVosk = async (grammar = null) => {
     if (!isModelLoadedRef.current) return;
     try {
       setRecognizing(true);
       try { await Vosk.stop(); } catch (e) {} // Defensive stop
       await new Promise(r => setTimeout(r, 200)); // Breather for native module
-      await Vosk.start({ grammar });
+      
+      if (grammar && Array.isArray(grammar) && grammar.length > 0) {
+        await Vosk.start({ grammar });
+      } else {
+        await Vosk.start();
+      }
     } catch (err) {
       console.warn('[Vosk] Failed to start:', err);
       setRecognizing(false);

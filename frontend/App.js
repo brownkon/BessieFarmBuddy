@@ -8,6 +8,7 @@ import { Audio } from 'expo-av';
 import {
   WAKE_PHRASES,
   EXIT_PHRASES,
+  FILLER_WORDS,
   LANGUAGES,
   configuredBackendUrl,
   getBackendCandidates,
@@ -168,7 +169,7 @@ export default function App() {
       setVoiceTranscript('');
       transcriptRef.current = '';
       setRecognizing(true);
-      await startVosk();
+      await startVosk([...WAKE_PHRASES, ...EXIT_PHRASES, ...FILLER_WORDS]); // Noise-reduced grammar to avoid false triggers while saving battery
     } catch (err) {
       setRecognizing(false);
       scheduleRestart();
@@ -201,7 +202,7 @@ export default function App() {
     setVoiceTranscript('(Recording audio...)');
 
     await cleanupAudio(recordingRef, null, { stopVosk: false });
-    await startVosk(EXIT_PHRASES); // Only listen for exit phrases locally during whisper
+    await startVosk([...EXIT_PHRASES, ...FILLER_WORDS]); // Listen for exits and noise to stay efficient (no full model)
     await startRecording();
   }, [startVosk, startRecording, recordingRef]);
 
