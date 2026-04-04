@@ -55,6 +55,8 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('chat');
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isListeningActive, setIsListeningActive] = useState(true);
+  const isListeningActiveRef = useRef(true);
   const menuAnim = useRef(new Animated.Value(-SCREEN_WIDTH * 0.8)).current;
   const scrollRef = useRef(null);
   const swipeResponder = useRef(
@@ -92,6 +94,7 @@ export default function App() {
   // Sync refs
   useEffect(() => { preferredVoiceRef.current = preferredVoice; }, [preferredVoice]);
   useEffect(() => { activeBackendUrlRef.current = activeBackendUrl; }, [activeBackendUrl]);
+  useEffect(() => { isListeningActiveRef.current = isListeningActive; }, [isListeningActive]);
 
   const {
     loading,
@@ -144,17 +147,22 @@ export default function App() {
     volume,
     setVolume,
     startRecording,
+    stopRecordingManual,
     stopAndGetURI,
     recordingRef
   } = useAudioRecording(onSilence);
 
   // --- ACTIONS ---
   const startWakeWordListening = useCallback(async () => {
-    if (isStartingRef.current || !isModelLoaded) return;
+    if (!isListeningActiveRef.current || isStartingRef.current || !isModelLoaded) {
+      if (!isListeningActiveRef.current) setStatus('Listening Disabled');
+      return;
+    }
     isStartingRef.current = true;
 
     try {
-      await cleanupAudio(recordingRef, null, { stopVosk: true });
+      await stopVosk();
+      await cleanupAudio(recordingRef, null, { stopVosk: false });
       await stopDucking(silentSoundRef);
 
       if (await Speech.isSpeakingAsync()) {
@@ -188,11 +196,18 @@ export default function App() {
     await stopVosk();
     await new Promise(r => setTimeout(r, 100));
 
+    const beepDone = () => {
+      clearTimeout(safetyBeepTimeout);
+      setTimeout(() => startCommandListening(), 300);
+    };
+
+    const safetyBeepTimeout = setTimeout(beepDone, 1500);
+
     Speech.speak('Moooooo', {
       rate: 1.1,
       voice: preferredVoiceRef.current,
-      onDone: () => setTimeout(() => startCommandListening(), 300),
-      onError: () => setTimeout(() => startCommandListening(), 300)
+      onDone: beepDone,
+      onError: beepDone
     });
   }, [stopVosk, startCommandListening]);
 
@@ -299,22 +314,61 @@ export default function App() {
     }
   };
 
+  const handleMicPress = useCallback(() => {
+    if (!isListeningActiveRef.current) {
+      setIsListeningActive(true);
+      isListeningActiveRef.current = true;
+      // Small pause to allow the master switch to propagate before starting audio
+      setTimeout(() => triggerCommandPrompt(), 50).unref?.();
+      return;
+    }
+    if (recording) {
+      handleStopChat();
+    } else {
+      triggerCommandPrompt();
+    }
+  }, [recording, isListeningActive, handleStopChat, triggerCommandPrompt]);
+
   const handleStopChat = async () => {
     clearTimeout(restartTimerRef.current);
     clearTimeout(speakTimeoutRef.current);
     Speech.stop();
-    await cleanupAudio(recordingRef, null, { stopVosk: true });
+    await stopVosk();
+    await stopRecordingManual();
 
     modeRef.current = 'wake';
-    setStatus('Stopped');
+    if (!isListeningActiveRef.current) {
+       setStatus('Listening Disabled');
+    } else {
+       setStatus('Stopped');
+    }
     setVolume(0);
     setVoiceTranscript('');
+    transcriptRef.current = '';
 
     setTimeout(() => {
       void stopDucking(silentSoundRef);
-      startWakeWordListening();
-    }, 1200);
+      if (isListeningActiveRef.current) {
+        startWakeWordListening();
+      }
+    }, 400);
   };
+
+  const toggleListening = useCallback(async () => {
+    const nextState = !isListeningActive;
+    
+    if (!nextState) {
+      // Disabling: Shut everything down immediately
+      setIsListeningActive(false);
+      isListeningActiveRef.current = false;
+      await handleStopChat();
+    } else {
+      // Enabling: Turn things back on
+      setIsListeningActive(true);
+      isListeningActiveRef.current = true;
+      startWakeWordListening();
+    }
+  }, [isListeningActive, handleStopChat, startWakeWordListening]);
 
   const toggleMenu = (open) => {
     setIsMenuOpen(open);
@@ -426,8 +480,10 @@ export default function App() {
                 <Text style={styles.menuIcon}>☰</Text>
               </TouchableOpacity>
               <Text style={styles.headerSmall}>🐄 Bessie</Text>
-              <TouchableOpacity onPress={handleStopChat}>
-                 <Text style={styles.stopButtonTextSmall}>🛑 STOP</Text>
+              <TouchableOpacity onPress={toggleListening}>
+                 <Text style={[styles.stopButtonTextSmall, !isListeningActive && styles.stopButtonDisabledText]}>
+                   {isListeningActive ? '🟢 LISTENING' : '🔘 SILENCED'}
+                 </Text>
               </TouchableOpacity>
             </View>
 
@@ -470,7 +526,7 @@ export default function App() {
                 value={voiceTranscript}
                 onChangeText={setVoiceTranscript}
                 onSend={handleSendManualText}
-                onVoicePress={triggerCommandPrompt}
+                onVoicePress={handleMicPress}
                 disabled={loading}
                 isRecording={!!recording}
               />
@@ -559,7 +615,8 @@ const styles = StyleSheet.create({
   },
   headerSmall: { fontSize: 18, fontWeight: 'bold', color: '#ffffff', letterSpacing: 0.5 },
   menuIcon: { fontSize: 24, color: '#ffffff', padding: 5 },
-  stopButtonTextSmall: { color: '#ef4444', fontSize: 12, fontWeight: 'bold', letterSpacing: 1 },
+  stopButtonTextSmall: { color: '#6ee7b7', fontSize: 11, fontWeight: 'bold', letterSpacing: 1 },
+  stopButtonDisabledText: { color: '#6b7280' },
   messagesList: { flex: 1, paddingHorizontal: 16 },
   messagesContent: { paddingVertical: 20 },
   messageBubble: { 

@@ -8,6 +8,12 @@ export const useVosk = (onWakeWord, onExit, onPartial, onResult) => {
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const [recognizing, setRecognizing] = useState(false);
   const isModelLoadedRef = useRef(false);
+  const isRecognizingRef = useRef(false);
+
+  const updateRecognizing = (val) => {
+    isRecognizingRef.current = val;
+    setRecognizing(val);
+  };
 
   useEffect(() => {
     const init = async () => {
@@ -52,6 +58,7 @@ export const useVosk = (onWakeWord, onExit, onPartial, onResult) => {
     const voskEmitter = new NativeEventEmitter(NativeModules.Vosk);
 
     const resultSub = voskEmitter.addListener('onResult', (res) => {
+      if (!isRecognizingRef.current) return;
       let text = '';
       try {
         const data = typeof res === 'string' ? JSON.parse(res) : res;
@@ -89,6 +96,7 @@ export const useVosk = (onWakeWord, onExit, onPartial, onResult) => {
     });
 
     const partialSub = voskEmitter.addListener('onPartialResult', (res) => {
+      if (!isRecognizingRef.current) return;
       let text = '';
       try {
         const data = typeof res === 'string' ? JSON.parse(res) : res;
@@ -100,6 +108,7 @@ export const useVosk = (onWakeWord, onExit, onPartial, onResult) => {
     });
 
     const finalSub = voskEmitter.addListener('onFinalResult', (res) => {
+      if (!isRecognizingRef.current) return;
       let text = '';
       try {
         const data = typeof res === 'string' ? JSON.parse(res) : res;
@@ -112,7 +121,7 @@ export const useVosk = (onWakeWord, onExit, onPartial, onResult) => {
 
     const errorSub = voskEmitter.addListener('onError', (err) => {
       console.error('[Vosk] Native Error:', err);
-      setRecognizing(false);
+      updateRecognizing(false);
     });
 
     return () => {
@@ -126,7 +135,7 @@ export const useVosk = (onWakeWord, onExit, onPartial, onResult) => {
   const startVosk = async (grammar = null) => {
     if (!isModelLoadedRef.current) return;
     try {
-      setRecognizing(true);
+      updateRecognizing(true);
       try { await Vosk.stop(); } catch (e) {} // Defensive stop
       await new Promise(r => setTimeout(r, 200)); // Breather for native module
       
@@ -137,14 +146,14 @@ export const useVosk = (onWakeWord, onExit, onPartial, onResult) => {
       }
     } catch (err) {
       console.warn('[Vosk] Failed to start:', err);
-      setRecognizing(false);
+      updateRecognizing(false);
     }
   };
 
   const stopVosk = async () => {
     try {
+      updateRecognizing(false);
       await Vosk.stop();
-      setRecognizing(false);
     } catch (err) {
       console.warn('[Vosk] Failed to stop:', err);
     }

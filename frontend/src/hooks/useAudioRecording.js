@@ -110,6 +110,16 @@ export const useAudioRecording = (onSilence, onVolumeChange) => {
     }
   };
 
+  const stopRecordingManual = async () => {
+    clearTimeout(silenceTimerRef.current);
+    try {
+      await cleanupAudio(recordingRef, setRecording, { stopVosk: false });
+      setVolume(0);
+    } catch (err) {
+      console.warn('[Audio] Failed to stop manually:', err);
+    }
+  };
+
   const stopAndGetURI = async () => {
     clearTimeout(silenceTimerRef.current);
     try {
@@ -131,6 +141,7 @@ export const useAudioRecording = (onSilence, onVolumeChange) => {
     volume,
     setVolume,
     startRecording,
+    stopRecordingManual,
     stopAndGetURI,
     recordingRef,
   };
