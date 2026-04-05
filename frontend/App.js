@@ -1,5 +1,20 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, Platform, LogBox, ScrollView, Alert, Animated, TextInput, KeyboardAvoidingView, Keyboard, SafeAreaView, Dimensions, LayoutAnimation, UIManager, PanResponder, Switch } from 'react-native';
+import {
+  Text,
+  View,
+  TouchableOpacity,
+  ActivityIndicator,
+  Platform,
+  LogBox,
+  ScrollView,
+  Alert,
+  Animated,
+  KeyboardAvoidingView,
+  Keyboard,
+  SafeAreaView,
+  Dimensions,
+  PanResponder
+} from 'react-native';
 import { registerRootComponent } from 'expo';
 import { StatusBar } from 'expo-status-bar';
 import * as Speech from 'expo-speech';
@@ -20,24 +35,20 @@ import { useAudioRecording } from './src/hooks/useAudioRecording';
 import { useWhisperApi } from './src/hooks/useWhisperApi';
 import { startDucking, stopDucking, cleanupAudio } from './src/utils/audioUtils';
 
+import styles from './src/styles/AppStyles';
+
 // Components
-import Visualizer from './src/components/Visualizer';
 import LanguageSelectorModal from './src/components/LanguageSelectorModal';
 import VoiceSelectorModal from './src/components/VoiceSelectorModal';
 import ManualTextInput from './src/components/ManualTextInput';
 import StatusDisplay from './src/components/StatusDisplay';
-import ResponseDisplay from './src/components/ResponseDisplay';
-import TabBar from './src/components/TabBar';
+import SideMenu from './src/components/SideMenu';
+import ChatMessage from './src/components/ChatMessage';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
-
 export default function App() {
   const [voiceTranscript, setVoiceTranscript] = useState('');
-  const [textTranscript, setTextTranscript] = useState('');
   const transcriptRef = useRef('');
   const [activeBackendUrl, setActiveBackendUrl] = useState(configuredBackendUrl);
   const activeBackendUrlRef = useRef(configuredBackendUrl);
@@ -52,11 +63,8 @@ export default function App() {
   const [messages, setMessages] = useState([
     { id: 'initial', role: 'assistant', text: 'Hello! I am Bessie, your farm assistant. How can I help you today?' }
   ]);
-  const [activeTab, setActiveTab] = useState('chat');
-  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isChatTtsEnabled, setIsChatTtsEnabled] = useState(true);
-  const recBarAnim = useRef(new Animated.Value(-100)).current;
   const [isListeningActive, setIsListeningActive] = useState(true);
   const isListeningActiveRef = useRef(true);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -68,7 +76,6 @@ export default function App() {
   const swipeResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (evt, gestureState) => {
-        // Trigger if starting from the left edge and moving right
         return !isMenuOpen &&
           evt.nativeEvent.pageX < 50 &&
           gestureState.dx > 10 &&
@@ -95,7 +102,6 @@ export default function App() {
   const silentSoundRef = useRef(null);
   const speakTimeoutRef = useRef(null);
   const restartTimerRef = useRef(null);
-  const horizontalScrollRef = useRef(null);
 
   // Sync refs
   useEffect(() => { preferredVoiceRef.current = preferredVoice; }, [preferredVoice]);
@@ -104,24 +110,15 @@ export default function App() {
 
   const {
     loading,
-    setLoading,
-    requestError,
-    setRequestError,
     streamText,
     streamAudio
   } = useWhisperApi(activeBackendUrl);
 
   const getFormattedHistory = useCallback((limit = 8) => {
-    // Convert {id, role, text} to {role, content} and skip the initial message if desired, 
-    // or just send the last N messages.
     return messages
       .slice(-limit)
       .map(m => ({ role: m.role, content: m.text }));
   }, [messages]);
-
-  const setManualText = (txt) => {
-    setVoiceTranscript(txt);
-  };
 
   const onWakeWord = useCallback((phrase) => {
     if (!isStartingRef.current) {
@@ -165,16 +162,6 @@ export default function App() {
     recordingRef
   } = useAudioRecording(onSilence);
 
-  useEffect(() => {
-    const isRec = !!recording;
-    console.log('[App] Recording state (from hook):', isRec);
-    Animated.timing(recBarAnim, {
-      toValue: isRec ? 0 : -200,
-      duration: 300,
-      useNativeDriver: false
-    }).start();
-  }, [recording]);
-
   // --- ACTIONS ---
   const startWakeWordListening = useCallback(async () => {
     if (!isListeningActiveRef.current || isStartingRef.current || !isModelLoaded) {
@@ -200,7 +187,7 @@ export default function App() {
       setVoiceTranscript('');
       transcriptRef.current = '';
       setRecognizing(true);
-      await startVosk([...WAKE_PHRASES, ...EXIT_PHRASES, ...FILLER_WORDS]); // Noise-reduced grammar to avoid false triggers while saving battery
+      await startVosk([...WAKE_PHRASES, ...EXIT_PHRASES, ...FILLER_WORDS]);
     } catch (err) {
       setRecognizing(false);
       scheduleRestart();
@@ -226,7 +213,7 @@ export default function App() {
 
     const safetyBeepTimeout = setTimeout(beepDone, 1500);
 
-    Speech.speak('Moooooo', {
+    Speech.speak('Moooo', {
       rate: 1.1,
       voice: preferredVoiceRef.current,
       onDone: beepDone,
@@ -239,7 +226,7 @@ export default function App() {
     setStatus(isFollowUp ? 'Listening (Whisper)...' : 'Listening... (Whisper)');
 
     await cleanupAudio(recordingRef, null, { stopVosk: false });
-    await startVosk([...EXIT_PHRASES, ...FILLER_WORDS]); // Listen for exits and noise to stay efficient (no full model)
+    await startVosk([...EXIT_PHRASES, ...FILLER_WORDS]);
     await startRecording();
   }, [startVosk, startRecording, recordingRef]);
 
@@ -260,7 +247,7 @@ export default function App() {
       rate: 1.0,
       voice: voiceId,
       onDone: () => {
-        setIsSpeaking(true); // Small hack to prevent immediate re-trigger before state updates
+        setIsSpeaking(true);
         setTimeout(() => {
           setIsSpeaking(false);
           speakNextSentence();
@@ -305,10 +292,8 @@ export default function App() {
           }
         },
         (transcript) => {
-          // Received transcript, add user message bubble
           setMessages(prev => {
             const userMsg = { id: Date.now().toString(), role: 'user', text: transcript };
-            // Insert before the assistant placeholder
             const list = [...prev];
             list.splice(list.length - 1, 0, userMsg);
             return list;
@@ -316,7 +301,6 @@ export default function App() {
         }
       );
 
-      // Finalize
       if (streamingSentenceBufferRef.current.trim()) {
         speechQueueRef.current.push(streamingSentenceBufferRef.current.trim());
         speakNextSentence();
@@ -399,8 +383,7 @@ export default function App() {
     if (!isListeningActiveRef.current) {
       setIsListeningActive(true);
       isListeningActiveRef.current = true;
-      // Small pause to allow the master switch to propagate before starting audio
-      setTimeout(() => triggerCommandPrompt(), 50).unref?.();
+      setTimeout(() => triggerCommandPrompt(), 50);
       return;
     }
     if (recording) {
@@ -410,7 +393,7 @@ export default function App() {
     }
   }, [recording, isListeningActive, handleStopChat, triggerCommandPrompt]);
 
-  const handleStopChat = async () => {
+  const handleStopChat = useCallback(async () => {
     clearTimeout(restartTimerRef.current);
     clearTimeout(speakTimeoutRef.current);
     Speech.stop();
@@ -418,11 +401,7 @@ export default function App() {
     await stopRecordingManual();
 
     modeRef.current = 'wake';
-    if (!isListeningActiveRef.current) {
-      setStatus('Listening Disabled');
-    } else {
-      setStatus('Stopped');
-    }
+    setStatus(isListeningActiveRef.current ? 'Stopped' : 'Listening Disabled');
     setVolume(0);
     setVoiceTranscript('');
     transcriptRef.current = '';
@@ -433,20 +412,16 @@ export default function App() {
         startWakeWordListening();
       }
     }, 400);
-  };
+  }, [stopVosk, stopRecordingManual, startWakeWordListening, silentSoundRef]);
 
   const toggleListening = useCallback(async () => {
     const nextState = !isListeningActive;
+    setIsListeningActive(nextState);
+    isListeningActiveRef.current = nextState;
 
     if (!nextState) {
-      // Disabling: Shut everything down immediately
-      setIsListeningActive(false);
-      isListeningActiveRef.current = false;
       await handleStopChat();
     } else {
-      // Enabling: Turn things back on
-      setIsListeningActive(true);
-      isListeningActiveRef.current = true;
       startWakeWordListening();
     }
   }, [isListeningActive, handleStopChat, startWakeWordListening]);
@@ -460,13 +435,13 @@ export default function App() {
     }).start();
   };
 
-  const scheduleRestart = () => {
+  const scheduleRestart = useCallback(() => {
     clearTimeout(restartTimerRef.current);
     restartTimerRef.current = setTimeout(async () => {
       if (await Speech.isSpeakingAsync()) scheduleRestart();
       else startWakeWordListening();
     }, 1000);
-  };
+  }, [startWakeWordListening]);
 
   // --- INITIALIZATION ---
   useEffect(() => {
@@ -492,7 +467,6 @@ export default function App() {
         silentSoundRef.current = sound;
       } catch (err) { console.warn(err); }
 
-      // Pick reachable backend
       for (const candidate of getBackendCandidates()) {
         try {
           const res = await fetch(`${candidate}/health`);
@@ -500,7 +474,6 @@ export default function App() {
         } catch (e) { }
       }
 
-      // Load voices
       try {
         const voices = await Speech.getAvailableVoicesAsync();
         const englishVoices = voices
@@ -530,27 +503,10 @@ export default function App() {
     }
   }, [isModelLoaded]);
 
-  // Keyboard listener as safety fallback
-  useEffect(() => {
-    const showSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      () => setIsKeyboardVisible(true)
-    );
-    const hideSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => setIsKeyboardVisible(false)
-    );
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
   return (
     <SafeAreaView style={styles.container} {...swipeResponder.panHandlers}>
       <StatusBar style="light" backgroundColor="#0f1117" />
 
-
-      {/* MAIN CONTENT */}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardAvoidingView}
@@ -587,20 +543,9 @@ export default function App() {
               onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
             >
               {messages.map((msg) => (
-                <View key={msg.id} style={[
-                  styles.messageBubble,
-                  msg.role === 'user' ? styles.userBubble : styles.assistantBubble
-                ]}>
-                  <Text style={msg.role === 'user' ? styles.userText : styles.assistantText}>
-                    {msg.text}
-                  </Text>
-                </View>
+                <ChatMessage key={msg.id} msg={msg} />
               ))}
-              {loading && (
-                <View style={styles.assistantBubble}>
-                  <ActivityIndicator color="#6ee7b7" size="small" />
-                </View>
-              )}
+              {loading && <ChatMessage loading />}
             </ScrollView>
 
             <View style={styles.inputArea}>
@@ -617,67 +562,23 @@ export default function App() {
         </View>
       </KeyboardAvoidingView>
 
-      {/* SIDE MENU (DRAWER) */}
-      {isMenuOpen && (
-        <TouchableOpacity
-          style={styles.drawerDimmer}
-          activeOpacity={1}
-          onPress={() => toggleMenu(false)}
-        />
-      )}
-      <Animated.View style={[styles.drawer, { transform: [{ translateX: menuAnim }] }]}>
-        <View style={styles.drawerHeader}>
-          <Text style={styles.drawerTitle}>🐄 Bessie</Text>
-          <TouchableOpacity onPress={() => toggleMenu(false)}>
-            <Text style={styles.menuIcon}>❮</Text>
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView contentContainerStyle={styles.drawerContent}>
-          <Text style={styles.drawerSectionLabel}>CONFIGURATION</Text>
-
-          <View style={styles.drawerItem}>
-            <Text style={styles.settingLabel}>Language</Text>
-            <TouchableOpacity style={styles.voiceButton} onPress={() => setIsLangModalVisible(true)}>
-              <Text style={styles.voiceButtonText}>🌐 {selectedLanguage.label}</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.drawerItem}>
-            <Text style={styles.settingLabel}>Voice Profile</Text>
-            <TouchableOpacity style={styles.voiceButton} onPress={() => setIsModalVisible(true)}>
-              <Text style={styles.voiceButtonText}>🗣️ Speaker Profile</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.drawerItem}>
-            <Text style={styles.settingLabel}>Text Chat Audio</Text>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
-              <Text style={{ color: '#9ca3af', fontSize: 13 }}>{isChatTtsEnabled ? 'Enabled' : 'Disabled'}</Text>
-              <Switch
-                value={isChatTtsEnabled}
-                onValueChange={setIsChatTtsEnabled}
-                thumbColor={isChatTtsEnabled ? '#2ecc71' : '#f4f3f4'}
-                trackColor={{ false: '#3e3e3e', true: '#10b981' }}
-              />
-            </View>
-          </View>
-
-          <View style={styles.statusBoxSmall}>
-            <Text style={styles.statusLabelSmall}>Backend Endpoint</Text>
-            <Text style={styles.statusTextSmall}>{activeBackendUrl}</Text>
-          </View>
-
-          <TouchableOpacity style={styles.stopButton} onPress={() => { handleStopChat(); toggleMenu(false); }}>
-            <Text style={styles.stopButtonText}>Emergency Stop</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </Animated.View>
+      <SideMenu
+        isMenuOpen={isMenuOpen}
+        toggleMenu={toggleMenu}
+        menuAnim={menuAnim}
+        selectedLanguage={selectedLanguage}
+        setIsLangModalVisible={setIsLangModalVisible}
+        setIsModalVisible={setIsModalVisible}
+        isChatTtsEnabled={isChatTtsEnabled}
+        setIsChatTtsEnabled={setIsChatTtsEnabled}
+        activeBackendUrl={activeBackendUrl}
+        handleStopChat={handleStopChat}
+      />
 
       <LanguageSelectorModal
         isVisible={isLangModalVisible}
         selectedLanguage={selectedLanguage}
-        onSelect={(lang) => { setSelectedLanguage(lang); setIsLangModalVisible(false); setServerMessage(''); }}
+        onSelect={(lang) => { setSelectedLanguage(lang); setIsLangModalVisible(false); }}
         onClose={() => setIsLangModalVisible(false)}
       />
 
@@ -691,148 +592,5 @@ export default function App() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f1117' },
-  keyboardAvoidingView: { flex: 1, backgroundColor: '#0f1117' },
-  page: { width: SCREEN_WIDTH, flex: 1, backgroundColor: '#0f1117' },
-  chatContainer: { flex: 1, width: '100%' },
-  chatHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? 40 : 10, // Ensure header is visible below notch/status bar
-    paddingBottom: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1f2937',
-    backgroundColor: '#0f1117'
-  },
-  headerSmall: { fontSize: 18, fontWeight: 'bold', color: '#ffffff', letterSpacing: 0.5 },
-  menuIcon: { fontSize: 24, color: '#ffffff', padding: 5 },
-  stopButtonTextSmall: { color: '#6ee7b7', fontSize: 11, fontWeight: 'bold', letterSpacing: 1 },
-  stopButtonDisabledText: { color: '#6b7280' },
-  messagesList: { flex: 1, paddingHorizontal: 16 },
-  messagesContent: { paddingVertical: 20 },
-  messageBubble: {
-    maxWidth: '85%',
-    padding: 14,
-    borderRadius: 20,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3
-  },
-  userBubble: {
-    alignSelf: 'flex-end',
-    backgroundColor: '#3b82f6',
-    borderBottomRightRadius: 4
-  },
-  assistantBubble: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#1f2937',
-    borderBottomLeftRadius: 4,
-    borderWidth: 1,
-    borderColor: '#374151'
-  },
-  userText: { color: '#ffffff', fontSize: 16, fontWeight: '500' },
-  assistantText: { color: '#e5e7eb', fontSize: 16, lineHeight: 22 },
-  inputArea: {
-    paddingHorizontal: 16,
-    paddingTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#1f2937',
-    backgroundColor: '#010101', // Slightly darker to contrast with history
-    paddingBottom: Platform.OS === 'ios' ? 32 : 24
-  },
-  drawerDimmer: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    zIndex: 100,
-  },
-  drawer: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: SCREEN_WIDTH * 0.8,
-    backgroundColor: '#111827',
-    zIndex: 101,
-    paddingTop: Platform.OS === 'android' ? 40 : 60,
-    borderRightWidth: 1,
-    borderRightColor: '#1f2937'
-  },
-  drawerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 30
-  },
-  drawerTitle: { fontSize: 24, fontWeight: 'bold', color: '#ffffff' },
-  drawerContent: { paddingHorizontal: 20 },
-  drawerSectionLabel: {
-    fontSize: 11,
-    color: '#6b7280',
-    letterSpacing: 2,
-    marginBottom: 20,
-    textTransform: 'uppercase'
-  },
-  drawerItem: { marginBottom: 25 },
-  statusBoxSmall: {
-    backgroundColor: '#1f2937',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 30,
-    borderWidth: 1,
-    borderColor: '#374151'
-  },
-  statusLabelSmall: { fontSize: 10, color: '#6b7280', textTransform: 'uppercase', marginBottom: 4 },
-  statusTextSmall: { fontSize: 13, color: '#9ca3af' },
-  stopButton: {
-    backgroundColor: '#1f2937',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 20,
-    borderWidth: 1,
-    borderColor: '#ef4444'
-  },
-  stopButtonText: { color: '#ef4444', fontWeight: 'bold' },
-  recordingBar: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 50 : 30, // Lower it slightly to ensure it clears the Android status bar area
-    left: 20,
-    right: 20,
-    backgroundColor: '#ef4444',
-    paddingVertical: 10,
-    borderRadius: 30,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 9999,
-    // Shadow
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 10,
-  },
-  recordingDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#fff',
-    marginRight: 10,
-  },
-  recordingText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 14,
-    letterSpacing: 0.5,
-  },
-});
 
 registerRootComponent(App);
