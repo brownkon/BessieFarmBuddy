@@ -68,6 +68,8 @@ export default function App() {
   const [isListeningActive, setIsListeningActive] = useState(true);
   const isListeningActiveRef = useRef(true);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [ttsRate, setTtsRate] = useState(1.0);
+  const [ttsVolume, setTtsVolume] = useState(1.0);
   const speechQueueRef = useRef([]);
   const streamingSentenceBufferRef = useRef('');
 
@@ -214,12 +216,13 @@ export default function App() {
     const safetyBeepTimeout = setTimeout(beepDone, 1500);
 
     Speech.speak('Moooo', {
-      rate: 1.1,
+      rate: ttsRate,
+      volume: ttsVolume,
       voice: preferredVoiceRef.current,
       onDone: beepDone,
       onError: beepDone
     });
-  }, [stopVosk, startCommandListening]);
+  }, [stopVosk, startCommandListening, ttsRate, ttsVolume]);
 
   const startCommandListening = useCallback(async (isFollowUp = false) => {
     modeRef.current = 'command';
@@ -242,12 +245,13 @@ export default function App() {
     setIsSpeaking(true);
     const bestVoiceMatch = availableVoices.find(v => v.language.startsWith(selectedLanguage.voicePrefix));
     const voiceId = bestVoiceMatch ? bestVoiceMatch.identifier : preferredVoiceRef.current;
+    // Removed redundant startDucking that may cause focus flickering
 
     Speech.speak(sentence, {
-      rate: 1.0,
+      rate: ttsRate,
+      volume: ttsVolume,
       voice: voiceId,
       onDone: () => {
-        setIsSpeaking(true);
         setTimeout(() => {
           setIsSpeaking(false);
           speakNextSentence();
@@ -258,7 +262,7 @@ export default function App() {
         speakNextSentence();
       },
     });
-  }, [isSpeaking, availableVoices, selectedLanguage.voicePrefix, preferredVoiceRef]);
+  }, [isSpeaking, availableVoices, selectedLanguage.voicePrefix, preferredVoiceRef, ttsRate, ttsVolume, silentSoundRef]);
 
   const stopAndSendRecording = useCallback(async () => {
     try {
@@ -308,9 +312,13 @@ export default function App() {
 
       const checkDoneInterval = setInterval(() => {
         if (!isSpeaking && speechQueueRef.current.length === 0) {
-          clearInterval(checkDoneInterval);
-          void stopDucking(silentSoundRef);
-          speakTimeoutRef.current = setTimeout(() => startCommandListening(true), 500);
+          setTimeout(() => {
+            if (!isSpeaking && speechQueueRef.current.length === 0) {
+              clearInterval(checkDoneInterval);
+              void stopDucking(silentSoundRef);
+              speakTimeoutRef.current = setTimeout(() => startCommandListening(true), 500);
+            }
+          }, 1000);
         }
       }, 500);
 
@@ -333,7 +341,7 @@ export default function App() {
       setMessages(prev => [...prev, userMsg]);
 
       await cleanupAudio(recordingRef, null, { stopVosk: true });
-      void startDucking(silentSoundRef);
+      await startDucking(silentSoundRef);
 
       const assistantId = Date.now().toString() + '_ai';
       setMessages(prev => [...prev, { id: assistantId, role: 'assistant', text: '' }]);
@@ -366,12 +374,19 @@ export default function App() {
       }
 
       const checkDoneInterval = setInterval(() => {
-        if (!isChatTtsEnabled || (!isSpeaking && speechQueueRef.current.length === 0)) {
-          clearInterval(checkDoneInterval);
-          void stopDucking(silentSoundRef);
-          startWakeWordListening();
+        const queueEmpty = speechQueueRef.current.length === 0;
+        // Added a multi-check buffer: only release if we stay silent for a few cycles
+        if (!isChatTtsEnabled || (!isSpeaking && queueEmpty)) {
+          // If we JUST finished, wait one more cycle to be sure no new chunk is arriving
+          setTimeout(() => {
+            if (!isSpeaking && speechQueueRef.current.length === 0) {
+              clearInterval(checkDoneInterval);
+              void stopDucking(silentSoundRef);
+              startWakeWordListening();
+            }
+          }, 1000);
         }
-      }, 300);
+      }, 500);
     } catch (error) {
       void stopDucking(silentSoundRef);
       Alert.alert('Text API failed', error.message);
@@ -462,7 +477,7 @@ export default function App() {
 
         const { sound } = await Audio.Sound.createAsync(
           { uri: 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==' },
-          { isLooping: true, volume: 0.1 }
+          { isLooping: true, volume: 1.0 }
         );
         silentSoundRef.current = sound;
       } catch (err) { console.warn(err); }
@@ -573,6 +588,10 @@ export default function App() {
         setIsChatTtsEnabled={setIsChatTtsEnabled}
         activeBackendUrl={activeBackendUrl}
         handleStopChat={handleStopChat}
+        ttsRate={ttsRate}
+        setTtsRate={setTtsRate}
+        ttsVolume={ttsVolume}
+        setTtsVolume={setTtsVolume}
       />
 
       <LanguageSelectorModal
@@ -586,7 +605,7 @@ export default function App() {
         isVisible={isModalVisible}
         availableVoices={availableVoices}
         preferredVoice={preferredVoice}
-        onSelect={(id) => { setPreferredVoice(id); setIsModalVisible(false); Speech.speak("Voice selected.", { voice: id }); }}
+        onSelect={(id) => { setPreferredVoice(id); setIsModalVisible(false); Speech.speak("Voice selected.", { voice: id, rate: ttsRate, volume: ttsVolume }); }}
         onClose={() => setIsModalVisible(false)}
       />
     </SafeAreaView>

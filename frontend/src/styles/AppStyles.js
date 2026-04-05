@@ -142,4 +142,42 @@ export default StyleSheet.create({
     fontSize: 14,
     letterSpacing: 0.5,
   },
+  stepperContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 10
+  },
+  stepperButton: {
+    width: 32,
+    height: 32,
+    backgroundColor: '#1f2937',
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#374151'
+  },
+  stepperLabel: {
+    color: '#ffffff',
+    fontSize: 20,
+    fontWeight: 'bold',
+    lineHeight: 22
+  },
+  stepperTrack: {
+    flex: 1,
+    height: 4,
+    backgroundColor: '#374151',
+    borderRadius: 2
+  },
+  stepperFill: {
+    height: '100%',
+    backgroundColor: '#2ecc71',
+    borderRadius: 2
+  },
+  settingLabel: {
+    fontSize: 14,
+    color: '#e5e7eb',
+    fontWeight: '600'
+  }
 });

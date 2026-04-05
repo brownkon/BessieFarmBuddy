@@ -22,7 +22,11 @@ const SideMenu = ({
   isChatTtsEnabled,
   setIsChatTtsEnabled,
   activeBackendUrl,
-  handleStopChat
+  handleStopChat,
+  ttsRate,
+  setTtsRate,
+  ttsVolume,
+  setTtsVolume
 }) => {
   if (!isMenuOpen) return null;
 
@@ -68,6 +72,48 @@ const SideMenu = ({
                 thumbColor={isChatTtsEnabled ? '#2ecc71' : '#f4f3f4'}
                 trackColor={{ false: '#3e3e3e', true: '#10b981' }}
               />
+            </View>
+          </View>
+
+          <View style={styles.drawerItem}>
+            <Text style={styles.settingLabel}>TTS Volume: {(ttsVolume * 100).toFixed(0)}%</Text>
+            <View style={styles.stepperContainer}>
+              <TouchableOpacity 
+                style={styles.stepperButton} 
+                onPress={() => setTtsVolume(Math.max(0, ttsVolume - 0.1))}
+              >
+                <Text style={styles.stepperLabel}>-</Text>
+              </TouchableOpacity>
+              <View style={styles.stepperTrack}>
+                <View style={[styles.stepperFill, { width: `${ttsVolume * 100}%` }]} />
+              </View>
+              <TouchableOpacity 
+                style={styles.stepperButton} 
+                onPress={() => setTtsVolume(Math.min(1.0, ttsVolume + 0.1))}
+              >
+                <Text style={styles.stepperLabel}>+</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.drawerItem}>
+            <Text style={styles.settingLabel}>TTS Speed: {ttsRate.toFixed(1)}x</Text>
+            <View style={styles.stepperContainer}>
+              <TouchableOpacity 
+                style={styles.stepperButton} 
+                onPress={() => setTtsRate(Math.max(0.5, ttsRate - 0.1))}
+              >
+                <Text style={styles.stepperLabel}>-</Text>
+              </TouchableOpacity>
+              <View style={styles.stepperTrack}>
+                <View style={[styles.stepperFill, { width: `${((ttsRate - 0.5) / 1.5) * 100}%` }]} />
+              </View>
+              <TouchableOpacity 
+                style={styles.stepperButton} 
+                onPress={() => setTtsRate(Math.min(2.0, ttsRate + 0.1))}
+              >
+                <Text style={styles.stepperLabel}>+</Text>
+              </TouchableOpacity>
             </View>
           </View>
 
