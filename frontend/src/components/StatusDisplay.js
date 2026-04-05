@@ -12,15 +12,15 @@ const StatusDisplay = ({
   volume,
   compact = false
 }) => {
+  const showRecording = !!recording || mode === 'command';
+
   if (compact) {
     return (
       <View style={styles.compactBox}>
-        {recording ? (
+        {showRecording ? (
           <View style={styles.centerRowCompact}>
-            <Visualizer volume={volume} isActive={!!recording} />
-            {transcript.length > 0 && (
-              <Text style={styles.partialTranscriptCompact} numberOfLines={1}>“{transcript}”</Text>
-            )}
+            <View style={styles.redDotCompact} />
+            <Text style={styles.recordingLabelCompact}>RECORDING AUDIO...</Text>
           </View>
         ) : (
           <Text style={styles.statusTextCompact}>{status}</Text>
@@ -38,11 +38,11 @@ const StatusDisplay = ({
           <Text style={styles.partialTranscript}>“{transcript}”</Text>
         </View>
       )}
-      {/* Activity indicator removed as per user request to only show in message history */}
 
-      {recording && (
+      {showRecording && (
         <View style={styles.centerRow}>
-          <Visualizer volume={volume} isActive={!!recording} />
+          <View style={styles.redDot} />
+          <Text style={styles.recordingLabel}>RECORDING AUDIO...</Text>
         </View>
       )}
     </View>
@@ -92,13 +92,37 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#4ade80',
     fontStyle: 'italic',
-    // We'll use a fixed width or just let it overflow if managed by container
   },
   centerRow: { 
     flexDirection: 'row', 
     alignItems: 'center', 
     justifyContent: 'center', 
-    marginTop: 10 
+    marginTop: 10,
+    gap: 8
+  },
+  redDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#ef4444'
+  },
+  redDotCompact: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#ef4444'
+  },
+  recordingLabel: {
+    fontSize: 14,
+    color: '#ef4444',
+    fontWeight: 'bold',
+    letterSpacing: 1
+  },
+  recordingLabelCompact: {
+    fontSize: 10,
+    color: '#ef4444',
+    fontWeight: 'bold',
+    letterSpacing: 1.5
   },
   transcriptContainer: { 
     width: '100%', 
