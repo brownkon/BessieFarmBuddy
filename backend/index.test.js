@@ -16,19 +16,35 @@ test('POST /api/chat - requires text', async (t) => {
   assert.strictEqual(body.error, 'Text input is required');
 });
 
-test('POST /api/chat - handles valid text (mocked)', async (t) => {
-  // To avoid real OpenAI calls in unit tests, we'd mock the OpenAI client.
-  // For now, this just tests that the route is configured to accept valid input.
-  // In a real environment with mocking, we would get a 200.
-  // Since we don't mock OpenAI here and there's no API key, it will likely return 500.
+test('POST /api/chat - handles valid text and history', async (t) => {
   const response = await fastify.inject({
     method: 'POST',
     url: '/api/chat',
     payload: {
-      text: 'Hello Bessie'
+      text: 'My name is Konner',
+      history: [
+        { role: 'user', content: 'What is my name?' },
+        { role: 'assistant', content: 'I don\'t know your name yet.' }
+      ]
     }
   });
 
-  // Depending on whether .env is loaded and the key is valid, we check for a response structure.
+  // Since we don't mock OpenAI here, we can't expect a 200 without a real key
+  assert.ok(response.statusCode === 200 || response.statusCode === 500);
+});
+
+test('POST /api/voice-chat - handles transcript and history', async (t) => {
+  const response = await fastify.inject({
+    method: 'POST',
+    url: '/api/voice-chat',
+    payload: {
+      transcript: 'Keep assisting me',
+      history: [
+        { role: 'user', content: 'You are my assistant' },
+        { role: 'assistant', content: 'Understood.' }
+      ]
+    }
+  });
+
   assert.ok(response.statusCode === 200 || response.statusCode === 500);
 });

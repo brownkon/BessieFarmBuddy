@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, Platform, LogBox, ScrollView, Alert, Animated, TextInput, KeyboardAvoidingView, Keyboard, SafeAreaView, Dimensions, LayoutAnimation, UIManager, PanResponder } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, Platform, LogBox, ScrollView, Alert, Animated, TextInput, KeyboardAvoidingView, Keyboard, SafeAreaView, Dimensions, LayoutAnimation, UIManager, PanResponder, Switch } from 'react-native';
 import { registerRootComponent } from 'expo';
 import { StatusBar } from 'expo-status-bar';
 import * as Speech from 'expo-speech';
@@ -55,8 +55,13 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('chat');
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isChatTtsEnabled, setIsChatTtsEnabled] = useState(true);
   const [isListeningActive, setIsListeningActive] = useState(true);
   const isListeningActiveRef = useRef(true);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const speechQueueRef = useRef([]);
+  const streamingSentenceBufferRef = useRef('');
+  
   const menuAnim = useRef(new Animated.Value(-SCREEN_WIDTH * 0.8)).current;
   const scrollRef = useRef(null);
   const swipeResponder = useRef(
@@ -101,9 +106,17 @@ export default function App() {
     setLoading,
     requestError,
     setRequestError,
-    sendTranscriptToBackend,
-    sendRecordingToBackend
+    streamText,
+    streamAudio
   } = useWhisperApi(activeBackendUrl);
+
+  const getFormattedHistory = useCallback((limit = 8) => {
+    // Convert {id, role, text} to {role, content} and skip the initial message if desired, 
+    // or just send the last N messages.
+    return messages
+      .slice(-limit)
+      .map(m => ({ role: m.role, content: m.text }));
+  }, [messages]);
 
   const setManualText = (txt) => {
     setVoiceTranscript(txt);
@@ -121,9 +134,8 @@ export default function App() {
     handleStopChat();
   }, []);
 
-  const onPartial = useCallback((txt) => setVoiceTranscript(txt), []);
+  const onPartial = useCallback((_txt) => {}, []);
   const onResult = useCallback((txt) => {
-    setVoiceTranscript(txt);
     transcriptRef.current = txt;
   }, []);
 
@@ -221,92 +233,151 @@ export default function App() {
     await startRecording();
   }, [startVosk, startRecording, recordingRef]);
 
-  const processBackendResult = useCallback(async (data, isHandsFree = true) => {
-    try {
-      const summary = data.summary || data.response;
-      
-      // Append user entry if it was voice (manual text already appends before calling)
-      if (data.transcript && modeRef.current === 'command') {
-        const userMsg = { id: Date.now().toString(), role: 'user', text: data.transcript };
-        setMessages(prev => [...prev, userMsg]);
-      }
+  const speakNextSentence = useCallback(() => {
+    if (isSpeaking || speechQueueRef.current.length === 0) return;
 
-      if (summary) {
-        const assistantMsg = { id: (Date.now() + 1).toString(), role: 'assistant', text: summary };
-        setMessages(prev => [...prev, assistantMsg]);
-
-        if (data.exit) {
-          console.log('[Bessie] Exit phrase detected. Skipping speech and restarting wake listener.');
-          void stopDucking(silentSoundRef);
-          startWakeWordListening();
-          return;
-        }
-
-        setStatus('Playing response...');
-        const bestVoiceMatch = availableVoices.find(v => v.language.startsWith(selectedLanguage.voicePrefix));
-        const voiceId = bestVoiceMatch ? bestVoiceMatch.identifier : preferredVoiceRef.current;
-
-        Speech.speak(summary, {
-          rate: 1.0,
-          voice: voiceId,
-          onDone: () => {
-            void stopDucking(silentSoundRef);
-            if (data.exit || !isHandsFree) startWakeWordListening();
-            else speakTimeoutRef.current = setTimeout(() => startCommandListening(true), 500);
-          },
-          onError: () => {
-            void stopDucking(silentSoundRef);
-            startWakeWordListening();
-          },
-        });
-      } else {
-        startWakeWordListening();
-      }
-    } catch (error) {
-      console.error('[Bessie] Error processing backend response:', error);
-      startWakeWordListening();
+    const sentence = speechQueueRef.current.shift();
+    if (!sentence || sentence.trim().length === 0) {
+      speakNextSentence();
+      return;
     }
-  }, [availableVoices, selectedLanguage.voicePrefix, preferredVoiceRef, silentSoundRef, startWakeWordListening, startCommandListening]);
+
+    setIsSpeaking(true);
+    const bestVoiceMatch = availableVoices.find(v => v.language.startsWith(selectedLanguage.voicePrefix));
+    const voiceId = bestVoiceMatch ? bestVoiceMatch.identifier : preferredVoiceRef.current;
+
+    Speech.speak(sentence, {
+      rate: 1.0,
+      voice: voiceId,
+      onDone: () => {
+        setIsSpeaking(true); // Small hack to prevent immediate re-trigger before state updates
+        setTimeout(() => {
+          setIsSpeaking(false);
+          speakNextSentence();
+        }, 50);
+      },
+      onError: () => {
+        setIsSpeaking(false);
+        speakNextSentence();
+      },
+    });
+  }, [isSpeaking, availableVoices, selectedLanguage.voicePrefix, preferredVoiceRef]);
 
   const stopAndSendRecording = useCallback(async () => {
     try {
       const uri = await stopAndGetURI();
-      if (!uri) {
-        startWakeWordListening();
-        return;
-      }
+      if (!uri) { startWakeWordListening(); return; }
 
       void startDucking(silentSoundRef);
-      const data = await sendRecordingToBackend(uri, selectedLanguage.code);
-      await processBackendResult(data, true);
+      setStatus('Thinking...');
+      
+      const assistantId = Date.now().toString() + '_ai';
+      setMessages(prev => [...prev, { id: assistantId, role: 'assistant', text: '' }]);
+      
+      let fullResponse = '';
+      streamingSentenceBufferRef.current = '';
+      speechQueueRef.current = [];
+
+      await streamAudio(uri, selectedLanguage.code, getFormattedHistory(8), 
+        (chunk) => {
+          fullResponse += chunk;
+          streamingSentenceBufferRef.current += chunk;
+          setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, text: fullResponse } : m));
+          
+          let match;
+          while ((match = streamingSentenceBufferRef.current.match(/^(.*?[.!?\n])(.*)$/s))) {
+            const toSpeak = match[1].trim();
+            streamingSentenceBufferRef.current = match[2];
+            if (toSpeak) {
+              speechQueueRef.current.push(toSpeak);
+              speakNextSentence();
+            }
+          }
+        },
+        (transcript) => {
+          // Received transcript, add user message bubble
+          setMessages(prev => {
+             const userMsg = { id: Date.now().toString(), role: 'user', text: transcript };
+             // Insert before the assistant placeholder
+             const list = [...prev];
+             list.splice(list.length - 1, 0, userMsg);
+             return list;
+          });
+        }
+      );
+
+      // Finalize
+      if (streamingSentenceBufferRef.current.trim()) {
+        speechQueueRef.current.push(streamingSentenceBufferRef.current.trim());
+        speakNextSentence();
+      }
+
+      const checkDoneInterval = setInterval(() => {
+        if (!isSpeaking && speechQueueRef.current.length === 0) {
+          clearInterval(checkDoneInterval);
+          void stopDucking(silentSoundRef);
+          speakTimeoutRef.current = setTimeout(() => startCommandListening(true), 500);
+        }
+      }, 500);
+
     } catch (error) {
       void stopDucking(silentSoundRef);
-      Alert.alert('API failed', error.message);
+      Alert.alert('Voice API failed', error.message);
       startWakeWordListening();
     }
-  }, [stopAndGetURI, sendRecordingToBackend, selectedLanguage.code, processBackendResult, startWakeWordListening]);
+  }, [stopAndGetURI, streamAudio, selectedLanguage.code, startWakeWordListening, startCommandListening, getFormattedHistory, speakNextSentence, isSpeaking, silentSoundRef]);
 
   const handleSendManualText = async () => {
     if (!voiceTranscript.trim()) return;
-
     const textToSend = voiceTranscript.trim();
     setVoiceTranscript('');
     Keyboard.dismiss();
 
     try {
-      setStatus('Sending text...');
+      setStatus('Sending...');
       const userMsg = { id: Date.now().toString(), role: 'user', text: textToSend };
       setMessages(prev => [...prev, userMsg]);
-
-      // Stop anything current
+      
       await cleanupAudio(recordingRef, null, { stopVosk: true });
       void startDucking(silentSoundRef);
 
-      const data = await sendTranscriptToBackend(textToSend, selectedLanguage.code);
-      if (data) {
-        modeRef.current = 'wake';
-        await processBackendResult(data, false);
+      const assistantId = Date.now().toString() + '_ai';
+      setMessages(prev => [...prev, { id: assistantId, role: 'assistant', text: '' }]);
+
+      let fullResponse = '';
+      streamingSentenceBufferRef.current = '';
+      speechQueueRef.current = [];
+
+      await streamText(textToSend, getFormattedHistory(8), selectedLanguage.code, (chunk) => {
+        fullResponse += chunk;
+        streamingSentenceBufferRef.current += chunk;
+        setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, text: fullResponse } : m));
+        
+        if (isChatTtsEnabled) {
+          let match;
+          while ((match = streamingSentenceBufferRef.current.match(/^(.*?[.!?\n])(.*)$/s))) {
+            const toSpeak = match[1].trim();
+            streamingSentenceBufferRef.current = match[2];
+            if (toSpeak) {
+              speechQueueRef.current.push(toSpeak);
+              speakNextSentence();
+            }
+          }
+        }
+      });
+
+      if (isChatTtsEnabled && streamingSentenceBufferRef.current.trim()) {
+        speechQueueRef.current.push(streamingSentenceBufferRef.current.trim());
+        speakNextSentence();
       }
+
+      const checkDoneInterval = setInterval(() => {
+        if (!isChatTtsEnabled || (!isSpeaking && speechQueueRef.current.length === 0)) {
+          clearInterval(checkDoneInterval);
+          void stopDucking(silentSoundRef);
+          startWakeWordListening();
+        }
+      }, 300);
     } catch (error) {
       void stopDucking(silentSoundRef);
       Alert.alert('Text API failed', error.message);
@@ -566,6 +637,19 @@ export default function App() {
             <TouchableOpacity style={styles.voiceButton} onPress={() => setIsModalVisible(true)}>
               <Text style={styles.voiceButtonText}>🗣️ Speaker Profile</Text>
             </TouchableOpacity>
+          </View>
+
+          <View style={styles.drawerItem}>
+            <Text style={styles.settingLabel}>Text Chat Audio</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
+              <Text style={{ color: '#9ca3af', fontSize: 13 }}>{isChatTtsEnabled ? 'Enabled' : 'Disabled'}</Text>
+              <Switch 
+                value={isChatTtsEnabled} 
+                onValueChange={setIsChatTtsEnabled}
+                thumbColor={isChatTtsEnabled ? '#2ecc71' : '#f4f3f4'}
+                trackColor={{ false: '#3e3e3e', true: '#10b981' }}
+              />
+            </View>
           </View>
 
           <View style={styles.statusBoxSmall}>
