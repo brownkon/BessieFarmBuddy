@@ -341,7 +341,9 @@ export default function App() {
       setMessages(prev => [...prev, userMsg]);
 
       await cleanupAudio(recordingRef, null, { stopVosk: true });
-      await startDucking(silentSoundRef);
+      if (isChatTtsEnabled) {
+        await startDucking(silentSoundRef);
+      }
 
       const assistantId = Date.now().toString() + '_ai';
       setMessages(prev => [...prev, { id: assistantId, role: 'assistant', text: '' }]);
