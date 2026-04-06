@@ -18,7 +18,13 @@ export const useAudioRecording = (onSilence, onVolumeChange) => {
     onVolumeChangeRef.current = onVolumeChange;
   }, [onSilence, onVolumeChange]);
 
+  const isPreparingRef = useRef(false);
   const startRecording = async () => {
+    if (isPreparingRef.current) {
+      console.log('[Audio] Already preparing a recording. Skipping.');
+      return;
+    }
+    isPreparingRef.current = true;
     try {
       const { status } = await Audio.requestPermissionsAsync();
       if (status !== 'granted') throw new Error('Microphone permission not granted');
@@ -107,6 +113,8 @@ export const useAudioRecording = (onSilence, onVolumeChange) => {
     } catch (err) {
       console.warn('[Audio] Failed to record:', err);
       throw err;
+    } finally {
+      isPreparingRef.current = false;
     }
   };
 

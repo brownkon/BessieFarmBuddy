@@ -12,7 +12,7 @@ export const startDucking = async (silentSoundRef) => {
         interruptionModeIOS: 2, // DuckOthers
         interruptionModeAndroid: 2, // DuckOthers
       });
-      await silentSoundRef.current.setVolumeAsync(0.5);
+      await silentSoundRef.current.setVolumeAsync(0.9);
       await silentSoundRef.current.playAsync();
     } catch (err) { /* silent fail */ }
   }

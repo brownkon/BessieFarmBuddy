@@ -29,7 +29,7 @@ export const useWhisperApi = (activeBackendUrl) => {
               if (dataStr === '[DONE]') { resolve(); continue; }
               try {
                 const parsed = JSON.parse(dataStr);
-                if (parsed.content) onChunk(parsed.content);
+                if (parsed.content || parsed.terminate) onChunk(parsed);
               } catch (e) {}
             }
           }
@@ -69,7 +69,7 @@ export const useWhisperApi = (activeBackendUrl) => {
               try {
                 const parsed = JSON.parse(dataStr);
                 if (parsed.transcript && onTranscript) onTranscript(parsed.transcript);
-                if (parsed.content) onChunk(parsed.content);
+                if (parsed.content || parsed.terminate) onChunk(parsed);
               } catch (e) {}
             }
           }
