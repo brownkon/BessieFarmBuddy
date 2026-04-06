@@ -132,19 +132,25 @@ export const useVosk = (onWakeWord, onExit, onPartial, onResult) => {
     };
   }, [onWakeWord, onExit, onPartial, onResult]);
 
-  const startVosk = async (grammar = null) => {
+  const startVosk = async (grammar = null, retryCount = 0) => {
     if (!isModelLoadedRef.current) return;
     try {
       updateRecognizing(true);
-      try { await Vosk.stop(); } catch (e) {} // Defensive stop
-      await new Promise(r => setTimeout(r, 200)); // Breather for native module
+      try { await Vosk.stop(); } catch (e) {} 
+      await new Promise(r => setTimeout(r, 300)); // Increased breather
       
       if (grammar && Array.isArray(grammar) && grammar.length > 0) {
         await Vosk.start({ grammar });
       } else {
         await Vosk.start();
       }
+      console.log('[Vosk] Started successfully');
     } catch (err) {
+      if (err.message?.includes('not loaded') && retryCount < 2) {
+        console.log(`[Vosk] Model not ready, retrying... (${retryCount + 1})`);
+        await new Promise(r => setTimeout(r, 600));
+        return startVosk(grammar, retryCount + 1);
+      }
       console.warn('[Vosk] Failed to start:', err);
       updateRecognizing(false);
     }

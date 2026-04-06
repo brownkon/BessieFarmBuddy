@@ -100,7 +100,11 @@ export default function App() {
   ).current;
 
   const modeRef = useRef('wake'); // 'wake' | 'command' | 'transition'
+  const isSpeakingRef = useRef(false);
   const isStartingRef = useRef(false);
+  const isProcessingRef = useRef(false);
+  const shouldTerminateRef = useRef(false);
+  const checkDoneIntervalRef = useRef(null);
   const silentSoundRef = useRef(null);
   const speakTimeoutRef = useRef(null);
   const restartTimerRef = useRef(null);
@@ -243,6 +247,7 @@ export default function App() {
     }
 
     setIsSpeaking(true);
+    isSpeakingRef.current = true;
     const bestVoiceMatch = availableVoices.find(v => v.language.startsWith(selectedLanguage.voicePrefix));
     const voiceId = bestVoiceMatch ? bestVoiceMatch.identifier : preferredVoiceRef.current;
     // Removed redundant startDucking that may cause focus flickering
@@ -254,23 +259,29 @@ export default function App() {
       onDone: () => {
         setTimeout(() => {
           setIsSpeaking(false);
+          isSpeakingRef.current = false;
           speakNextSentence();
         }, 50);
       },
       onError: () => {
         setIsSpeaking(false);
+        isSpeakingRef.current = false;
         speakNextSentence();
       },
     });
   }, [isSpeaking, availableVoices, selectedLanguage.voicePrefix, preferredVoiceRef, ttsRate, ttsVolume, silentSoundRef]);
 
   const stopAndSendRecording = useCallback(async () => {
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
     try {
       const uri = await stopAndGetURI();
       if (!uri) { startWakeWordListening(); return; }
 
       void startDucking(silentSoundRef);
-      setStatus('Thinking...');
+      modeRef.current = 'thinking';
+      setStatus('Reading...');
+      shouldTerminateRef.current = false;
 
       const assistantId = Date.now().toString() + '_ai';
       setMessages(prev => [...prev, { id: assistantId, role: 'assistant', text: '' }]);
@@ -280,7 +291,10 @@ export default function App() {
       speechQueueRef.current = [];
 
       await streamAudio(uri, selectedLanguage.code, getFormattedHistory(8),
-        (chunk) => {
+        (parsed) => {
+          const chunk = parsed.content || '';
+          if (parsed.terminate) shouldTerminateRef.current = true;
+
           fullResponse += chunk;
           streamingSentenceBufferRef.current += chunk;
           setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, text: fullResponse } : m));
@@ -310,33 +324,48 @@ export default function App() {
         speakNextSentence();
       }
 
-      const checkDoneInterval = setInterval(() => {
-        if (!isSpeaking && speechQueueRef.current.length === 0) {
-          setTimeout(() => {
-            if (!isSpeaking && speechQueueRef.current.length === 0) {
-              clearInterval(checkDoneInterval);
+      clearInterval(checkDoneIntervalRef.current);
+      checkDoneIntervalRef.current = setInterval(() => {
+        const queueEmpty = speechQueueRef.current.length === 0;
+        // Check ONLY the Ref to avoid stale closures
+        if (!isSpeakingRef.current && queueEmpty) {
+          // Verify with a shorter 800ms window now that state is robust
+          setTimeout(async () => {
+            const reallyDone = !isSpeakingRef.current && speechQueueRef.current.length === 0 && !(await Speech.isSpeakingAsync());
+            if (reallyDone) {
+              clearInterval(checkDoneIntervalRef.current);
               void stopDucking(silentSoundRef);
-              speakTimeoutRef.current = setTimeout(() => startCommandListening(true), 500);
+              if (!shouldTerminateRef.current) {
+                speakTimeoutRef.current = setTimeout(() => startCommandListening(true), 100);
+              } else {
+                setStatus('Talk soon!');
+                setTimeout(() => startWakeWordListening(), 1000);
+              }
             }
-          }, 1000);
+          }, 800);
         }
-      }, 500);
+      }, 1000);
 
     } catch (error) {
       void stopDucking(silentSoundRef);
       Alert.alert('Voice API failed', error.message);
       startWakeWordListening();
+    } finally {
+      isProcessingRef.current = false;
     }
   }, [stopAndGetURI, streamAudio, selectedLanguage.code, startWakeWordListening, startCommandListening, getFormattedHistory, speakNextSentence, isSpeaking, silentSoundRef]);
 
   const handleSendManualText = async () => {
-    if (!voiceTranscript.trim()) return;
+    if (isProcessingRef.current || !voiceTranscript.trim()) return;
+    isProcessingRef.current = true;
     const textToSend = voiceTranscript.trim();
     setVoiceTranscript('');
     Keyboard.dismiss();
 
     try {
-      setStatus('Sending...');
+      setStatus('Reading...');
+      modeRef.current = 'thinking';
+      shouldTerminateRef.current = false;
       const userMsg = { id: Date.now().toString(), role: 'user', text: textToSend };
       setMessages(prev => [...prev, userMsg]);
 
@@ -352,7 +381,10 @@ export default function App() {
       streamingSentenceBufferRef.current = '';
       speechQueueRef.current = [];
 
-      await streamText(textToSend, getFormattedHistory(8), selectedLanguage.code, (chunk) => {
+      await streamText(textToSend, getFormattedHistory(8), selectedLanguage.code, (parsed) => {
+        const chunk = parsed.content || '';
+        if (parsed.terminate) shouldTerminateRef.current = true;
+        
         fullResponse += chunk;
         streamingSentenceBufferRef.current += chunk;
         setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, text: fullResponse } : m));
@@ -375,24 +407,31 @@ export default function App() {
         speakNextSentence();
       }
 
-      const checkDoneInterval = setInterval(() => {
+      clearInterval(checkDoneIntervalRef.current);
+      checkDoneIntervalRef.current = setInterval(() => {
         const queueEmpty = speechQueueRef.current.length === 0;
-        // Added a multi-check buffer: only release if we stay silent for a few cycles
-        if (!isChatTtsEnabled || (!isSpeaking && queueEmpty)) {
-          // If we JUST finished, wait one more cycle to be sure no new chunk is arriving
-          setTimeout(() => {
-            if (!isSpeaking && speechQueueRef.current.length === 0) {
-              clearInterval(checkDoneInterval);
+        if (!isChatTtsEnabled || (!isSpeakingRef.current && queueEmpty)) {
+          setTimeout(async () => {
+            const reallyDone = !isChatTtsEnabled || (!isSpeakingRef.current && speechQueueRef.current.length === 0 && !(await Speech.isSpeakingAsync()));
+            if (reallyDone) {
+              clearInterval(checkDoneIntervalRef.current);
               void stopDucking(silentSoundRef);
-              startWakeWordListening();
+              if (!shouldTerminateRef.current) {
+                startWakeWordListening();
+              } else {
+                setStatus('Talk soon!');
+                setTimeout(() => startWakeWordListening(), 1000);
+              }
             }
-          }, 1000);
+          }, 800);
         }
-      }, 500);
+      }, 1000);
     } catch (error) {
       void stopDucking(silentSoundRef);
       Alert.alert('Text API failed', error.message);
       startWakeWordListening();
+    } finally {
+      isProcessingRef.current = false;
     }
   };
 
