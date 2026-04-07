@@ -9,15 +9,16 @@ export const useWhisperApi = (activeBackendUrl) => {
   /**
    * Stream LLM response for text input
    */
-  const streamText = async (text, history = [], language = 'en', onChunk) => {
+  const streamText = async (text, history = [], language = 'en', onChunk, options = {}) => {
+    const { headers = {}, location = null } = options;
     setLoading(true);
-    setRequestError('');
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open('POST', `${activeBackendUrl}/api/chat`);
       xhr.setRequestHeader('Content-Type', 'application/json');
-      let seenBytes = 0;
+      Object.keys(headers).forEach(key => xhr.setRequestHeader(key, headers[key]));
 
+      let seenBytes = 0;
       xhr.onreadystatechange = () => {
         if (xhr.readyState === 3 || xhr.readyState === 4) {
           const newData = xhr.responseText.substring(seenBytes);
@@ -37,24 +38,26 @@ export const useWhisperApi = (activeBackendUrl) => {
         if (xhr.readyState === 4) { setLoading(false); resolve(); }
       };
       xhr.onerror = () => { setLoading(false); reject(new Error('Network error')); };
-      xhr.send(JSON.stringify({ text, history, language }));
+      xhr.send(JSON.stringify({ text, history, language, location }));
     });
   };
 
   /**
    * Stream LLM response for audio input (Transcription + Chat)
    */
-  const streamAudio = async (uri, language, history = [], onChunk, onTranscript) => {
+  const streamAudio = async (uri, language, history = [], onChunk, onTranscript, _unused, options = {}) => {
+    const { headers = {}, location = null } = options;
     setLoading(true);
-    setRequestError('');
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open('POST', `${activeBackendUrl}/api/voice-chat`);
+      Object.keys(headers).forEach(key => xhr.setRequestHeader(key, headers[key]));
       
       const formData = new FormData();
       formData.append('audio', { uri, type: 'audio/m4a', name: 'command.m4a' });
       formData.append('language', language);
       formData.append('history', JSON.stringify(history));
+      if (location) formData.append('location', JSON.stringify(location));
 
       let seenBytes = 0;
       xhr.onreadystatechange = () => {

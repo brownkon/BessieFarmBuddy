@@ -6,8 +6,10 @@ import {
   ScrollView, 
   Switch, 
   Animated, 
-  Dimensions 
+  Dimensions,
+  Alert
 } from 'react-native';
+import { supabase } from '../services/supabase';
 import styles from '../styles/AppStyles';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -26,9 +28,15 @@ const SideMenu = ({
   ttsRate,
   setTtsRate,
   ttsVolume,
-  setTtsVolume
+  setTtsVolume,
+  user
 }) => {
   if (!isMenuOpen) return null;
+
+  const handleSignOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) Alert.alert('Error signing out', error.message);
+  };
 
   return (
     <>
@@ -46,6 +54,13 @@ const SideMenu = ({
         </View>
 
         <ScrollView contentContainerStyle={styles.drawerContent}>
+          {user && (
+            <View style={styles.statusBoxSmall}>
+              <Text style={styles.statusLabelSmall}>Logged in as</Text>
+              <Text style={styles.statusTextSmall}>{user.email}</Text>
+            </View>
+          )}
+
           <Text style={styles.drawerSectionLabel}>CONFIGURATION</Text>
 
           <View style={styles.drawerItem}>
@@ -128,6 +143,15 @@ const SideMenu = ({
           >
             <Text style={styles.stopButtonText}>Emergency Stop</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.stopButton, { borderColor: '#ef4444', marginTop: 10 }]} 
+            onPress={handleSignOut}
+          >
+            <Text style={styles.stopButtonText}>Sign Out</Text>
+          </TouchableOpacity>
+
+          <View style={{ height: 40 }} />
         </ScrollView>
       </Animated.View>
     </>

@@ -1,3 +1,5 @@
+import { setupURLPolyfill } from 'react-native-url-polyfill';
+setupURLPolyfill();
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Text,
@@ -19,6 +21,9 @@ import { registerRootComponent } from 'expo';
 import { StatusBar } from 'expo-status-bar';
 import * as Speech from 'expo-speech';
 import { Audio } from 'expo-av';
+
+import { AuthProvider, useAuth } from './src/context/AuthContext';
+import AuthScreen from './src/screens/Auth/AuthScreen';
 
 import {
   WAKE_PHRASES,
@@ -47,7 +52,9 @@ import ChatMessage from './src/components/ChatMessage';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-export default function App() {
+function AppMain() {
+  const { session, user } = useAuth();
+  const [gpsLocation, setGpsLocation] = useState(null);
   const [voiceTranscript, setVoiceTranscript] = useState('');
   const transcriptRef = useRef('');
   const [activeBackendUrl, setActiveBackendUrl] = useState(configuredBackendUrl);
@@ -99,7 +106,7 @@ export default function App() {
     })
   ).current;
 
-  const modeRef = useRef('wake'); // 'wake' | 'command' | 'transition'
+  const modeRef = useRef('wake'); 
   const isSpeakingRef = useRef(false);
   const isStartingRef = useRef(false);
   const isProcessingRef = useRef(false);
@@ -250,7 +257,6 @@ export default function App() {
     isSpeakingRef.current = true;
     const bestVoiceMatch = availableVoices.find(v => v.language.startsWith(selectedLanguage.voicePrefix));
     const voiceId = bestVoiceMatch ? bestVoiceMatch.identifier : preferredVoiceRef.current;
-    // Removed redundant startDucking that may cause focus flickering
 
     Speech.speak(sentence, {
       rate: ttsRate,
@@ -269,7 +275,7 @@ export default function App() {
         speakNextSentence();
       },
     });
-  }, [isSpeaking, availableVoices, selectedLanguage.voicePrefix, preferredVoiceRef, ttsRate, ttsVolume, silentSoundRef]);
+  }, [isSpeaking, availableVoices, selectedLanguage.voicePrefix, preferredVoiceRef, ttsRate, ttsVolume]);
 
   const stopAndSendRecording = useCallback(async () => {
     if (isProcessingRef.current) return;
@@ -316,6 +322,11 @@ export default function App() {
             list.splice(list.length - 1, 0, userMsg);
             return list;
           });
+        },
+        null,
+        { 
+          headers: { 'Authorization': `Bearer ${session?.access_token}` },
+          location: gpsLocation 
         }
       );
 
@@ -327,9 +338,7 @@ export default function App() {
       clearInterval(checkDoneIntervalRef.current);
       checkDoneIntervalRef.current = setInterval(() => {
         const queueEmpty = speechQueueRef.current.length === 0;
-        // Check ONLY the Ref to avoid stale closures
         if (!isSpeakingRef.current && queueEmpty) {
-          // Verify with a shorter 800ms window now that state is robust
           setTimeout(async () => {
             const reallyDone = !isSpeakingRef.current && speechQueueRef.current.length === 0 && !(await Speech.isSpeakingAsync());
             if (reallyDone) {
@@ -353,7 +362,7 @@ export default function App() {
     } finally {
       isProcessingRef.current = false;
     }
-  }, [stopAndGetURI, streamAudio, selectedLanguage.code, startWakeWordListening, startCommandListening, getFormattedHistory, speakNextSentence, isSpeaking, silentSoundRef]);
+  }, [stopAndGetURI, streamAudio, selectedLanguage.code, startWakeWordListening, startCommandListening, getFormattedHistory, speakNextSentence, session, gpsLocation]);
 
   const handleSendManualText = async () => {
     if (isProcessingRef.current || !voiceTranscript.trim()) return;
@@ -400,6 +409,9 @@ export default function App() {
             }
           }
         }
+      }, {
+        headers: { 'Authorization': `Bearer ${session?.access_token}` },
+        location: gpsLocation
       });
 
       if (isChatTtsEnabled && streamingSentenceBufferRef.current.trim()) {
@@ -499,6 +511,11 @@ export default function App() {
     }, 1000);
   }, [startWakeWordListening]);
 
+  useEffect(() => {
+    // Location tracking removed as per user request
+    setGpsLocation(null);
+  }, []);
+
   // --- INITIALIZATION ---
   useEffect(() => {
     const setup = async () => {
@@ -558,6 +575,8 @@ export default function App() {
       startWakeWordListening();
     }
   }, [isModelLoaded]);
+
+  if (!user) return <AuthScreen />;
 
   return (
     <SafeAreaView style={styles.container} {...swipeResponder.panHandlers}>
@@ -633,6 +652,7 @@ export default function App() {
         setTtsRate={setTtsRate}
         ttsVolume={ttsVolume}
         setTtsVolume={setTtsVolume}
+        user={user}
       />
 
       <LanguageSelectorModal
@@ -650,6 +670,14 @@ export default function App() {
         onClose={() => setIsModalVisible(false)}
       />
     </SafeAreaView>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppMain />
+    </AuthProvider>
   );
 }
 
