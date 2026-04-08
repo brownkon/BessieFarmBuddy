@@ -4,7 +4,7 @@ const cacheService = require('../cache');
 /**
  * Orchestrator module handles the tool execution loop and streaming responses.
  */
-async function streamResponse({ openai, messages, needsTool, toolCallsCount = 0 }) {
+async function streamResponse({ openai, messages, needsTool, toolCallsCount = 0, context = {} }) {
   const completion = await openai.chat.completions.create({
     model: 'gpt-5-mini', 
     messages: messages,
@@ -53,7 +53,7 @@ async function streamResponse({ openai, messages, needsTool, toolCallsCount = 0 
             result = cachedResult;
           } else {
             console.log(`[Cache] Miss for ${currentToolCall}`);
-            result = await executeTool(currentToolCall, args);
+            result = await executeTool(currentToolCall, args, context);
             // Control output size
             if (typeof result === 'object') {
               const strResult = JSON.stringify(result);
@@ -89,7 +89,8 @@ async function streamResponse({ openai, messages, needsTool, toolCallsCount = 0 
             openai,
             messages: systemFollowup,
             needsTool: true,
-            toolCallsCount: toolCallsCount + 1
+            toolCallsCount: toolCallsCount + 1,
+            context
           });
 
           for await (const chunk of followUpStream) {

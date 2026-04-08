@@ -1,4 +1,4 @@
-const supabase = require('../services/supabase.service');
+const supabase = require('../services/supabase');
 
 async function authenticate(request, reply) {
   if (!supabase) {

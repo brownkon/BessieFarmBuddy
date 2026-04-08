@@ -13,7 +13,7 @@ const openaiService = {
   /**
    * Get a streaming response from OpenAI with cost-efficient tool handling.
    */
-  async getChatStream({ text, history = [], language = 'en', systemMessage = null }) {
+  async getChatStream({ text, history = [], language = 'en', systemMessage = null, context = {} }) {
     const finalSystemMessage = systemMessage || `You are Bessie, a helpful farmer's assistant AI. 
         - Tools are expensive. Only use them when the answer cannot be reasonably inferred.
         - Before calling a tool, think through the problem and confirm it's strictly necessary.
@@ -39,7 +39,8 @@ const openaiService = {
       return await streamResponse({
           openai: client,
           messages,
-          needsTool
+          needsTool,
+          context
       });
 
     } catch (error) {

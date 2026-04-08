@@ -12,7 +12,12 @@ async function chatRoutes(fastify, options) {
       if (!text) return reply.code(400).send({ error: 'Text input is required' });
 
       fastify.log.info(`[Bessie] Streaming chat for ${user.email} in ${language || 'en'}: "${text}"`);
-      const stream = await openaiService.getChatStream({ text, history, language });
+      const stream = await openaiService.getChatStream({ 
+        text, 
+        history, 
+        language, 
+        context: { userId: user.id } 
+      });
 
       reply.raw.setHeader('Content-Type', 'text/event-stream');
       reply.raw.setHeader('Cache-Control', 'no-cache');

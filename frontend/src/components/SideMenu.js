@@ -29,7 +29,8 @@ const SideMenu = ({
   setTtsRate,
   ttsVolume,
   setTtsVolume,
-  user
+  user,
+  setIsNotesModalVisible
 }) => {
   if (!isMenuOpen) return null;
 
@@ -67,6 +68,16 @@ const SideMenu = ({
             <Text style={styles.settingLabel}>Language</Text>
             <TouchableOpacity style={styles.voiceButton} onPress={() => setIsLangModalVisible(true)}>
               <Text style={styles.voiceButtonText}>🌐 {selectedLanguage.label}</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.drawerItem}>
+            <Text style={styles.settingLabel}>Farmer Records</Text>
+            <TouchableOpacity 
+              style={[styles.voiceButton, { borderColor: '#34d399', backgroundColor: 'rgba(52, 211, 153, 0.1)' }]} 
+              onPress={() => { setIsNotesModalVisible(true); toggleMenu(false); }}
+            >
+              <Text style={[styles.voiceButtonText, { color: '#34d399' }]}>📝 View Farmer Notes</Text>
             </TouchableOpacity>
           </View>
 

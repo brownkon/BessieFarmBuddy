@@ -49,6 +49,7 @@ import ManualTextInput from './src/components/ManualTextInput';
 import StatusDisplay from './src/components/StatusDisplay';
 import SideMenu from './src/components/SideMenu';
 import ChatMessage from './src/components/ChatMessage';
+import NotesModal from './src/components/NotesModal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -67,6 +68,7 @@ function AppMain() {
 
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isLangModalVisible, setIsLangModalVisible] = useState(false);
+  const [isNotesModalVisible, setIsNotesModalVisible] = useState(false);
   const [messages, setMessages] = useState([
     { id: 'initial', role: 'assistant', text: 'Hello! I am Bessie, your farm assistant. How can I help you today?' }
   ]);
@@ -653,6 +655,12 @@ function AppMain() {
         ttsVolume={ttsVolume}
         setTtsVolume={setTtsVolume}
         user={user}
+        setIsNotesModalVisible={setIsNotesModalVisible}
+      />
+
+      <NotesModal
+        isVisible={isNotesModalVisible}
+        onClose={() => setIsNotesModalVisible(false)}
       />
 
       <LanguageSelectorModal

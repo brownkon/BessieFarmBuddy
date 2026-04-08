@@ -179,5 +179,91 @@ export default StyleSheet.create({
     fontSize: 14,
     color: '#e5e7eb',
     fontWeight: '600'
+  },
+  // Modal & Notes Styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '90%',
+    height: '80%',
+    backgroundColor: '#111827',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#374151',
+    overflow: 'hidden',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1f2937',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  closeButton: {
+    padding: 8,
+    backgroundColor: '#1f2937',
+    borderRadius: 12,
+  },
+  closeButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+  },
+  notesList: {
+    padding: 16,
+  },
+  noteCard: {
+    backgroundColor: '#1f2937',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#374151',
+  },
+  noteHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  cowBadge: {
+    backgroundColor: '#3b82f6',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  cowBadgeText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  noteDate: {
+    color: '#6b7280',
+    fontSize: 12,
+  },
+  noteText: {
+    color: '#e5e7eb',
+    fontSize: 15,
+    lineHeight: 20,
+  },
+  emptyText: {
+    color: '#6b7280',
+    fontSize: 16,
+    textAlign: 'center',
+    marginTop: 40,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   }
 });
