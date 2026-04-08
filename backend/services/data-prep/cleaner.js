@@ -29,7 +29,7 @@ function parseMultiline(html) {
 function parseSevereness(html) {
   if (!html) return [];
   const results = [];
-  const regex = /width:(\d+)%/g;
+  const regex = /width:(\d+)%?/g;
   let match;
   while ((match = regex.exec(html)) !== null) {
     results.push(parseInt(match[1], 10));

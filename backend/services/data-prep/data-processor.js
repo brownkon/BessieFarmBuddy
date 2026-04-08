@@ -24,91 +24,147 @@ class DataProcessor {
   }
 
   /**
-   * Processes a single CSV file and upserts records to Supabase.
+   * Parses a single CSV file and returns records as a Map.
    */
-  async processFile(filePath, orgId) {
-    console.log(`[DataProcessor] Processing file: ${path.basename(filePath)}`);
+  async parseFile(filePath, orgId) {
+    console.log(`[DataProcessor] Parsing file: ${path.basename(filePath)}`);
     const content = await fs.readFile(filePath, 'utf-8');
     
     // Find the real header line (some files have a garbage first line)
     const lines = content.split(/\r?\n/);
     let headerLineIndex = -1;
     for (let i = 0; i < Math.min(lines.length, 10); i++) {
-      if (lines[i].includes('Animal Number') || lines[i].includes('Animal Tag Id')) {
+      if (lines[i].includes('Animal Number') || lines[i].includes('Animal Tag Id') || lines[i].includes('Animal Life No')) {
         headerLineIndex = i;
         break;
       }
     }
 
-    // If we can't find a header, try parsing from the first line anyway
     const startLine = headerLineIndex !== -1 ? headerLineIndex + 1 : 1;
 
-    // Parse CSV
+    // Parse CSV with duplicate column handling
     const records = parse(content, {
-      columns: true,
+      columns: header => {
+        const counts = {};
+        return header.map(col => {
+          const name = col.trim();
+          counts[name] = (counts[name] || 0) + 1;
+          return counts[name] > 1 ? `${name}_${counts[name]}` : name;
+        });
+      },
       skip_empty_lines: true,
       relax_column_count: true,
       from_line: startLine,
       bom: true
     });
 
-    const cowsToUpsert = records.map(record => {
-      // Different reports might have slightly different column names
+    const cowMap = new Map();
+
+    records.forEach(record => {
       const animalNumber = (record['Animal Number'] || record['Animal Tag Id'] || '').trim();
       
-      // Ignore empty, non-numeric (SUM, AVG, etc), or zero animal numbers
-      if (!animalNumber || isNaN(animalNumber) || animalNumber === '0') {
-        return null;
+      // Skip sum/avg lines and internal markers
+      if (!animalNumber || isNaN(animalNumber) || animalNumber === '0' || animalNumber === 'SUM' || animalNumber === 'AVG') {
+        return;
       }
 
-      // Clean sensor data
       const cleanedSensors = mapSensorData(
         record['Sensor'] || '',
         record['Value'] || '',
         record['Severeness'] || ''
       );
 
-      return {
+      const cowData = {
         organization_id: orgId,
         animal_number: animalNumber,
-        cow_group: record['Group'] || null,
+        cow_group: record['Group'] || record['Group Number'] || null,
+        location: record['Location'] || null,
+        robot: record['Robot'] || null,
+        animal_tag_id: record['Animal Tag Id'] || null,
+        animal_life_no: record['Animal Life No. '] || record['Animal Life No.'] || null,
+        lactation_no: cleanNumber(record['Lactation No.']),
         lactation_days: cleanNumber(record['Lactation days']),
-        day_production: cleanNumber(record['Day Production (24h)']),
-        sensors: cleanedSensors.sensors,
-        severeness: cleanedSensors.severeness,
+        day_production: cleanNumber(record['Day Production (24h)']) || cleanNumber(record['Day Production']),
+        day_production_deviation: cleanNumber(record['Day Production (24h) Deviation']),
+        reproduction_status: record['Reproduction Status'] || record['Pregnancy Status'] || null,
+        last_insemination: record['Last Insemination'] || null,
+        days_pregnant: cleanNumber(record['Days Pregnant']),
+        days_to_dry_off: cleanNumber(record['Days to Dry Off']),
+        expected_calving_date: record['Expected Calving Date'] || record['Expected Calving'] || null,
+        production_status: record['Production Status'] || null,
+        gender: record['Gender'] || null,
+        
+        // Extended Fields
+        rest_feed: cleanNumber(record['Rest Feed']),
+        failures: cleanNumber(record['Failures']),
+        failed_milking: cleanNumber(record['Failed Milking']),
+        milkings_lactation: cleanNumber(record['Milkings']),
+        milkings_milk: cleanNumber(record['Milkings_2']),
+        fat_protein_ratio: cleanNumber(record['Fat/Protein Ratio']),
+        nr_of_refusal: cleanNumber(record['Nr of Refusal']),
+        color_code: record['Color Code LF-LR-RF-RR'] || null,
+        end_milk_till: record['End Milk Till'] || null,
+        milk_separation: record['Milk Separation'] || null,
+        body_score: cleanNumber(record['Body Score']),
+        intake_total: cleanNumber(record['Intake Total']),
+        rest_feed_total: cleanNumber(record['Rest Feed Total']),
+        scc_indication: cleanNumber(record['SCC Indication']),
+        last_fertility_diagnose: record['Last Fertility Diagnose'] || null,
+        last_fertility_remarks: record['Last Fertility Remarks'] || null,
+        last_fertility: record['Last Fertility'] || null,
+        days_since_heat: cleanNumber(record['Days Since Heat']),
+        insemination_no: cleanNumber(record['Insemination No.']),
+        pregnancy_check_date: record['Pregnancy Check Date'] || null,
+        lf: cleanNumber(record['LF']),
+        lr: cleanNumber(record['LR']),
+        rr: cleanNumber(record['RR']),
+        rf: cleanNumber(record['RF']),
+        milk_temperature: cleanNumber(record['Milk Temperature']),
+        rumination_herd: cleanNumber(record['Rumination Herd']),
+        rumination_att_count: cleanNumber(record['Rumination Att. Count']),
+        inversion_ketosis: record['Inversion/Ketosis'] || null,
+        activity_deviation: cleanNumber(record['Activity Deviation']),
+        rumination_minutes: cleanNumber(record['Rumination Minutes']),
+        sire: record['Sire'] || null,
+        inseminate: record['Inseminate'] || null,
+        too_late_for_milking: record['Too Late for Milking'] || null,
+        milk_visit_yield: cleanNumber(record['Milk Visit Yield']),
+        last_milk: record['Last Milk'] || null,
+        train_cow: record['Train Cow'] || null,
+        calving_date: record['Calving Date'] || null,
         sick_chance: cleanNumber(record['Sick Chance']),
         sick_change_status: record['Sick Change Status'] || null,
+
+        sensors: Object.keys(cleanedSensors.sensors).length > 0 ? cleanedSensors.sensors : null,
+        severeness: Object.keys(cleanedSensors.severeness).length > 0 ? cleanedSensors.severeness : null,
         updated_at: new Date().toISOString()
       };
-    }).filter(Boolean);
 
-    // De-duplicate: Postgres upsert fails if the same key appears twice in one batch
-    const uniqueCows = Array.from(
-      cowsToUpsert.reduce((map, cow) => {
-        map.set(cow.animal_number, cow);
-        return map;
-      }, new Map()).values()
-    );
+      cowMap.set(animalNumber, cowData);
+    });
 
-    if (uniqueCows.length === 0) return 0;
-
-    // Supabase Upsert
-    const { error } = await supabase
-      .from('cow_data')
-      .upsert(uniqueCows, { onConflict: 'organization_id, animal_number' });
-
-    if (error) {
-      console.error(`[DataProcessor] Error upserting ${path.basename(filePath)}:`, error.message);
-      return 0;
-    }
-
-    const count = uniqueCows.length;
-    console.log(`[DataProcessor] Upserted ${count} records from ${path.basename(filePath)}`);
-    return count;
+    return cowMap;
   }
 
   /**
-   * Scans the data directory and processes all CSV files.
+   * Merges two cow data objects, keeping the most informative values.
+   */
+  mergeCowData(existing, incoming) {
+    const merged = { ...existing };
+    for (const [key, value] of Object.entries(incoming)) {
+      if (value !== null && value !== undefined) {
+        if ((key === 'sensors' || key === 'severeness') && merged[key] && typeof value === 'object') {
+          merged[key] = { ...merged[key], ...value };
+        } else {
+          merged[key] = value;
+        }
+      }
+    }
+    return merged;
+  }
+
+  /**
+   * Scans the data directory and processes all CSV files, merging them before sync.
    */
   async syncAll() {
     if (!supabase) {
@@ -124,19 +180,43 @@ class DataProcessor {
 
     try {
       const files = await fs.readdir(DATA_DIR);
-      // Filter for CSV files and skip Historical reports
       const csvFiles = files.filter(f => 
         f.endsWith('.csv') && !f.toLowerCase().includes('historical')
       );
 
-      let totalUpserted = 0;
+      const masterCowMap = new Map();
+
       for (const file of csvFiles) {
         const filePath = path.join(DATA_DIR, file);
-        const count = await this.processFile(filePath, orgId);
-        totalUpserted += count;
+        const fileCowMap = await this.parseFile(filePath, orgId);
+        
+        for (const [animalNumber, data] of fileCowMap) {
+          if (masterCowMap.has(animalNumber)) {
+            masterCowMap.set(animalNumber, this.mergeCowData(masterCowMap.get(animalNumber), data));
+          } else {
+            masterCowMap.set(animalNumber, data);
+          }
+        }
       }
 
-      console.log(`[DataProcessor] Sync complete. Total records processed: ${totalUpserted}`);
+      const allCows = Array.from(masterCowMap.values());
+      if (allCows.length === 0) {
+        console.log('[DataProcessor] No records to sync.');
+        return;
+      }
+
+      console.log(`[DataProcessor] Syncing ${allCows.length} unique cows to Supabase...`);
+
+      // Supabase Upsert
+      const { error } = await supabase
+        .from('cow_data')
+        .upsert(allCows, { onConflict: 'organization_id, animal_number' });
+
+      if (error) {
+        console.error('[DataProcessor] Error upserting to Supabase:', error.message);
+      } else {
+        console.log(`[DataProcessor] Sync complete. Successfully upserted ${allCows.length} records.`);
+      }
     } catch (err) {
       console.error('[DataProcessor] Sync failed:', err.message);
     }
