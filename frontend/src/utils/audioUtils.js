@@ -27,18 +27,25 @@ export const stopDucking = async (silentSoundRef) => {
     } catch (err) { /* silent fail */ }
   }
   try {
-    await Audio.setAudioModeAsync({
+    const setMode = async (mode) => {
+      await Promise.race([
+        Audio.setAudioModeAsync(mode),
+        new Promise(resolve => setTimeout(resolve, 500))
+      ]);
+    };
+
+    await setMode({
       allowsRecordingIOS: true,
       playsInSilentModeIOS: true,
       shouldDuckAndroid: false,
       staysActiveInBackground: true,
       interruptionModeIOS: 1, // MixWithOthers
-      interruptionModeAndroid: 1, // DoNotMix (forces pause/restore logic)
+      interruptionModeAndroid: 1, // DoNotMix
     });
 
     await new Promise(resolve => setTimeout(resolve, 200));
 
-    await Audio.setAudioModeAsync({
+    await setMode({
       allowsRecordingIOS: true,
       playsInSilentModeIOS: true,
       shouldDuckAndroid: false,
@@ -47,7 +54,7 @@ export const stopDucking = async (silentSoundRef) => {
       interruptionModeAndroid: 2,
     });
     console.log('[Audio] Ducking released and volume restoration triggered.');
-  } catch (err) { /* silent fail */ }
+  } catch (err) { console.log('[Audio] Stop ducking failed:', err.message); }
 };
 
 export const cleanupAudio = async (recordingRef, setRecording, options = { stopVosk: true }) => {

@@ -118,6 +118,7 @@ function AppMain() {
   const silentSoundRef = useRef(null);
   const speakTimeoutRef = useRef(null);
   const restartTimerRef = useRef(null);
+  const terminationRestartTimerRef = useRef(null);
 
   // Sync refs
   useEffect(() => { preferredVoiceRef.current = preferredVoice; }, [preferredVoice]);
@@ -137,16 +138,19 @@ function AppMain() {
   }, [messages]);
 
   const onWakeWord = useCallback((phrase) => {
+    // Always listen unless explicitly disabled or already starting
     if (!isStartingRef.current) {
-      console.log('[Vosk] Wake phrase detected:', phrase);
+      console.log('[App] Wake word detected, interrupting current state if needed:', phrase);
       triggerCommandPrompt();
     }
   }, []);
 
   const onExit = useCallback((phrase) => {
-    console.log('[Vosk] Local exit keyword detected:', phrase);
-    handleStopChat();
-  }, []);
+    if (modeRef.current !== 'wake') {
+      console.log('[Vosk] Local exit keyword detected:', phrase);
+      handleStopChat();
+    }
+  }, [handleStopChat]);
 
   const onPartial = useCallback((_txt) => { }, []);
   const onResult = useCallback((txt) => {
@@ -179,47 +183,84 @@ function AppMain() {
   } = useAudioRecording(onSilence);
 
   // --- ACTIONS ---
-  const startWakeWordListening = useCallback(async () => {
-    if (!isListeningActiveRef.current || isStartingRef.current || !isModelLoaded) {
+  const startWakeWordListening = useCallback(async (force = false) => {
+    if (!isListeningActiveRef.current || !isModelLoaded) {
       if (!isListeningActiveRef.current) setStatus('Listening Disabled');
       return;
     }
+
+    if (isStartingRef.current && !force) {
+      console.log('[App] Already starting wake word listening, skipping redundant call.');
+      return;
+    }
+
     isStartingRef.current = true;
+    console.log('[App] Starting Wake Word Listening (force=' + force + ')...');
 
     try {
-      await stopVosk();
-      await cleanupAudio(recordingRef, null, { stopVosk: false });
-      await stopDucking(silentSoundRef);
-
-      if (await Speech.isSpeakingAsync()) {
-        scheduleRestart();
-        return;
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 500));
-
+      // Provide immediate feedback
       modeRef.current = 'wake';
+      setStatus('Waking up...');
+
+      // Stop everything with strict timeouts
+      await Promise.race([
+        stopVosk(),
+        new Promise(resolve => setTimeout(resolve, 500))
+      ]).catch(() => {});
+
+      await cleanupAudio(recordingRef, null, { stopVosk: false });
+      
+      await Promise.race([
+        stopDucking(silentSoundRef),
+        new Promise(resolve => setTimeout(resolve, 1500))
+      ]).catch(() => {});
+
+      // Short breather to let hardware settle
+      await new Promise(resolve => setTimeout(resolve, 300));
+
       setStatus('Say "Hey Dairy" to start...');
       setVoiceTranscript('');
       transcriptRef.current = '';
       setRecognizing(true);
+      
       await startVosk([...WAKE_PHRASES, ...EXIT_PHRASES, ...FILLER_WORDS]);
+      console.log('[App] Wake word listening active.');
     } catch (err) {
+      console.error('[App] Error in startWakeWordListening:', err);
       setRecognizing(false);
-      scheduleRestart();
+      // Fallback: try once more after a delay if it failed
+      if (!force) setTimeout(() => startWakeWordListening(true), 1500);
     } finally {
       isStartingRef.current = false;
     }
-  }, [isModelLoaded, startVosk, recordingRef, silentSoundRef, scheduleRestart]);
+  }, [isModelLoaded, startVosk, recordingRef, silentSoundRef, stopVosk]);
 
   const triggerCommandPrompt = useCallback(async () => {
+    console.log('[App] Interrupted by wake word, resetting state...');
+    
+    // Cancel any pending termination restart
+    clearTimeout(terminationRestartTimerRef.current);
+    
+    // Stop everything immediately
+    Speech.stop();
+    isProcessingRef.current = false;
+    shouldTerminateRef.current = false;
+    clearTimeout(speakTimeoutRef.current);
+    clearInterval(checkDoneIntervalRef.current);
+    speechQueueRef.current = [];
+    streamingSentenceBufferRef.current = '';
+    setIsSpeaking(false);
+    isSpeakingRef.current = false;
+
+    await stopRecordingManual();
+    await stopVosk();
+
     isStartingRef.current = false;
     modeRef.current = 'transition';
     setStatus('Readying...');
     setVoiceTranscript('');
     transcriptRef.current = '';
 
-    await stopVosk();
     await new Promise(r => setTimeout(r, 100));
 
     const beepDone = () => {
@@ -236,14 +277,14 @@ function AppMain() {
       onDone: beepDone,
       onError: beepDone
     });
-  }, [stopVosk, startCommandListening, ttsRate, ttsVolume]);
+  }, [stopVosk, stopRecordingManual, startCommandListening, ttsRate, ttsVolume]);
 
   const startCommandListening = useCallback(async (isFollowUp = false) => {
     modeRef.current = 'command';
     setStatus(isFollowUp ? 'Listening (Whisper)...' : 'Listening... (Whisper)');
 
     await cleanupAudio(recordingRef, null, { stopVosk: false });
-    await startVosk([...EXIT_PHRASES, ...FILLER_WORDS]);
+    await startVosk([...WAKE_PHRASES, ...EXIT_PHRASES, ...FILLER_WORDS]);
     await startRecording();
   }, [startVosk, startRecording, recordingRef]);
 
@@ -291,6 +332,9 @@ function AppMain() {
       modeRef.current = 'thinking';
       setStatus('Reading...');
       shouldTerminateRef.current = false;
+
+      // Ensure Vosk is still listening for "Hey Dairy" while thinking/speaking
+      await startVosk([...WAKE_PHRASES, ...EXIT_PHRASES, ...FILLER_WORDS]);
 
       const assistantId = Date.now().toString() + '_ai';
       setMessages(prev => [...prev, { id: assistantId, role: 'assistant', text: '' }]);
@@ -358,8 +402,7 @@ function AppMain() {
               if (!shouldTerminateRef.current) {
                 speakTimeoutRef.current = setTimeout(() => startCommandListening(true), 100);
               } else {
-                setStatus('Talk soon!');
-                setTimeout(() => startWakeWordListening(), 1000);
+                void handleStopChat('Talk soon!');
               }
             }
           }, 800);
@@ -393,6 +436,9 @@ function AppMain() {
       if (isChatTtsEnabled) {
         await startDucking(silentSoundRef);
       }
+
+      // Ensure Vosk is still listening for "Hey Dairy" during text-based conversations
+      await startVosk([...WAKE_PHRASES, ...EXIT_PHRASES, ...FILLER_WORDS]);
 
       const assistantId = Date.now().toString() + '_ai';
       setMessages(prev => [...prev, { id: assistantId, role: 'assistant', text: '' }]);
@@ -450,8 +496,7 @@ function AppMain() {
               if (!shouldTerminateRef.current) {
                 startWakeWordListening();
               } else {
-                setStatus('Talk soon!');
-                setTimeout(() => startWakeWordListening(), 1000);
+                void handleStopChat('Talk soon!');
               }
             }
           }, 800);
@@ -480,26 +525,36 @@ function AppMain() {
     }
   }, [recording, isListeningActive, handleStopChat, triggerCommandPrompt]);
 
-  const handleStopChat = useCallback(async () => {
+  const handleStopChat = useCallback(async (finalStatus = null) => {
+    console.log('[App] handleStopChat called, finalStatus:', finalStatus);
+    isStartingRef.current = false; // Reset the starting flag
+    
     clearTimeout(restartTimerRef.current);
     clearTimeout(speakTimeoutRef.current);
+    clearTimeout(terminationRestartTimerRef.current);
     Speech.stop();
-    await stopVosk();
-    await stopRecordingManual();
+    
+    // Only stop recording here; let startWakeWordListening handle Vosk reset
+    await stopRecordingManual().catch(() => {});
 
     modeRef.current = 'wake';
-    setStatus(isListeningActiveRef.current ? 'Stopped' : 'Listening Disabled');
+    if (finalStatus) {
+      setStatus(finalStatus);
+    } else {
+      setStatus(isListeningActiveRef.current ? 'Stopped' : 'Listening Disabled');
+    }
+    
     setVolume(0);
     setVoiceTranscript('');
     transcriptRef.current = '';
 
-    setTimeout(() => {
-      void stopDucking(silentSoundRef);
+    const delay = finalStatus ? 800 : 300;
+    terminationRestartTimerRef.current = setTimeout(() => {
       if (isListeningActiveRef.current) {
-        startWakeWordListening();
+        startWakeWordListening(true);
       }
-    }, 400);
-  }, [stopVosk, stopRecordingManual, startWakeWordListening, silentSoundRef]);
+    }, delay);
+  }, [stopRecordingManual, startWakeWordListening]);
 
   const toggleListening = useCallback(async () => {
     const nextState = !isListeningActive;
@@ -521,14 +576,6 @@ function AppMain() {
       useNativeDriver: true,
     }).start();
   };
-
-  const scheduleRestart = useCallback(() => {
-    clearTimeout(restartTimerRef.current);
-    restartTimerRef.current = setTimeout(async () => {
-      if (await Speech.isSpeakingAsync()) scheduleRestart();
-      else startWakeWordListening();
-    }, 1000);
-  }, [startWakeWordListening]);
 
   useEffect(() => {
     // Location tracking removed as per user request
