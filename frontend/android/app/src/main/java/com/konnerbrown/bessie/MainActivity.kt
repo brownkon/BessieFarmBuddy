@@ -1,4 +1,4 @@
-package com.anonymous.frontend
+package com.konnerbrown.bessie
 
 import android.os.Build
 import android.os.Bundle

@@ -8,4 +8,4 @@ module.exports = function(api) {
       }],
     ],
   };
-};
+}; // cache invalidation comment 2

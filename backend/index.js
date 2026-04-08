@@ -2,7 +2,8 @@ const fastify = require('./app');
 
 const start = async (retries = 2) => {
   try {
-    await fastify.listen({ port: 3000, host: '0.0.0.0' });
+    const port = process.env.PORT || 3000;
+    await fastify.listen({ port, host: '0.0.0.0' });
     fastify.log.info(`server listening on ${fastify.server.address().port}`);
   } catch (err) {
     if (err.code === 'EADDRINUSE' && retries > 0) {

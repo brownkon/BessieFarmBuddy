@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "frontend",
+    "name": "Bessie",
     "slug": "frontend",
     "scheme": "bessie-farm-buddy",
     "version": "1.0.0",
@@ -8,9 +8,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0f1117",
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
+    "runtimeVersion": "1.0.0",
     "updates": {
       "url": "https://u.expo.dev/e2533d92-7eb8-4dc0-aac1-542c1001dda1"
     },
@@ -29,7 +27,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0f1117"
       },
-      "package": "com.anonymous.frontend",
+      "package": "com.konnerbrown.bessie",
       "softwareKeyboardLayoutMode": "resize",
       "permissions": [
         "android.permission.RECORD_AUDIO"
@@ -42,7 +40,9 @@
       [
         "react-native-vosk/app.plugin",
         {
-          "models": ["model-en-us"]
+          "models": [
+            "model-en-us"
+          ]
         }
       ],
       [
