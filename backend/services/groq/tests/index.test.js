@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 process.env.GROQ_API_KEY = 'dummy_key';
-const groqService = require('./groq.service');
+const groqService = require('../index');
 
 // Mock Groq SDK
 const mockGroq = {

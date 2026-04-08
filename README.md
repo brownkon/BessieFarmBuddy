@@ -4,9 +4,10 @@ Bessie is a voice-controlled AI assistant designed specifically for farmers. It 
 
 The app uses a hybrid architecture:
 - **Offline Wake Word Detection**: Powered by [Vosk](https://alphacephei.com/vosk/) to listen for "Hey Dairy" or "Hey Bessie" without needing an internet connection.
-- **High-Accuracy Transcription**: Uses **OpenAI Whisper** via the backend for processing complex commands.
-- **Intelligent Responses**: Uses **GPT-4o-mini** to provide concise, practical advice for farming scenarios.
-- **Voice Response**: Narrated back using native Text-to-Speech.
+- **High-Accuracy Transcription**: Uses **Groq (Whisper-Large-V3)** for near-instant speech-to-text.
+- **Cost-Efficient Orchestration**: Uses a smart router (**gpt-5-nano**) to classify requests and only call tools when strictly necessary, followed by **gpt-5-mini** for concise responses.
+- **Real-Time Farm Data**: Integrated with Supabase via specialized tools for cow health, groups, and production stats.
+- **Data Pipeline**: Automated CSV cleaning and sinking from farm reports.
 
 ---
 
@@ -82,3 +83,52 @@ The frontend is a React Native app built with Expo.
 - **Exit Phrases**: "Stop", "Thank you", "Goodbye", "Done"
 
 Once Bessie is listening, simply speak your question or command naturally.
+
+---
+
+## 📊 Data Pipeline (Farmer Reports)
+
+Bessie handles the heavy lifting of cleaning and syncing raw farm reports into structured data.
+
+### 1. Database Initialization
+Before syncing, ensure your database is ready by executing the initialization script in your **Supabase SQL Editor**:
+- Run the code from: **[`backend/schemas/ReportsInitialization.sql`](file:///Users/konnerbrown/Desktop/Sandbox/Bessie-main/backend/schemas/ReportsInitialization.sql)**
+
+### 2. Prepare Data
+- Export your cow health and production reports to **CSV**.
+- Place the files in: `data/CSV/`
+- *Note: The system automatically ignores files with "Historical" in the name to focus on current data.*
+
+### 3. Sync Data
+- **Auto-Sync**: The backend runs a background sync every **1 hour**.
+- **Manual Sync**: To force an immediate update of all records:
+   ```bash
+   cd backend
+   node test-sync.js
+   ```
+
+## 🧪 Testing
+
+The backend includes a comprehensive modular and integrated test suite.
+
+### Run All Tests
+To verify all services (Cache, Data-Prep, Groq, OpenAI) at once:
+```bash
+cd backend
+node --test test-all.js
+```
+
+### Modular Tests
+Tests are localized within each service bundle for isolated verification:
+```bash
+node --test services/openai/tests/index.test.js
+node --test services/cache/tests/index.test.js
+```
+
+## 🏗 Modular Architecture
+
+The backend is organized into specialized service bundles:
+- `services/openai/`: Handles routing, reasoning, and tool execution loops.
+- `services/data-prep/`: Handles HTML cleaning and CSV parsing.
+- `services/cache/`: Global LRU caching to minimize API and database costs.
+- `tools/`: Modular definitions for AI function calling.

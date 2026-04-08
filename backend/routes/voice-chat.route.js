@@ -1,7 +1,7 @@
-const groqService = require('../services/groq.service');
-const openaiService = require('../services/openai.service');
+const groqService = require('../services/groq');
+const openaiService = require('../services/openai');
 const { authenticate } = require('../middleware/auth.middleware');
-const supabase = require('../services/supabase.service');
+const supabase = require('../services/supabase');
 const fs = require('fs-extra');
 const path = require('path');
 const os = require('os');

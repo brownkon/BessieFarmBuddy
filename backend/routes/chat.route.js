@@ -1,6 +1,6 @@
-const openaiService = require('../services/openai.service');
+const openaiService = require('../services/openai');
 const { authenticate } = require('../middleware/auth.middleware');
-const supabase = require('../services/supabase.service');
+const supabase = require('../services/supabase');
 
 async function chatRoutes(fastify, options) {
   // Unified Text Chat (Streaming) - Protected

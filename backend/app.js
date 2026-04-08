@@ -4,6 +4,7 @@ const fastify = require('fastify')({
 });
 
 require('dotenv').config();
+const { dataProcessor } = require('./services/data-prep');
 
 // Register plugins
 fastify.register(require('@fastify/cors'), { origin: true });
@@ -22,5 +23,19 @@ fastify.get('/health', async () => ({ status: 'ok' }));
 
 // API routes
 fastify.register(require('./routes/api.routes'), { prefix: '/api' });
+
+// Automation: Hourly sync
+const SYNC_INTERVAL = 60 * 60 * 1000; // 1 hour
+setInterval(() => {
+  console.log('[Automation] Starting hourly data sync...');
+  dataProcessor.syncAll().catch(err => {
+    console.error('[Automation] Scheduled sync failed:', err.message);
+  });
+}, SYNC_INTERVAL);
+
+// Initial sync on startup
+dataProcessor.syncAll().catch(err => {
+  console.error('[Automation] Initial startup sync failed:', err.message);
+});
 
 module.exports = fastify;
