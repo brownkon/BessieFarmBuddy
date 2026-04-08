@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, TextInput, TouchableOpacity, Text, View } from 'react-native';
+import { StyleSheet, TextInput, TouchableOpacity, Text, View, ActivityIndicator } from 'react-native';
 
 const ManualTextInput = ({ 
   value, 
@@ -37,7 +37,11 @@ const ManualTextInput = ({
         onPress={onSend}
         disabled={!value.trim() || disabled}
       >
-        <Text style={styles.sendButtonText}>➤</Text>
+        {disabled ? (
+          <ActivityIndicator color="#6ee7b7" size="small" />
+        ) : (
+          <Text style={styles.sendButtonText}>➤</Text>
+        )}
       </TouchableOpacity>
     </View>
   );

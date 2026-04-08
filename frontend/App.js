@@ -686,7 +686,6 @@ function AppMain() {
               {messages.map((msg) => (
                 <ChatMessage key={msg.id} msg={msg} />
               ))}
-              {loading && <ChatMessage loading />}
             </ScrollView>
 
             <View style={styles.inputArea}>
