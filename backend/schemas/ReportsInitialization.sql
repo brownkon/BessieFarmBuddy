@@ -91,3 +91,34 @@ CREATE POLICY "Leaders can manage cow data" ON public.cow_data
       AND role = 'boss'
     )
   );
+
+-- Farmer Notes Table
+DROP TABLE IF EXISTS public.farmer_notes CASCADE;
+CREATE TABLE public.farmer_notes (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
+  organization_id uuid REFERENCES public.organizations(id) ON DELETE CASCADE,
+  content text NOT NULL,
+  animal_number text,
+  created_at timestamptz DEFAULT now()
+);
+
+-- Enable RLS
+ALTER TABLE public.farmer_notes ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policy: Users can view notes for their organization
+CREATE POLICY "Users can read their organization's notes" ON public.farmer_notes
+  FOR SELECT USING (
+    organization_id IN (
+      SELECT organization_id FROM public.organization_members WHERE user_id = auth.uid()
+    )
+  );
+
+-- RLS Policy: Users can insert their own notes
+CREATE POLICY "Users can insert their own notes" ON public.farmer_notes
+  FOR INSERT WITH CHECK (
+    user_id = auth.uid() AND
+    organization_id IN (
+      SELECT organization_id FROM public.organization_members WHERE user_id = auth.uid()
+    )
+  );

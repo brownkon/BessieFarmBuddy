@@ -84,4 +84,24 @@ test('OpenAI: Orchestration with Router', async (t) => {
   assert.strictEqual(result, "Direct Answer");
 });
 
-console.log('--- Integrated Test Suite Created ---');
+/**
+ * TOOLS & DAILY REPORT TESTS
+ */
+test('Tools: Modular definitions load successfully', (t) => {
+  const { tools } = require('./tools/index');
+  
+  // Assert that newly created modular tools exist
+  assert.ok(tools['get_specific_metric'], 'get_specific_metric tool not found');
+  assert.strictEqual(tools['get_specific_metric'].definition.function.name, 'get_specific_metric');
+  
+  assert.ok(tools['record_note'], 'record_note tool not found');
+  assert.ok(tools['get_cows_by_reproduction_status'], 'reproduction tool not found');
+  assert.ok(tools['get_recent_notes'], 'recent_notes tool not found');
+});
+
+test('Daily Report: Script function maps correctly', (t) => {
+  const { generateDailyReport } = require('./services/data-prep/daily-report');
+  assert.strictEqual(typeof generateDailyReport, 'function', 'generateDailyReport should be a function');
+});
+
+console.log('--- Integrated Test Suite Created (incl. Tools) ---');

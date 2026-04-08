@@ -1,10 +1,6 @@
 const supabase = require('../services/supabase');
 
-/**
- * Cow-related tools for AI retrieval.
- */
 const cowTools = {
-  // OpenAI Tool Definition
   definition: {
     type: "function",
     function: {
@@ -19,8 +15,6 @@ const cowTools = {
       }
     }
   },
-
-  // Implementation
   async handler({ animalNumber }) {
     if (!supabase) return "Supabase not initialized.";
     const { data, error } = await supabase
@@ -33,30 +27,6 @@ const cowTools = {
       if (error.code === 'PGRST116') return `Cow ${animalNumber} not found in the records.`;
       return `Error retrieving cow data: ${error.message}`;
     }
-    return data;
-  }
-};
-
-const healthAlerts = {
-  definition: {
-    type: "function",
-    function: {
-      name: "get_health_alerts",
-      description: "Get cows with high sick chance or alerts.",
-      parameters: { type: "object", properties: {} }
-    }
-  },
-
-  async handler() {
-    if (!supabase) return "Supabase not initialized.";
-    const { data, error } = await supabase
-      .from('cow_data')
-      .select('animal_number, sick_chance, sick_change_status, sensors')
-      .gt('sick_chance', 50)
-      .order('sick_chance', { ascending: false });
-
-    if (error) return `Error fetching health alerts: ${error.message}`;
-    if (data.length === 0) return "No high-risk health alerts at this time.";
     return data;
   }
 };
@@ -76,7 +46,6 @@ const groupStatus = {
       }
     }
   },
-
   async handler({ groupName }) {
     if (!supabase) return "Supabase not initialized.";
     const { data, error } = await supabase
@@ -101,6 +70,5 @@ const groupStatus = {
 
 module.exports = {
   get_cow_info: cowTools,
-  get_health_alerts: healthAlerts,
   get_group_status: groupStatus
 };

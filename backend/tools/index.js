@@ -1,4 +1,8 @@
-const cowTools = require('./cow.tools');
+const infoTools = require('./info.tools');
+const healthTools = require('./health.tools');
+const metricsTools = require('./metrics.tools');
+const reproductionTools = require('./reproduction.tools');
+const notesTools = require('./notes.tools');
 const conversationTools = require('./conversation.tools');
 
 /**
@@ -6,7 +10,11 @@ const conversationTools = require('./conversation.tools');
  * definition and implementation.
  */
 const tools = {
-  ...cowTools,
+  ...infoTools,
+  ...healthTools,
+  ...metricsTools,
+  ...reproductionTools,
+  ...notesTools,
   ...conversationTools
 };
 
@@ -20,12 +28,12 @@ function getToolDefinitions() {
 /**
  * Executes a tool by name with the given arguments.
  */
-async function executeTool(name, args) {
+async function executeTool(name, args, context = {}) {
   const tool = tools[name];
   if (!tool) {
     throw new Error(`Tool "${name}" not found.`);
   }
-  return await tool.handler(args);
+  return await tool.handler(args, context);
 }
 
 module.exports = {
