@@ -24,6 +24,7 @@ import { Audio } from 'expo-av';
 
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import AuthScreen from './src/screens/Auth/AuthScreen';
+import { supabase } from './src/services/supabase';
 
 import {
   WAKE_PHRASES,
@@ -298,6 +299,14 @@ function AppMain() {
       streamingSentenceBufferRef.current = '';
       speechQueueRef.current = [];
 
+      // Ensure we have a fresh session token
+      const { data: { session: freshSession } } = await supabase.auth.getSession();
+      const token = freshSession?.access_token || session?.access_token;
+      
+      if (!token) {
+        throw new Error('You must be logged in to use voice chat.');
+      }
+
       await streamAudio(uri, selectedLanguage.code, getFormattedHistory(8),
         (parsed) => {
           const chunk = parsed.content || '';
@@ -327,7 +336,7 @@ function AppMain() {
         },
         null,
         { 
-          headers: { 'Authorization': `Bearer ${session?.access_token}` },
+          headers: { 'Authorization': `Bearer ${token}` },
           location: gpsLocation 
         }
       );
@@ -392,6 +401,14 @@ function AppMain() {
       streamingSentenceBufferRef.current = '';
       speechQueueRef.current = [];
 
+      // Ensure we have a fresh session token
+      const { data: { session: freshSession } } = await supabase.auth.getSession();
+      const token = freshSession?.access_token || session?.access_token;
+
+      if (!token) {
+        throw new Error('You must be logged in to send messages.');
+      }
+
       await streamText(textToSend, getFormattedHistory(8), selectedLanguage.code, (parsed) => {
         const chunk = parsed.content || '';
         if (parsed.terminate) shouldTerminateRef.current = true;
@@ -412,7 +429,7 @@ function AppMain() {
           }
         }
       }, {
-        headers: { 'Authorization': `Bearer ${session?.access_token}` },
+        headers: { 'Authorization': `Bearer ${token}` },
         location: gpsLocation
       });
 

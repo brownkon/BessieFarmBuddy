@@ -20,17 +20,6 @@ async function classifyRequest(openai, text, history) {
     return { should_call_tool: false, tool_name: null, arguments: null, confidence: 1.0 };
   }
 
-  // --- NEW: Keyword-based Short-Circuit ---
-  // If the prompt contains ZERO keywords related to our farm tools, skip the routing model entirely.
-  const farmKeywords = ['cow', 'animal', 'herd', 'id', 'status', 'sick', 'health', 'production', 'metric', 'note', 'record', 'group', 'north', 'south', 'east', 'west', 'data', 'report'];
-  const numbers = text.match(/\d+/);
-  const hasFarmKeyword = farmKeywords.some(k => lowerText.includes(k)) || numbers;
-
-  if (!hasFarmKeyword) {
-    console.log(`[Classifier] Short-circuit: General conversation detected. Skipping model.`);
-    return { should_call_tool: false, tool_name: null, arguments: null, confidence: 1.0 };
-  }
-
   // Generate tool list once and cache it
   if (!cachedToolList) {
     const toolDefs = getToolDefinitions();
