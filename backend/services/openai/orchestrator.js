@@ -5,12 +5,14 @@ const cacheService = require('../cache');
  * Orchestrator module handles the tool execution loop and streaming responses.
  */
 async function streamResponse({ openai, messages, needsTool, toolCallsCount = 0, context = {} }) {
+  const creationStart = Date.now();
   const completion = await openai.chat.completions.create({
-    model: 'gpt-5-mini', 
+    model: 'gpt-5-mini',
     messages: messages,
     tools: needsTool ? getToolDefinitions() : undefined,
     stream: true,
   });
+  console.log(`[Timer] OpenAI create call took: ${Date.now() - creationStart}ms`);
 
   return (async function* () {
     let currentToolCall = null;
@@ -39,7 +41,7 @@ async function streamResponse({ openai, messages, needsTool, toolCallsCount = 0,
         let result = "";
         try {
           const args = toolArguments ? JSON.parse(toolArguments) : {};
-          
+
           if (currentToolCall === 'terminate_conversation') {
             yield { content: " Goodbye!", terminate: true };
             return;
@@ -73,7 +75,7 @@ async function streamResponse({ openai, messages, needsTool, toolCallsCount = 0,
               function: { name: currentToolCall, arguments: toolArguments }
             }]
           };
-          
+
           const systemFollowup = [
             ...messages,
             toolResultMessage,

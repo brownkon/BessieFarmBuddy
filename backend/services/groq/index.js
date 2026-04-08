@@ -26,6 +26,23 @@ const service = {
       console.error("[Groq] Transcription error:", error);
       throw error;
     }
+  },
+
+  /**
+   * Fast chat completion for routing/classification
+   */
+  async chatCompletion({ messages, model = "llama-3.1-8b-instant", response_format = null }) {
+    try {
+      const response = await this.groq.chat.completions.create({
+        model,
+        messages,
+        response_format: response_format ? { type: response_format } : undefined,
+      });
+      return response.choices[0].message.content;
+    } catch (error) {
+      console.error("[Groq] Chat error:", error);
+      throw error;
+    }
   }
 };
 

@@ -26,16 +26,19 @@ fastify.register(require('./routes/api.routes'), { prefix: '/api' });
 
 // Automation: Hourly sync
 const SYNC_INTERVAL = 60 * 60 * 1000; // 1 hour
-setInterval(() => {
+const syncIntervalId = setInterval(() => {
   console.log('[Automation] Starting hourly data sync...');
   dataProcessor.syncAll().catch(err => {
     console.error('[Automation] Scheduled sync failed:', err.message);
   });
 }, SYNC_INTERVAL);
 
-// Initial sync on startup
-dataProcessor.syncAll().catch(err => {
-  console.error('[Automation] Initial startup sync failed:', err.message);
+// Handle cleanup
+fastify.addHook('onClose', async (instance) => {
+  clearInterval(syncIntervalId);
+  instance.log.info('[Automation] Sync interval cleared.');
 });
+
+
 
 module.exports = fastify;

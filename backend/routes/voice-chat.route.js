@@ -36,7 +36,9 @@ async function voiceChatRoutes(fastify, options) {
       tempFilePath = path.join(tempDir, `bessie_v_${Date.now()}.m4a`);
       await fs.writeFile(tempFilePath, audioBuffer);
 
+      const transcribeStart = Date.now();
       const transcript = await groqService.transcribeAudio(tempFilePath, language, fs);
+      console.log(`[Timer] Transcription took: ${Date.now() - transcribeStart}ms`);
 
       reply.raw.setHeader('Content-Type', 'text/event-stream');
       reply.raw.setHeader('Cache-Control', 'no-cache');
@@ -51,12 +53,13 @@ async function voiceChatRoutes(fastify, options) {
       // 1. Send the transcript chunk
       reply.raw.write(`data: ${JSON.stringify({ transcript })}\n\n`);
 
-      // 2. Begin streaming LLM using OpenAI
+      const aiStart = Date.now();
       const stream = await openaiService.getChatStream({
         text: transcript,
         history,
         language
       });
+      console.log(`[Timer] getChatStream started in: ${Date.now() - aiStart}ms`);
 
       let fullResponse = "";
       const toolsUsed = [];
@@ -71,15 +74,17 @@ async function voiceChatRoutes(fastify, options) {
       reply.raw.end();
 
       // Async Log to Supabase (Background)
-      supabase.from('chats').insert({
-        user_id: user.id,
-        prompt: transcript,
-        response: fullResponse,
-        gps_coordinates: location || null,
-        tools_used: toolsUsed
-      }).then(({ error }) => {
-        if (error) fastify.log.error(`[Supabase] Error saving voice chat: ${error.message}`);
-        else fastify.log.info(`[Supabase] Saved voice chat for ${user.email}`);
+      setImmediate(() => {
+        supabase.from('chats').insert({
+          user_id: user.id,
+          prompt: transcript,
+          response: fullResponse,
+          gps_coordinates: location || null,
+          tools_used: toolsUsed
+        }).then(({ error }) => {
+          if (error) fastify.log.error(`[Supabase] Error saving voice chat: ${error.message}`);
+          else fastify.log.info(`[Supabase] Saved voice chat for ${user.email}`);
+        });
       });
 
     } catch (error) {

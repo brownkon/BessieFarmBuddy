@@ -37,15 +37,17 @@ async function chatRoutes(fastify, options) {
       reply.raw.end();
 
       // Async Log to Supabase (Background)
-      supabase.from('chats').insert({
-        user_id: user.id,
-        prompt: text,
-        response: fullResponse,
-        gps_coordinates: location || null,
-        tools_used: toolsUsed
-      }).then(({ error }) => {
-        if (error) fastify.log.error(`[Supabase] Error saving chat: ${error.message}`);
-        else fastify.log.info(`[Supabase] Saved chat for ${user.email}`);
+      setImmediate(() => {
+        supabase.from('chats').insert({
+          user_id: user.id,
+          prompt: text,
+          response: fullResponse,
+          gps_coordinates: location || null,
+          tools_used: toolsUsed
+        }).then(({ error }) => {
+          if (error) fastify.log.error(`[Supabase] Error saving chat: ${error.message}`);
+          else fastify.log.info(`[Supabase] Saved chat for ${user.email}`);
+        });
       });
 
     } catch (error) {
