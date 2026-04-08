@@ -1,11 +1,11 @@
 import React from 'react';
-import { 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  ScrollView, 
-  Switch, 
-  Animated, 
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  Switch,
+  Animated,
   Dimensions,
   Alert
 } from 'react-native';
@@ -73,8 +73,8 @@ const SideMenu = ({
 
           <View style={styles.drawerItem}>
             <Text style={styles.settingLabel}>Farmer Records</Text>
-            <TouchableOpacity 
-              style={[styles.voiceButton, { borderColor: '#34d399', backgroundColor: 'rgba(52, 211, 153, 0.1)' }]} 
+            <TouchableOpacity
+              style={[styles.voiceButton, { borderColor: '#34d399', backgroundColor: 'rgba(52, 211, 153, 0.1)' }]}
               onPress={() => { setIsNotesModalVisible(true); toggleMenu(false); }}
             >
               <Text style={[styles.voiceButtonText, { color: '#34d399' }]}>📝 View Farmer Notes</Text>
@@ -104,8 +104,8 @@ const SideMenu = ({
           <View style={styles.drawerItem}>
             <Text style={styles.settingLabel}>TTS Volume: {(ttsVolume * 100).toFixed(0)}%</Text>
             <View style={styles.stepperContainer}>
-              <TouchableOpacity 
-                style={styles.stepperButton} 
+              <TouchableOpacity
+                style={styles.stepperButton}
                 onPress={() => setTtsVolume(Math.max(0, ttsVolume - 0.1))}
               >
                 <Text style={styles.stepperLabel}>-</Text>
@@ -113,8 +113,8 @@ const SideMenu = ({
               <View style={styles.stepperTrack}>
                 <View style={[styles.stepperFill, { width: `${ttsVolume * 100}%` }]} />
               </View>
-              <TouchableOpacity 
-                style={styles.stepperButton} 
+              <TouchableOpacity
+                style={styles.stepperButton}
                 onPress={() => setTtsVolume(Math.min(1.0, ttsVolume + 0.1))}
               >
                 <Text style={styles.stepperLabel}>+</Text>
@@ -125,8 +125,8 @@ const SideMenu = ({
           <View style={styles.drawerItem}>
             <Text style={styles.settingLabel}>TTS Speed: {ttsRate.toFixed(1)}x</Text>
             <View style={styles.stepperContainer}>
-              <TouchableOpacity 
-                style={styles.stepperButton} 
+              <TouchableOpacity
+                style={styles.stepperButton}
                 onPress={() => setTtsRate(Math.max(0.5, ttsRate - 0.1))}
               >
                 <Text style={styles.stepperLabel}>-</Text>
@@ -134,8 +134,8 @@ const SideMenu = ({
               <View style={styles.stepperTrack}>
                 <View style={[styles.stepperFill, { width: `${((ttsRate - 0.5) / 1.5) * 100}%` }]} />
               </View>
-              <TouchableOpacity 
-                style={styles.stepperButton} 
+              <TouchableOpacity
+                style={styles.stepperButton}
                 onPress={() => setTtsRate(Math.min(2.0, ttsRate + 0.1))}
               >
                 <Text style={styles.stepperLabel}>+</Text>
@@ -143,20 +143,15 @@ const SideMenu = ({
             </View>
           </View>
 
-          <View style={styles.statusBoxSmall}>
-            <Text style={styles.statusLabelSmall}>Backend Endpoint</Text>
-            <Text style={styles.statusTextSmall}>{activeBackendUrl}</Text>
-          </View>
-
-          <TouchableOpacity 
-            style={styles.stopButton} 
+          <TouchableOpacity
+            style={styles.stopButton}
             onPress={() => { handleStopChat(); toggleMenu(false); }}
           >
             <Text style={styles.stopButtonText}>Emergency Stop</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={[styles.stopButton, { borderColor: '#ef4444', marginTop: 10 }]} 
+          <TouchableOpacity
+            style={[styles.stopButton, { borderColor: '#ef4444', marginTop: 10 }]}
             onPress={handleSignOut}
           >
             <Text style={styles.stopButtonText}>Sign Out</Text>

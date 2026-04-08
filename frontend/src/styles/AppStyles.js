@@ -180,6 +180,22 @@ export default StyleSheet.create({
     color: '#e5e7eb',
     fontWeight: '600'
   },
+  voiceButton: {
+    marginTop: 8,
+    backgroundColor: '#1f2937',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#374151',
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  voiceButtonText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '500'
+  },
   // Modal & Notes Styles
   modalContainer: {
     flex: 1,
