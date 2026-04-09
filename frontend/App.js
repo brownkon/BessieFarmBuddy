@@ -36,7 +36,7 @@ import {
   getAccentLabel
 } from './src/config/constants';
 
-import { useVosk } from './src/hooks/useVosk';
+import { useNativeSpeech } from './src/hooks/useNativeSpeech';
 import { useAudioRecording } from './src/hooks/useAudioRecording';
 import { useWhisperApi } from './src/hooks/useWhisperApi';
 import { startDucking, stopDucking, cleanupAudio } from './src/utils/audioUtils';
@@ -160,12 +160,12 @@ function AppMain() {
   const {
     status,
     setStatus,
-    isModelLoaded,
+    isReady,
     recognizing,
     setRecognizing,
-    startVosk,
-    stopVosk
-  } = useVosk(onWakeWord, onExit, onPartial, onResult);
+    startListening,
+    stopListening
+  } = useNativeSpeech(onWakeWord, onExit, onPartial, onResult);
 
   const onSilence = useCallback(() => {
     console.log('[Audio] Silence Timed Out.');
@@ -184,8 +184,8 @@ function AppMain() {
 
   // --- ACTIONS ---
   const startWakeWordListening = useCallback(async (force = false) => {
-    if (!isListeningActiveRef.current || !isModelLoaded) {
-      if (!isListeningActiveRef.current) setStatus('Listening Disabled');
+    if (!isListeningActiveRef.current) {
+      setStatus('Listening Disabled');
       return;
     }
 
@@ -198,42 +198,40 @@ function AppMain() {
     console.log('[App] Starting Wake Word Listening (force=' + force + ')...');
 
     try {
-      // Provide immediate feedback
       modeRef.current = 'wake';
       setStatus('Waking up...');
 
-      // Stop everything with strict timeouts
+      // Stop any active recognition
       await Promise.race([
-        stopVosk(),
+        stopListening(),
         new Promise(resolve => setTimeout(resolve, 500))
       ]).catch(() => {});
 
-      await cleanupAudio(recordingRef, null, { stopVosk: false });
-      
+      await cleanupAudio(recordingRef, null, { stopRecognition: null });
+
       await Promise.race([
         stopDucking(silentSoundRef),
         new Promise(resolve => setTimeout(resolve, 1500))
       ]).catch(() => {});
 
-      // Short breather to let hardware settle
       await new Promise(resolve => setTimeout(resolve, 300));
 
-      setStatus('Say "Hey Dairy" to start...');
+      setStatus('Say "Hey Bessie" to start...');
       setVoiceTranscript('');
       transcriptRef.current = '';
       setRecognizing(true);
-      
-      await startVosk([...WAKE_PHRASES, ...EXIT_PHRASES, ...FILLER_WORDS]);
+
+      // Pass wake=true + full vocabulary so the hook auto-restarts and biases toward farm terms
+      await startListening([...WAKE_PHRASES, ...EXIT_PHRASES, ...FILLER_WORDS], 'en-US', true);
       console.log('[App] Wake word listening active.');
     } catch (err) {
       console.error('[App] Error in startWakeWordListening:', err);
       setRecognizing(false);
-      // Fallback: try once more after a delay if it failed
       if (!force) setTimeout(() => startWakeWordListening(true), 1500);
     } finally {
       isStartingRef.current = false;
     }
-  }, [isModelLoaded, startVosk, recordingRef, silentSoundRef, stopVosk]);
+  }, [startListening, stopListening, recordingRef, silentSoundRef]);
 
   const triggerCommandPrompt = useCallback(async () => {
     console.log('[App] Interrupted by wake word, resetting state...');
@@ -253,7 +251,7 @@ function AppMain() {
     isSpeakingRef.current = false;
 
     await stopRecordingManual();
-    await stopVosk();
+    await stopListening();
 
     isStartingRef.current = false;
     modeRef.current = 'transition';
@@ -277,16 +275,17 @@ function AppMain() {
       onDone: beepDone,
       onError: beepDone
     });
-  }, [stopVosk, stopRecordingManual, startCommandListening, ttsRate, ttsVolume]);
+  }, [stopListening, stopRecordingManual, startCommandListening, ttsRate, ttsVolume]);
 
   const startCommandListening = useCallback(async (isFollowUp = false) => {
     modeRef.current = 'command';
-    setStatus(isFollowUp ? 'Listening (Whisper)...' : 'Listening... (Whisper)');
+    setStatus(isFollowUp ? 'Listening...' : 'Listening...');
 
-    await cleanupAudio(recordingRef, null, { stopVosk: false });
-    await startVosk([...WAKE_PHRASES, ...EXIT_PHRASES, ...FILLER_WORDS]);
+    await cleanupAudio(recordingRef, null, { stopRecognition: stopListening });
+    // Start in non-wake mode — pass full vocabulary hints to improve command accuracy
+    await startListening([...WAKE_PHRASES, ...EXIT_PHRASES, ...FILLER_WORDS], 'en-US', false);
     await startRecording();
-  }, [startVosk, startRecording, recordingRef]);
+  }, [startListening, stopListening, startRecording, recordingRef]);
 
   const speakNextSentence = useCallback(() => {
     if (isSpeaking || speechQueueRef.current.length === 0) return;
@@ -333,8 +332,8 @@ function AppMain() {
       setStatus('Reading...');
       shouldTerminateRef.current = false;
 
-      // Ensure Vosk is still listening for "Hey Dairy" while thinking/speaking
-      await startVosk([...WAKE_PHRASES, ...EXIT_PHRASES, ...FILLER_WORDS]);
+      // Ensure native speech is still listening for "Hey Bessie" while thinking/speaking
+      await startListening([...WAKE_PHRASES, ...EXIT_PHRASES, ...FILLER_WORDS], 'en-US', true);
 
       const assistantId = Date.now().toString() + '_ai';
       setMessages(prev => [...prev, { id: assistantId, role: 'assistant', text: '' }]);
@@ -432,13 +431,13 @@ function AppMain() {
       const userMsg = { id: Date.now().toString(), role: 'user', text: textToSend };
       setMessages(prev => [...prev, userMsg]);
 
-      await cleanupAudio(recordingRef, null, { stopVosk: true });
+      await cleanupAudio(recordingRef, null, { stopRecognition: stopListening });
       if (isChatTtsEnabled) {
         await startDucking(silentSoundRef);
       }
 
-      // Ensure Vosk is still listening for "Hey Dairy" during text-based conversations
-      await startVosk([...WAKE_PHRASES, ...EXIT_PHRASES, ...FILLER_WORDS]);
+      // Ensure native speech is still listening for "Hey Bessie" during text-based conversations
+      await startListening([...WAKE_PHRASES, ...EXIT_PHRASES, ...FILLER_WORDS], 'en-US', true);
 
       const assistantId = Date.now().toString() + '_ai';
       setMessages(prev => [...prev, { id: assistantId, role: 'assistant', text: '' }]);
@@ -631,16 +630,17 @@ function AppMain() {
     setup();
     return () => {
       clearTimeout(restartTimerRef.current);
-      stopVosk();
+      stopListening();
       if (silentSoundRef.current) silentSoundRef.current.unloadAsync();
     };
   }, []);
 
+  // Start listening as soon as permissions are granted (isReady)
   useEffect(() => {
-    if (isModelLoaded) {
+    if (isReady) {
       startWakeWordListening();
     }
-  }, [isModelLoaded]);
+  }, [isReady]);
 
   if (!user) return <AuthScreen />;
 
