@@ -282,5 +282,113 @@ export default StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  // History Styles
+  historyItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+    backgroundColor: '#1f2937',
+    borderWidth: 1,
+    borderColor: 'transparent',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  historyItemActive: {
+    borderColor: '#3b82f6',
+    backgroundColor: 'rgba(59, 130, 246, 0.1)'
+  },
+  historyItemTitle: {
+    color: '#e5e7eb',
+    fontSize: 14,
+    fontWeight: '500',
+    flex: 1,
+    marginRight: 8
+  },
+  historyDeleteButton: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)'
+  },
+  historyDeleteText: {
+    color: '#ef4444',
+    fontSize: 12
+  },
+  newChatButton: {
+    backgroundColor: '#3b82f6',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 20,
+    flexDirection: 'row',
+    justifyContent: 'center'
+  },
+  newChatButtonText: {
+    color: '#ffffff',
+    fontWeight: 'bold',
+    fontSize: 15,
+    marginLeft: 8
+  },
+  settingsToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#1f2937',
+    marginTop: 'auto'
+  },
+  settingsToggleText: {
+    color: '#9ca3af',
+    fontSize: 14,
+    marginLeft: 10,
+    fontWeight: '600'
+  },
+  seeMoreButton: {
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 10
+  },
+  seeMoreText: {
+    color: '#3b82f6',
+    fontSize: 13,
+    fontWeight: '600'
+  },
+  // Rename Modal Styles
+  renameInput: {
+    backgroundColor: '#1f2937',
+    color: '#ffffff',
+    padding: 16,
+    borderRadius: 12,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#374151',
+    marginTop: 20,
+    width: '100%'
+  },
+  modalButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+    marginTop: 24,
+    width: '100%'
+  },
+  modalButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    backgroundColor: '#1f2937',
+    borderWidth: 1,
+    borderColor: '#374151'
+  },
+  modalButtonPrimary: {
+    backgroundColor: '#3b82f6',
+    borderColor: '#3b82f6'
+  },
+  modalButtonText: {
+    color: '#ffffff',
+    fontWeight: '600',
+    fontSize: 14
   }
 });

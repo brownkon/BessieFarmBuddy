@@ -57,6 +57,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 function AppMain() {
   const { session, user } = useAuth();
   const [gpsLocation, setGpsLocation] = useState(null);
+  const [activeSessionId, setActiveSessionId] = useState(null);
   const [voiceTranscript, setVoiceTranscript] = useState('');
   const transcriptRef = useRef('');
   const [activeBackendUrl, setActiveBackendUrl] = useState(configuredBackendUrl);
@@ -134,10 +135,49 @@ function AppMain() {
   } = useWhisperApi(activeBackendUrl);
 
   const getFormattedHistory = useCallback((limit = 8) => {
-    return messages
+    // Exclude the initial greeting if it's the first message
+    const filteredMessages = messages.filter(m => m.id !== 'initial');
+    return filteredMessages
       .slice(-limit)
       .map(m => ({ role: m.role, content: m.text }));
   }, [messages]);
+
+  const startNewChat = useCallback(() => {
+    setActiveSessionId(null);
+    setMessages([
+      { id: 'initial', role: 'assistant', text: 'Hello! I am Bessie, your farm assistant. How can I help you today?' }
+    ]);
+  }, []);
+
+  const loadSession = useCallback(async (sessionId) => {
+    try {
+      setStatus('Loading chat...');
+      const { data: { session: freshSession } } = await supabase.auth.getSession();
+      const token = freshSession?.access_token;
+
+      const response = await fetch(`${activeBackendUrl}/api/chat-sessions/${sessionId}/messages`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+
+      if (data.messages) {
+        const formattedMessages = data.messages.map(m => ([
+          { id: `${m.id}_u`, role: 'user', text: m.prompt },
+          { id: `${m.id}_a`, role: 'assistant', text: m.response }
+        ])).flat();
+
+        setMessages([
+          { id: 'initial', role: 'assistant', text: 'Hello! I am Bessie, your farm assistant. How can I help you today?' },
+          ...formattedMessages
+        ]);
+        setActiveSessionId(sessionId);
+        setStatus('Ready');
+      }
+    } catch (error) {
+      console.error('Error loading session:', error);
+      Alert.alert('Error', 'Failed to load chat history');
+    }
+  }, [activeBackendUrl]);
 
   const onWakeWord = useCallback((phrase) => {
     // Ignore wake words if we are already in a command or transitioning
@@ -429,7 +469,9 @@ function AppMain() {
         null,
         {
           headers: { 'Authorization': `Bearer ${token}` },
-          location: gpsLocation
+          location: gpsLocation,
+          sessionId: activeSessionId,
+          onSessionCreated: (id) => setActiveSessionId(id)
         }
       );
 
@@ -524,7 +566,9 @@ function AppMain() {
         }
       }, {
         headers: { 'Authorization': `Bearer ${token}` },
-        location: gpsLocation
+        location: gpsLocation,
+        sessionId: activeSessionId,
+        onSessionCreated: (id) => setActiveSessionId(id)
       });
 
       if (isChatTtsEnabled && streamingSentenceBufferRef.current.trim()) {
@@ -768,6 +812,9 @@ function AppMain() {
         setTtsVolume={setTtsVolume}
         user={user}
         setIsNotesModalVisible={setIsNotesModalVisible}
+        activeSessionId={activeSessionId}
+        loadSession={loadSession}
+        startNewChat={startNewChat}
       />
 
       <NotesModal

@@ -32,9 +32,19 @@ CREATE TABLE IF NOT EXISTS public.organization_members (
   created_at timestamptz DEFAULT now()
 );
 
+-- Chat Sessions Table (Groups of messages)
+CREATE TABLE IF NOT EXISTS public.chat_sessions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES public.profiles(id) ON DELETE CASCADE,
+  title text DEFAULT 'New Chat',
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
 -- Chats Table (Interaction history)
 CREATE TABLE IF NOT EXISTS public.chats (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id uuid REFERENCES public.chat_sessions(id) ON DELETE CASCADE,
   user_id uuid REFERENCES public.profiles(id) ON DELETE CASCADE,
   prompt text NOT NULL,
   response text NOT NULL,
@@ -42,6 +52,8 @@ CREATE TABLE IF NOT EXISTS public.chats (
   gps_coordinates jsonb,
   tools_used jsonb
 );
+
+CREATE INDEX IF NOT EXISTS idx_chats_session_id ON public.chats(session_id);
 
 --------------------------------------------------------------------------------
 -- ROW LEVEL SECURITY (RLS)
@@ -51,6 +63,7 @@ CREATE TABLE IF NOT EXISTS public.chats (
 ALTER TABLE public.organizations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.organization_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.chat_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.chats ENABLE ROW LEVEL SECURITY;
 
 -- 1. Profiles: Users can read/write their own profile
@@ -75,7 +88,11 @@ CREATE POLICY "Members can see their team" ON public.organization_members
     )
   );
 
--- 4. Chats: Users can read/write their own chat history
+-- 4. Chat Sessions: Users can manage own sessions
+CREATE POLICY "Users can manage own sessions" ON public.chat_sessions
+  FOR ALL USING (auth.uid() = user_id);
+
+-- 5. Chats: Users can read/write their own chat history
 CREATE POLICY "Users can manage own chats" ON public.chats
   FOR ALL USING (auth.uid() = user_id);
 

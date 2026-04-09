@@ -17,6 +17,7 @@ async function voiceChatRoutes(fastify, options) {
       let language = 'en';
       let history = [];
       let location = null;
+      let sessionId = null;
 
       for await (const part of parts) {
         if (part.file) {
@@ -27,6 +28,8 @@ async function voiceChatRoutes(fastify, options) {
           try { history = JSON.parse(part.value); } catch (e) { }
         } else if (part.fieldname === 'location') {
           try { location = JSON.parse(part.value); } catch (e) { }
+        } else if (part.fieldname === 'sessionId') {
+          sessionId = part.value;
         }
       }
 
@@ -50,8 +53,30 @@ async function voiceChatRoutes(fastify, options) {
         return;
       }
 
-      // 1. Send the transcript chunk
-      reply.raw.write(`data: ${JSON.stringify({ transcript })}\n\n`);
+      // If no sessionId, create a new session
+      let isNewSession = false;
+      if (!sessionId) {
+        isNewSession = true;
+        const { data: newSession, error: sessError } = await supabase
+          .from('chat_sessions')
+          .insert({
+            user_id: user.id,
+            title: transcript.substring(0, 40) + (transcript.length > 40 ? '...' : '')
+          })
+          .select()
+          .single();
+
+        if (sessError) {
+          fastify.log.error(`[Supabase] Error creating session: ${sessError.message}`);
+          return reply.code(500).send({ error: 'Failed to create chat session' });
+        }
+        sessionId = newSession.id;
+      }
+
+      // 1. Send the transcript chunk and sessionId
+      const initialChunk = { transcript };
+      if (isNewSession) initialChunk.sessionId = sessionId;
+      reply.raw.write(`data: ${JSON.stringify(initialChunk)}\n\n`);
 
       const aiStart = Date.now();
       const stream = await openaiService.getChatStream({
@@ -76,7 +101,9 @@ async function voiceChatRoutes(fastify, options) {
 
       // Async Log to Supabase (Background)
       setImmediate(() => {
+        // Save message
         supabase.from('chats').insert({
+          session_id: sessionId,
           user_id: user.id,
           prompt: transcript,
           response: fullResponse,
@@ -86,6 +113,14 @@ async function voiceChatRoutes(fastify, options) {
           if (error) fastify.log.error(`[Supabase] Error saving voice chat: ${error.message}`);
           else fastify.log.info(`[Supabase] Saved voice chat for ${user.email}`);
         });
+
+        // Update session timestamp
+        supabase.from('chat_sessions')
+          .update({ updated_at: new Date() })
+          .eq('id', sessionId)
+          .then(({ error }) => {
+            if (error) fastify.log.error(`[Supabase] Error updating session timestamp: ${error.message}`);
+          });
       });
 
     } catch (error) {

@@ -10,7 +10,7 @@ export const useWhisperApi = (activeBackendUrl) => {
    * Stream LLM response for text input
    */
   const streamText = async (text, history = [], language = 'en', onChunk, options = {}) => {
-    const { headers = {}, location = null } = options;
+    const { headers = {}, location = null, sessionId = null } = options;
     setLoading(true);
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
@@ -30,6 +30,7 @@ export const useWhisperApi = (activeBackendUrl) => {
               if (dataStr === '[DONE]') { resolve(); continue; }
               try {
                 const parsed = JSON.parse(dataStr);
+                if (parsed.sessionId && options.onSessionCreated) options.onSessionCreated(parsed.sessionId);
                 if (parsed.content || parsed.terminate) onChunk(parsed);
               } catch (e) {}
             }
@@ -38,7 +39,7 @@ export const useWhisperApi = (activeBackendUrl) => {
         if (xhr.readyState === 4) { setLoading(false); resolve(); }
       };
       xhr.onerror = () => { setLoading(false); reject(new Error('Network error')); };
-      xhr.send(JSON.stringify({ text, history, language, location }));
+      xhr.send(JSON.stringify({ text, history, language, location, sessionId }));
     });
   };
 
@@ -46,7 +47,7 @@ export const useWhisperApi = (activeBackendUrl) => {
    * Stream LLM response for audio input (Transcription + Chat)
    */
   const streamAudio = async (uri, language, history = [], onChunk, onTranscript, _unused, options = {}) => {
-    const { headers = {}, location = null } = options;
+    const { headers = {}, location = null, sessionId = null } = options;
     setLoading(true);
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
@@ -58,6 +59,7 @@ export const useWhisperApi = (activeBackendUrl) => {
       formData.append('language', language);
       formData.append('history', JSON.stringify(history));
       if (location) formData.append('location', JSON.stringify(location));
+      if (sessionId) formData.append('sessionId', sessionId);
 
       let seenBytes = 0;
       xhr.onreadystatechange = () => {
@@ -71,6 +73,7 @@ export const useWhisperApi = (activeBackendUrl) => {
               if (dataStr === '[DONE]') { resolve(); continue; }
               try {
                 const parsed = JSON.parse(dataStr);
+                if (parsed.sessionId && options.onSessionCreated) options.onSessionCreated(parsed.sessionId);
                 if (parsed.transcript && onTranscript) onTranscript(parsed.transcript);
                 if (parsed.content || parsed.terminate) onChunk(parsed);
               } catch (e) {}
