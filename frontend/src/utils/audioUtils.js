@@ -1,5 +1,4 @@
 import { Audio } from 'expo-av';
-import * as Vosk from 'react-native-vosk';
 
 export const startDucking = async (silentSoundRef) => {
   if (silentSoundRef.current) {
@@ -57,12 +56,16 @@ export const stopDucking = async (silentSoundRef) => {
   } catch (err) { console.log('[Audio] Stop ducking failed:', err.message); }
 };
 
-export const cleanupAudio = async (recordingRef, setRecording, options = { stopVosk: true }) => {
+/**
+ * @param {object} options
+ * @param {Function|null} options.stopRecognition  - optional async fn to stop native speech
+ */
+export const cleanupAudio = async (recordingRef, setRecording, options = {}) => {
   console.log('[Cleanup] Starting cleanup flow...');
   try {
-    if (options.stopVosk) {
+    if (options.stopRecognition) {
       await Promise.race([
-        Vosk.stop(),
+        options.stopRecognition(),
         new Promise(resolve => setTimeout(resolve, 300))
       ]).catch(() => { });
     }

@@ -7,16 +7,22 @@ let cachedToolList = null;
  */
 async function classifyRequest(openai, text, history) {
   const start = Date.now();
-  // Optimized fast-track
+  // Fast-track: phrase-based matching (no LLM needed for clear closures/greetings)
   const lowerText = text.toLowerCase().trim().replace(/[!.?]/g, '');
-  const closures = ['thanks', 'thank you', 'bye', 'goodbye', 'see ya', 'see you later'];
-  const greetings = ['hi', 'hello', 'hey', 'yo', 'sup'];
+  const closurePhrases = [
+    'thanks', 'thank you', 'bye', 'goodbye', 'see ya', 'see you later',
+    'stop listening', 'stop talking', 'that\'s all', 'that is all',
+    'i\'m done', 'i am done', 'we\'re done', 'we are done',
+    'leave me alone', 'go away', 'end conversation', 'end chat',
+    'talk later', 'talk soon', 'catch you later', 'good night', 'good day',
+  ];
+  const greetingPhrases = ['hi', 'hello', 'hey', 'yo', 'sup', 'howdy', 'good morning'];
 
-  if (closures.includes(lowerText)) {
+  if (closurePhrases.some(phrase => lowerText.includes(phrase))) {
     return { should_call_tool: true, tool_name: "terminate_conversation", arguments: null, confidence: 1.0 };
   }
 
-  if (greetings.includes(lowerText)) {
+  if (greetingPhrases.some(phrase => lowerText === phrase)) {
     return { should_call_tool: false, tool_name: null, arguments: null, confidence: 1.0 };
   }
 

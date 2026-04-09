@@ -38,11 +38,11 @@
     },
     "plugins": [
       [
-        "react-native-vosk/app.plugin",
+        "expo-speech-recognition",
         {
-          "models": [
-            "model-en-us"
-          ]
+          "microphonePermission": "Allow Bessie to use the microphone to listen for voice commands.",
+          "speechRecognitionPermission": "Allow Bessie to use speech recognition to understand your farm commands.",
+          "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox"]
         }
       ],
       [
