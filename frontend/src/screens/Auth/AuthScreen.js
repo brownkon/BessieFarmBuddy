@@ -18,6 +18,10 @@ export default function AuthScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
+  const [orgMode, setOrgMode] = useState('create');
+  const [orgName, setOrgName] = useState('');
+  const [orgAddress, setOrgAddress] = useState('');
+  const [accessCode, setAccessCode] = useState('');
 
   async function handleAuth() {
     if (!email || !password) {
@@ -28,10 +32,122 @@ export default function AuthScreen() {
     setLoading(true);
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({ email, password });
-        if (error) throw error;
-        // User will be automatically signed in if email confirmation is disabled
-        // No success alert needed as AuthContext handles the state change and switches screens
+        if (orgMode === 'create' && (!orgName || !orgAddress)) {
+          Alert.alert('Error', 'Please provide both an organization name and address');
+          setLoading(false);
+          return;
+        }
+        if (orgMode === 'join' && !accessCode) {
+          Alert.alert('Error', 'Please provide an access code');
+          setLoading(false);
+          return;
+        }
+
+        const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
+        const trimmedCode = accessCode.trim().toUpperCase();
+
+        // Pre-validate join code before letting Supabase create the user account
+        if (orgMode === 'join') {
+          const preValRes = await fetch(`${backendUrl}/api/org/validate/${trimmedCode}`);
+          if (!preValRes.ok) {
+            Alert.alert('Error', 'Invalid access code or organization not found.');
+            setLoading(false);
+            return;
+          }
+        }
+
+        const { data, error } = await supabase.auth.signUp({ email: email.trim().toLowerCase(), password });
+
+        // Supabase returns no error but also no session when the email is already
+        // registered but unconfirmed — detect this via the identities array.
+        if (!error && data?.user?.identities?.length === 0) {
+          Alert.alert(
+            'Account Already Exists',
+            'An account with this email already exists. Please sign in instead, or use a different email.'
+          );
+          setLoading(false);
+          return;
+        }
+
+        if (error) {
+          // Surface "already registered" clearly
+          if (error.message?.toLowerCase().includes('already registered') ||
+              error.message?.toLowerCase().includes('user already exists')) {
+            Alert.alert(
+              'Account Already Exists',
+              'An account with this email already exists. Please sign in instead, or use a different email.'
+            );
+            setLoading(false);
+            return;
+          }
+          throw error;
+        }
+
+        let session = data.session;
+        if (!session) {
+          const sessionRes = await supabase.auth.getSession();
+          session = sessionRes.data.session;
+        }
+
+        // If still no session, email confirmation is enabled in Supabase.
+        // The user was created in auth but org setup was skipped — rollback.
+        if (!session) {
+          // Best-effort rollback: we have user id from data.user but no token,
+          // so we call the backend admin rollback with the service role.
+          try {
+            await fetch(`${backendUrl}/api/org/rollback-by-id`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ user_id: data.user.id })
+            });
+          } catch (_) { /* best-effort */ }
+
+          Alert.alert(
+            'Email Confirmation Required',
+            'Your Supabase project has email confirmation enabled. Please disable it in Supabase Dashboard → Authentication → Providers → Email → "Confirm email" toggle, then try again.'
+          );
+          setLoading(false);
+          return;
+        }
+
+        const token = session.access_token;
+        try {
+          if (orgMode === 'create') {
+            const res = await fetch(`${backendUrl}/api/org/create`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({ name: orgName, location: orgAddress })
+            });
+            if (!res.ok) {
+              const errData = await res.json();
+              throw new Error(errData.error || 'Failed to create organization');
+            }
+          } else {
+            const res = await fetch(`${backendUrl}/api/org/join`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({ access_code: trimmedCode })
+            });
+            if (!res.ok) {
+              const errData = await res.json();
+              throw new Error(errData.error || 'Failed to join organization');
+            }
+          }
+        } catch (err) {
+          // Rollback: delete the auth user so the email isn't blocked
+          await fetch(`${backendUrl}/api/org/rollback`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          await supabase.auth.signOut();
+          throw err;
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -51,6 +167,52 @@ export default function AuthScreen() {
       <View style={styles.authBox}>
         <Text style={styles.title}>🐄 Bessie</Text>
         <Text style={styles.subtitle}>{isSignUp ? 'Create your account' : 'Welcome back'}</Text>
+        {isSignUp && (
+          <View style={styles.orgToggleContainer}>
+            <TouchableOpacity
+              style={[styles.orgToggleBtn, orgMode === 'create' && styles.orgToggleBtnActive]}
+              onPress={() => setOrgMode('create')}
+            >
+              <Text style={orgMode === 'create' ? styles.orgToggleTextActive : styles.orgToggleText}>Create Org</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.orgToggleBtn, orgMode === 'join' && styles.orgToggleBtnActive]}
+              onPress={() => setOrgMode('join')}
+            >
+              <Text style={orgMode === 'join' ? styles.orgToggleTextActive : styles.orgToggleText}>Join Org</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {isSignUp && orgMode === 'create' && (
+          <>
+            <TextInput
+              style={styles.input}
+              placeholder="Organization Name"
+              placeholderTextColor="#6b7280"
+              value={orgName}
+              onChangeText={setOrgName}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Farm Address / Location"
+              placeholderTextColor="#6b7280"
+              value={orgAddress}
+              onChangeText={setOrgAddress}
+            />
+          </>
+        )}
+        {isSignUp && orgMode === 'join' && (
+          <TextInput
+            style={styles.input}
+            placeholder="Access Code"
+            placeholderTextColor="#6b7280"
+            value={accessCode}
+            onChangeText={(text) => setAccessCode(text.toUpperCase())}
+            autoCapitalize="characters"
+            autoCorrect={false}
+          />
+        )}
 
         <TextInput
           style={styles.input}
@@ -62,6 +224,7 @@ export default function AuthScreen() {
           keyboardType="email-address"
         />
 
+
         <View style={styles.passwordContainer}>
           <TextInput
             style={styles.passwordInput}
@@ -71,7 +234,7 @@ export default function AuthScreen() {
             onChangeText={setPassword}
             secureTextEntry={!showPassword}
           />
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => setShowPassword(!showPassword)}
             style={styles.eyeButton}
           >
@@ -80,6 +243,8 @@ export default function AuthScreen() {
             </Text>
           </TouchableOpacity>
         </View>
+
+
 
         <TouchableOpacity
           style={styles.button}
@@ -147,6 +312,32 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#374151',
     fontSize: 16,
+  },
+  orgToggleContainer: {
+    flexDirection: 'row',
+    marginBottom: 15,
+    backgroundColor: '#111827',
+    borderRadius: 12,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: '#374151',
+  },
+  orgToggleBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  orgToggleBtnActive: {
+    backgroundColor: '#3b82f6',
+  },
+  orgToggleText: {
+    color: '#9ca3af',
+    fontWeight: '600',
+  },
+  orgToggleTextActive: {
+    color: '#ffffff',
+    fontWeight: '600',
   },
   passwordContainer: {
     flexDirection: 'row',
