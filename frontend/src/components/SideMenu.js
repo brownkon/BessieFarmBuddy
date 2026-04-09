@@ -32,6 +32,41 @@ const SideMenu = ({
   user,
   setIsNotesModalVisible
 }) => {
+  const [orgData, setOrgData] = React.useState(null);
+
+  React.useEffect(() => {
+    if (isMenuOpen && user) {
+      fetchUserOrg();
+    }
+  }, [isMenuOpen, user]);
+
+  async function fetchUserOrg() {
+    try {
+      const { data: memberData, error } = await supabase
+        .from('organization_members')
+        .select(`
+          role,
+          organizations (
+            name,
+            access_code
+          )
+        `)
+        .eq('user_id', user.id)
+        .single();
+
+      if (!error && memberData && memberData.role === 'boss') {
+        setOrgData({
+          name: memberData.organizations.name,
+          accessCode: memberData.organizations.access_code
+        });
+      } else {
+        setOrgData(null);
+      }
+    } catch (err) {
+      console.log('Error fetching org:', err);
+    }
+  }
+
   if (!isMenuOpen) return null;
 
   const handleSignOut = async () => {
@@ -59,6 +94,18 @@ const SideMenu = ({
             <View style={styles.statusBoxSmall}>
               <Text style={styles.statusLabelSmall}>Logged in as</Text>
               <Text style={styles.statusTextSmall}>{user.email}</Text>
+            </View>
+          )}
+
+          {orgData && (
+            <View style={styles.drawerItem}>
+              <Text style={styles.settingLabel}>Organization: {orgData.name}</Text>
+              <View style={{ backgroundColor: '#111827', padding: 10, borderRadius: 8, marginTop: 5, borderWidth: 1, borderColor: '#374151' }}>
+                <Text style={{ color: '#9ca3af', fontSize: 12 }}>Invite Code</Text>
+                <Text selectable style={{ color: '#34d399', fontSize: 18, fontWeight: 'bold', marginTop: 5, letterSpacing: 2 }}>
+                  {orgData.accessCode || 'Pending Drop...'}
+                </Text>
+              </View>
             </View>
           )}
 

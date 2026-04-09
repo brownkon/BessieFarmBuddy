@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS public.organizations (
   name text NOT NULL,
   billing_info text,
   location text,
+  access_code text UNIQUE,
   created_at timestamptz DEFAULT now()
 );
 

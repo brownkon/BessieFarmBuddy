@@ -2,6 +2,7 @@ const healthRoutes = require('./health.route');
 const chatRoutes = require('./chat.route');
 const voiceChatRoutes = require('./voice-chat.route');
 const syncRoutes = require('./sync.route');
+const orgRoutes = require('./org.route');
 
 async function apiRoutes(fastify, options) {
   // Register modular routes
@@ -9,6 +10,7 @@ async function apiRoutes(fastify, options) {
   fastify.register(chatRoutes);
   fastify.register(voiceChatRoutes);
   fastify.register(syncRoutes);
+  fastify.register(orgRoutes);
 }
 
 module.exports = apiRoutes;
