@@ -109,7 +109,7 @@ function AppMain() {
     })
   ).current;
 
-  const modeRef = useRef('wake'); 
+  const modeRef = useRef('wake');
   const isSpeakingRef = useRef(false);
   const isStartingRef = useRef(false);
   const isProcessingRef = useRef(false);
@@ -119,6 +119,8 @@ function AppMain() {
   const speakTimeoutRef = useRef(null);
   const restartTimerRef = useRef(null);
   const terminationRestartTimerRef = useRef(null);
+  const speechEndTimeoutRef = useRef(null);
+  const commandStartTimeRef = useRef(0);
 
   // Sync refs
   useEffect(() => { preferredVoiceRef.current = preferredVoice; }, [preferredVoice]);
@@ -138,18 +140,25 @@ function AppMain() {
   }, [messages]);
 
   const onWakeWord = useCallback((phrase) => {
-    // Always listen unless explicitly disabled or already starting
-    if (!isStartingRef.current) {
-      console.log('[App] Wake word detected, interrupting current state if needed:', phrase);
-      triggerCommandPrompt();
+    // Ignore wake words if we are already in a command or transitioning
+    if (modeRef.current === 'command' || modeRef.current === 'thinking' || isStartingRef.current) {
+      console.log('[App] Wake word detected during active session, ignoring:', phrase);
+      return;
     }
-  }, []);
+
+    console.log('[App] Wake word detected, triggering command prompt:', phrase);
+    triggerCommandPrompt();
+  }, [triggerCommandPrompt]);
 
   const onExit = useCallback((phrase) => {
-    if (modeRef.current !== 'wake') {
-      console.log('[Vosk] Local exit keyword detected:', phrase);
-      handleStopChat();
+    // Ignore exit words if we are already in a command or transitioning
+    if (modeRef.current === 'command' || modeRef.current === 'thinking' || isStartingRef.current) {
+      console.log('[App] Exit word detected during active session, ignoring:', phrase);
+      return;
     }
+
+    console.log('[App] Exit word detected, stopping chat:', phrase);
+    handleStopChat();
   }, [handleStopChat]);
 
   const onPartial = useCallback((_txt) => { }, []);
@@ -157,19 +166,44 @@ function AppMain() {
     transcriptRef.current = txt;
   }, []);
 
+  const handleSpeechStart = useCallback(() => {
+    if (modeRef.current === 'command') {
+      clearTimeout(speechEndTimeoutRef.current);
+      resetSilenceTimer();
+    }
+  }, [resetSilenceTimer]);
+
+  const handleSpeechEnd = useCallback(() => {
+    if (modeRef.current === 'command') {
+      clearTimeout(speechEndTimeoutRef.current);
+      speechEndTimeoutRef.current = setTimeout(() => {
+        if (modeRef.current === 'command') {
+          stopAndSendRecording('Native VAD');
+        }
+      }, 1000);
+    }
+  }, [stopAndSendRecording]);
+
   const {
     status,
     setStatus,
     isReady,
     recognizing,
-    setRecognizing,
+    setRecognizing: setNativeRecognizing,
     startListening,
     stopListening
-  } = useNativeSpeech(onWakeWord, onExit, onPartial, onResult);
+  } = useNativeSpeech(onWakeWord, onExit, (txt) => {
+    // Also reset silence timers on partial results for extra safety
+    if (modeRef.current === 'command') {
+      clearTimeout(speechEndTimeoutRef.current);
+      resetSilenceTimer();
+    }
+    onPartial(txt);
+  }, onResult, handleSpeechStart, handleSpeechEnd);
 
   const onSilence = useCallback(() => {
     console.log('[Audio] Silence Timed Out.');
-    stopAndSendRecording();
+    stopAndSendRecording('Manual Silence Fallback');
   }, [stopAndSendRecording]);
 
   const {
@@ -179,6 +213,7 @@ function AppMain() {
     startRecording,
     stopRecordingManual,
     stopAndGetURI,
+    resetSilenceTimer,
     recordingRef
   } = useAudioRecording(onSilence);
 
@@ -205,28 +240,28 @@ function AppMain() {
       await Promise.race([
         stopListening(),
         new Promise(resolve => setTimeout(resolve, 500))
-      ]).catch(() => {});
+      ]).catch(() => { });
 
       await cleanupAudio(recordingRef, null, { stopRecognition: null });
 
       await Promise.race([
         stopDucking(silentSoundRef),
         new Promise(resolve => setTimeout(resolve, 1500))
-      ]).catch(() => {});
+      ]).catch(() => { });
 
       await new Promise(resolve => setTimeout(resolve, 300));
 
-      setStatus('Say "Hey Bessie" to start...');
+      setStatus('Say "Hey Dairy" to start...');
       setVoiceTranscript('');
       transcriptRef.current = '';
-      setRecognizing(true);
+      setNativeRecognizing(true);
 
       // Pass wake=true + full vocabulary so the hook auto-restarts and biases toward farm terms
-      await startListening([...WAKE_PHRASES, ...EXIT_PHRASES, ...FILLER_WORDS], 'en-US', true);
+      await startListening([...WAKE_PHRASES, ...EXIT_PHRASES], 'en-US', true);
       console.log('[App] Wake word listening active.');
     } catch (err) {
       console.error('[App] Error in startWakeWordListening:', err);
-      setRecognizing(false);
+      setNativeRecognizing(false);
       if (!force) setTimeout(() => startWakeWordListening(true), 1500);
     } finally {
       isStartingRef.current = false;
@@ -235,10 +270,10 @@ function AppMain() {
 
   const triggerCommandPrompt = useCallback(async () => {
     console.log('[App] Interrupted by wake word, resetting state...');
-    
+
     // Cancel any pending termination restart
     clearTimeout(terminationRestartTimerRef.current);
-    
+
     // Stop everything immediately
     Speech.stop();
     isProcessingRef.current = false;
@@ -252,6 +287,7 @@ function AppMain() {
 
     await stopRecordingManual();
     await stopListening();
+    clearTimeout(speechEndTimeoutRef.current);
 
     isStartingRef.current = false;
     modeRef.current = 'transition';
@@ -280,11 +316,14 @@ function AppMain() {
   const startCommandListening = useCallback(async (isFollowUp = false) => {
     modeRef.current = 'command';
     setStatus(isFollowUp ? 'Listening...' : 'Listening...');
+    clearTimeout(speechEndTimeoutRef.current);
 
     await cleanupAudio(recordingRef, null, { stopRecognition: stopListening });
-    // Start in non-wake mode — pass full vocabulary hints to improve command accuracy
-    await startListening([...WAKE_PHRASES, ...EXIT_PHRASES, ...FILLER_WORDS], 'en-US', false);
+    // Start in non-wake mode — pass null to disable all vocabulary biasing during the command
+    // this ensures we only use the native module for VAD/SpeechEnd detection.
+    await startListening(null, 'en-US', false);
     await startRecording();
+    commandStartTimeRef.current = Date.now();
   }, [startListening, stopListening, startRecording, recordingRef]);
 
   const speakNextSentence = useCallback(() => {
@@ -320,8 +359,18 @@ function AppMain() {
     });
   }, [isSpeaking, availableVoices, selectedLanguage.voicePrefix, preferredVoiceRef, ttsRate, ttsVolume]);
 
-  const stopAndSendRecording = useCallback(async () => {
+  const stopAndSendRecording = useCallback(async (reason = 'unknown') => {
     if (isProcessingRef.current) return;
+
+    // Enforce 2s minimum duration for automatically triggered stops
+    const elapsed = Date.now() - commandStartTimeRef.current;
+    if (elapsed < 2000 && reason !== 'Manual Stop') {
+      console.log(`[App] Stop request too early (${elapsed}ms) for reason: ${reason}. Waiting for min duration...`);
+      setTimeout(() => stopAndSendRecording(reason), 2000 - elapsed);
+      return;
+    }
+
+    console.log(`[App] stopAndSendRecording triggered. Reason: ${reason} (Duration: ${elapsed}ms)`);
     isProcessingRef.current = true;
     try {
       const uri = await stopAndGetURI();
@@ -333,7 +382,7 @@ function AppMain() {
       shouldTerminateRef.current = false;
 
       // Ensure native speech is still listening for "Hey Bessie" while thinking/speaking
-      await startListening([...WAKE_PHRASES, ...EXIT_PHRASES, ...FILLER_WORDS], 'en-US', true);
+      await startListening([...WAKE_PHRASES, ...EXIT_PHRASES], 'en-US', true);
 
       const assistantId = Date.now().toString() + '_ai';
       setMessages(prev => [...prev, { id: assistantId, role: 'assistant', text: '' }]);
@@ -345,7 +394,7 @@ function AppMain() {
       // Ensure we have a fresh session token
       const { data: { session: freshSession } } = await supabase.auth.getSession();
       const token = freshSession?.access_token || session?.access_token;
-      
+
       if (!token) {
         throw new Error('You must be logged in to use voice chat.');
       }
@@ -378,9 +427,9 @@ function AppMain() {
           });
         },
         null,
-        { 
+        {
           headers: { 'Authorization': `Bearer ${token}` },
-          location: gpsLocation 
+          location: gpsLocation
         }
       );
 
@@ -437,7 +486,7 @@ function AppMain() {
       }
 
       // Ensure native speech is still listening for "Hey Bessie" during text-based conversations
-      await startListening([...WAKE_PHRASES, ...EXIT_PHRASES, ...FILLER_WORDS], 'en-US', true);
+      await startListening([...WAKE_PHRASES, ...EXIT_PHRASES], 'en-US', true);
 
       const assistantId = Date.now().toString() + '_ai';
       setMessages(prev => [...prev, { id: assistantId, role: 'assistant', text: '' }]);
@@ -457,7 +506,7 @@ function AppMain() {
       await streamText(textToSend, getFormattedHistory(8), selectedLanguage.code, (parsed) => {
         const chunk = parsed.content || '';
         if (parsed.terminate) shouldTerminateRef.current = true;
-        
+
         fullResponse += chunk;
         streamingSentenceBufferRef.current += chunk;
         setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, text: fullResponse } : m));
@@ -527,14 +576,14 @@ function AppMain() {
   const handleStopChat = useCallback(async (finalStatus = null) => {
     console.log('[App] handleStopChat called, finalStatus:', finalStatus);
     isStartingRef.current = false; // Reset the starting flag
-    
+
     clearTimeout(restartTimerRef.current);
     clearTimeout(speakTimeoutRef.current);
     clearTimeout(terminationRestartTimerRef.current);
     Speech.stop();
-    
+
     // Only stop recording here; let startWakeWordListening handle Vosk reset
-    await stopRecordingManual().catch(() => {});
+    await stopRecordingManual().catch(() => { });
 
     modeRef.current = 'wake';
     if (finalStatus) {
@@ -542,7 +591,7 @@ function AppMain() {
     } else {
       setStatus(isListeningActiveRef.current ? 'Stopped' : 'Listening Disabled');
     }
-    
+
     setVolume(0);
     setVoiceTranscript('');
     transcriptRef.current = '';

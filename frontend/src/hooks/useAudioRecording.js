@@ -7,6 +7,7 @@ export const useAudioRecording = (onSilence, onVolumeChange) => {
   const [volume, setVolume] = useState(0);
   const recordingRef = useRef(null);
   const silenceTimerRef = useRef(null);
+  const startTimeRef = useRef(0);
 
   // Use refs to avoid stale closures in the recording listener
   const onSilenceRef = useRef(onSilence);
@@ -88,9 +89,9 @@ export const useAudioRecording = (onSilence, onVolumeChange) => {
               if (!silenceTimerRef.current) {
                 console.log('[Audio] Silence detected, starting timer...');
                 silenceTimerRef.current = setTimeout(() => {
-                  console.log('[Audio] Silence Timed Out (Fast Stop).');
+                  console.log('[Audio] Silence Safety Timeout (Fallback).');
                   if (onSilenceRef.current) onSilenceRef.current();
-                }, 1000);
+                }, 5000);
               }
             }
           }
@@ -100,15 +101,16 @@ export const useAudioRecording = (onSilence, onVolumeChange) => {
       setRecording(newRecording);
       recordingRef.current = newRecording;
       await newRecording.startAsync();
+      startTimeRef.current = Date.now();
       console.log('[Audio] Recording started.');
 
-      // 10 Second Safety Backup
+      // 15 Second Safety Backup (increased from 10)
       setTimeout(() => {
         if (recordingRef.current) {
           console.log('[Audio] Safety Timeout reached. Forcing stop.');
           if (onSilenceRef.current) onSilenceRef.current();
         }
-      }, 10000);
+      }, 15000);
 
     } catch (err) {
       console.warn('[Audio] Failed to record:', err);
@@ -119,12 +121,23 @@ export const useAudioRecording = (onSilence, onVolumeChange) => {
   };
 
   const stopRecordingManual = async () => {
-    clearTimeout(silenceTimerRef.current);
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
     try {
       await cleanupAudio(recordingRef, setRecording, { stopVosk: false });
       setVolume(0);
     } catch (err) {
       console.warn('[Audio] Failed to stop manually:', err);
+    }
+  };
+
+  const resetSilenceTimer = () => {
+    if (silenceTimerRef.current) {
+      console.log('[Audio] VAD Reset: Clearing silence timer.');
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
     }
   };
 
@@ -135,6 +148,8 @@ export const useAudioRecording = (onSilence, onVolumeChange) => {
       if (!rec) return null;
       console.log('[Audio] Stopping for Whisper...');
       await cleanupAudio(recordingRef, setRecording, { stopVosk: true });
+      const duration = (Date.now() - startTimeRef.current) / 1000;
+      console.log(`[Audio] Recording stopped. Duration: ${duration.toFixed(2)}s`);
       const uri = rec.getURI();
       setVolume(0);
       return uri;
@@ -151,6 +166,7 @@ export const useAudioRecording = (onSilence, onVolumeChange) => {
     startRecording,
     stopRecordingManual,
     stopAndGetURI,
+    resetSilenceTimer,
     recordingRef,
   };
 };

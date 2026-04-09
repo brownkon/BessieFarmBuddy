@@ -57,7 +57,8 @@ async function voiceChatRoutes(fastify, options) {
       const stream = await openaiService.getChatStream({
         text: transcript,
         history,
-        language
+        language,
+        context: { userId: user.id }
       });
       console.log(`[Timer] getChatStream started in: ${Date.now() - aiStart}ms`);
 

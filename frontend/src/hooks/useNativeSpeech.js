@@ -10,9 +10,13 @@ import { WAKE_PHRASES, EXIT_PHRASES } from '../config/constants';
  * Exports: { status, setStatus, isReady, recognizing, setRecognizing,
  *            startListening, stopListening }
  *
+ * onSpeechEnd is called when the native platform VAD detects the user has
+ * stopped speaking during command mode — this replaces dB-threshold silence
+ * detection with the platform's built-in ML voice activity detector.
+ *
  * "isReady" signals that permissions have been granted and the app can start listening.
  */
-export const useNativeSpeech = (onWakeWord, onExit, onPartial, onResult) => {
+export const useNativeSpeech = (onWakeWord, onExit, onPartial, onResult, onSpeechStart, onSpeechEnd) => {
   const [status, setStatus] = useState('Initializing...');
   const [isReady, setIsReady] = useState(false);
   const [recognizing, setRecognizing] = useState(false);
@@ -31,10 +35,14 @@ export const useNativeSpeech = (onWakeWord, onExit, onPartial, onResult) => {
   const onExitRef = useRef(onExit);
   const onPartialRef = useRef(onPartial);
   const onResultRef = useRef(onResult);
+  const onSpeechStartRef = useRef(onSpeechStart);
+  const onSpeechEndRef = useRef(onSpeechEnd);
   useEffect(() => { onWakeWordRef.current = onWakeWord; }, [onWakeWord]);
   useEffect(() => { onExitRef.current = onExit; }, [onExit]);
   useEffect(() => { onPartialRef.current = onPartial; }, [onPartial]);
   useEffect(() => { onResultRef.current = onResult; }, [onResult]);
+  useEffect(() => { onSpeechStartRef.current = onSpeechStart; }, [onSpeechStart]);
+  useEffect(() => { onSpeechEndRef.current = onSpeechEnd; }, [onSpeechEnd]);
 
   const updateRecognizing = useCallback((val) => {
     isRecognizingRef.current = val;
@@ -67,6 +75,10 @@ export const useNativeSpeech = (onWakeWord, onExit, onPartial, onResult) => {
   // ── Event listeners (using addListener for SDK 51 compatibility) ─────────────
   useEffect(() => {
     const checkWakeOrExit = (text) => {
+      // Only perform wake/exit checking during "wake-word" (continuous) sessions.
+      // In command mode (non-continuous), we only care about VAD/transcript.
+      if (!continuousRef.current) return;
+      
       const lower = text.toLowerCase().trim().replace(/[.,!?]+$/, '');
 
       // Check exit phrases first
@@ -88,9 +100,16 @@ export const useNativeSpeech = (onWakeWord, onExit, onPartial, onResult) => {
     };
 
     const startSub = ExpoSpeechRecognitionModule.addListener('start', () => {
-      console.log('[NativeSpeech] Recognition started.');
       isRecognizingRef.current = true;
       setRecognizing(true);
+    });
+
+    const speechStartSub = ExpoSpeechRecognitionModule.addListener('speechstart', () => {
+      if (onSpeechStartRef.current) onSpeechStartRef.current();
+    });
+
+    const speechEndSub = ExpoSpeechRecognitionModule.addListener('speechend', () => {
+      if (onSpeechEndRef.current) onSpeechEndRef.current();
     });
 
     const endSub = ExpoSpeechRecognitionModule.addListener('end', () => {
@@ -119,7 +138,6 @@ export const useNativeSpeech = (onWakeWord, onExit, onPartial, onResult) => {
 
     const resultSub = ExpoSpeechRecognitionModule.addListener('result', (event) => {
       if (!isRecognizingRef.current) return;
-
       const transcript = event.results[0]?.transcript ?? '';
       if (!transcript) return;
 
@@ -157,6 +175,8 @@ export const useNativeSpeech = (onWakeWord, onExit, onPartial, onResult) => {
 
     return () => {
       startSub.remove();
+      speechStartSub.remove();
+      speechEndSub.remove();
       endSub.remove();
       resultSub.remove();
       partialSub.remove();
@@ -190,7 +210,7 @@ export const useNativeSpeech = (onWakeWord, onExit, onPartial, onResult) => {
         ExpoSpeechRecognitionModule.start({
           lang,
           interimResults: true,
-          continuous: false,
+          continuous: true,
           contextualStrings: contextualStringsRef.current.length > 0
             ? contextualStringsRef.current
             : undefined,
