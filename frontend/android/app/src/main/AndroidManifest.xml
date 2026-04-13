@@ -13,6 +13,12 @@
       <data android:scheme="https"/>
     </intent>
   </queries>
+  <queries>
+    <package android:name="com.google.android.googlequicksearchbox"/>
+    <intent>
+      <action android:name="android.speech.RecognitionService"/>
+    </intent>
+  </queries>
   <application android:name=".MainApplication" android:label="@string/app_name" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:allowBackup="true" android:theme="@style/AppTheme">
     <meta-data android:name="expo.modules.updates.ENABLED" android:value="true"/>
     <meta-data android:name="expo.modules.updates.EXPO_RUNTIME_VERSION" android:value="@string/expo_runtime_version"/>
@@ -29,7 +35,7 @@
         <category android:name="android.intent.category.DEFAULT"/>
         <category android:name="android.intent.category.BROWSABLE"/>
         <data android:scheme="bessie-farm-buddy"/>
-        <data android:scheme="com.konnerbrown.bessie"/>
+        <data android:scheme="com.maggie.farmbuddy"/>
         <data android:scheme="exp+frontend"/>
       </intent-filter>
     </activity>

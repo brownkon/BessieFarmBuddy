@@ -146,6 +146,7 @@ const SideMenu = ({
               });
               
               setSessions(prev => prev.filter(s => s.id !== id));
+              setTotalSessions(prev => Math.max(0, prev - 1));
               if (activeSessionId === id) {
                 startNewChat();
               }

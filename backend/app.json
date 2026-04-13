@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "41e5826b-6c94-4146-8398-7588893e7986"
+      }
+    },
+    "android": {
+      "package": "com.brownkon000.backend"
+    }
+  }
+}

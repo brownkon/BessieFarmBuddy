@@ -44,7 +44,7 @@ if (getRNMinorVersion() >= 75) {
   }
 }
 
-rootProject.name = 'frontend'
+rootProject.name = 'Bessie'
 
 dependencyResolutionManagement {
   versionCatalogs {

@@ -101,6 +101,30 @@ async function sessionRoutes(fastify, options) {
       return reply.code(500).send({ error: 'Failed to delete session' });
     }
   });
+
+  // Create a new session
+  fastify.post('/chat-sessions', { preHandler: [authenticate] }, async (request, reply) => {
+    try {
+      const user = request.user;
+      const { title = 'New Chat' } = request.body || {};
+
+      const { data, error } = await supabase
+        .from('chat_sessions')
+        .insert({
+          user_id: user.id,
+          title: title
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return { session: data };
+    } catch (error) {
+      fastify.log.error(error);
+      return reply.code(500).send({ error: 'Failed to create session' });
+    }
+  });
 }
 
 module.exports = sessionRoutes;

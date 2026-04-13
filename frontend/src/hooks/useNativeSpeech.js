@@ -78,7 +78,7 @@ export const useNativeSpeech = (onWakeWord, onExit, onPartial, onResult, onSpeec
       // Only perform wake/exit checking during "wake-word" (continuous) sessions.
       // In command mode (non-continuous), we only care about VAD/transcript.
       if (!continuousRef.current) return;
-      
+
       const lower = text.toLowerCase().trim().replace(/[.,!?]+$/, '');
 
       // Check exit phrases first
@@ -113,7 +113,7 @@ export const useNativeSpeech = (onWakeWord, onExit, onPartial, onResult, onSpeec
     });
 
     const endSub = ExpoSpeechRecognitionModule.addListener('end', () => {
-      console.log('[NativeSpeech] Recognition ended. continuous=', continuousRef.current);
+
       // In wake-word mode, auto-restart so we keep listening
       if (continuousRef.current && !restartingRef.current) {
         restartingRef.current = true;
@@ -165,7 +165,6 @@ export const useNativeSpeech = (onWakeWord, onExit, onPartial, onResult, onSpeec
     const errorSub = ExpoSpeechRecognitionModule.addListener('error', (event) => {
       // 'no-speech' and 'aborted' are normal in wake-word mode — not real errors
       if (event.error === 'no-speech' || event.error === 'aborted') {
-        console.log('[NativeSpeech] Non-fatal event:', event.error);
         return;
       }
       console.error('[NativeSpeech] Error:', event.error, event.message);
@@ -195,7 +194,7 @@ export const useNativeSpeech = (onWakeWord, onExit, onPartial, onResult, onSpeec
   const startListening = useCallback(async (vocabulary = null, lang = 'en-US', wake = false) => {
     try {
       // Stop any existing session first
-      try { ExpoSpeechRecognitionModule.abort(); } catch (e) {}
+      try { ExpoSpeechRecognitionModule.abort(); } catch (e) { }
 
       continuousRef.current = wake;
       langRef.current = lang;
@@ -219,7 +218,7 @@ export const useNativeSpeech = (onWakeWord, onExit, onPartial, onResult, onSpeec
         throw e; // re-throw so outer catch can handle it
       }
 
-      console.log('[NativeSpeech] Started (wake=' + wake + ', lang=' + lang + ', hints=' + contextualStringsRef.current.length + ')');
+      // console.log('[NativeSpeech] Started (wake=' + wake + ', lang=' + lang + ', hints=' + contextualStringsRef.current.length + ')');
     } catch (err) {
       console.warn('[NativeSpeech] Failed to start:', err);
       isRecognizingRef.current = false;
@@ -236,7 +235,7 @@ export const useNativeSpeech = (onWakeWord, onExit, onPartial, onResult, onSpeec
       restartingRef.current = false;
       isRecognizingRef.current = false;
       setRecognizing(false);
-      try { ExpoSpeechRecognitionModule.abort(); } catch (e) {}
+      try { ExpoSpeechRecognitionModule.abort(); } catch (e) { }
     } catch (err) {
       console.warn('[NativeSpeech] Failed to stop:', err);
     }

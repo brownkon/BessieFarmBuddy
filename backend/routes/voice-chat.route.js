@@ -29,7 +29,7 @@ async function voiceChatRoutes(fastify, options) {
         } else if (part.fieldname === 'location') {
           try { location = JSON.parse(part.value); } catch (e) { }
         } else if (part.fieldname === 'sessionId') {
-          sessionId = part.value;
+          sessionId = part.value === 'null' || part.value === 'undefined' ? null : part.value;
         }
       }
 
@@ -53,30 +53,31 @@ async function voiceChatRoutes(fastify, options) {
         return;
       }
 
-      // If no sessionId, create a new session
-      let isNewSession = false;
-      if (!sessionId) {
-        isNewSession = true;
-        const { data: newSession, error: sessError } = await supabase
-          .from('chat_sessions')
-          .insert({
-            user_id: user.id,
-            title: transcript.substring(0, 40) + (transcript.length > 40 ? '...' : '')
-          })
-          .select()
-          .single();
-
-        if (sessError) {
-          fastify.log.error(`[Supabase] Error creating session: ${sessError.message}`);
-          return reply.code(500).send({ error: 'Failed to create chat session' });
-        }
-        sessionId = newSession.id;
+      // Require sessionId — session creation is the frontend's responsibility
+      if (!sessionId || sessionId === 'null' || sessionId === 'undefined') {
+        reply.raw.write(`data: ${JSON.stringify({ error: 'sessionId is required. Create a session first via POST /api/chat-sessions.' })}\n\n`);
+        reply.raw.write('data: [DONE]\n\n');
+        reply.raw.end();
+        return;
       }
 
-      // 1. Send the transcript chunk and sessionId
-      const initialChunk = { transcript };
-      if (isNewSession) initialChunk.sessionId = sessionId;
-      reply.raw.write(`data: ${JSON.stringify(initialChunk)}\n\n`);
+      // Auto-title the session on its first real message
+      const { data: currentSession } = await supabase
+        .from('chat_sessions')
+        .select('title')
+        .eq('id', sessionId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (currentSession && (currentSession.title === 'New Chat' || !currentSession.title)) {
+        await supabase
+          .from('chat_sessions')
+          .update({ title: transcript.substring(0, 40) + (transcript.length > 40 ? '...' : '') })
+          .eq('id', sessionId);
+      }
+
+      // Send the transcript chunk
+      reply.raw.write(`data: ${JSON.stringify({ transcript })}\n\n`);
 
       const aiStart = Date.now();
       const stream = await openaiService.getChatStream({
@@ -110,8 +111,8 @@ async function voiceChatRoutes(fastify, options) {
           gps_coordinates: location || null,
           tools_used: toolsUsed
         }).then(({ error }) => {
-          if (error) fastify.log.error(`[Supabase] Error saving voice chat: ${error.message}`);
-          else fastify.log.info(`[Supabase] Saved voice chat for ${user.email}`);
+          if (error) fastify.log.error({ error: error.message }, 'Error saving voice chat');
+          else fastify.log.info({ email: user.email }, 'Saved voice chat');
         });
 
         // Update session timestamp
@@ -119,7 +120,7 @@ async function voiceChatRoutes(fastify, options) {
           .update({ updated_at: new Date() })
           .eq('id', sessionId)
           .then(({ error }) => {
-            if (error) fastify.log.error(`[Supabase] Error updating session timestamp: ${error.message}`);
+            if (error) fastify.log.error({ error: error.message }, 'Error updating session timestamp');
           });
       });
 

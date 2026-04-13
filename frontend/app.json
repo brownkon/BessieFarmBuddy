@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Bessie",
+    "name": "Maggie",
     "slug": "frontend",
-    "scheme": "bessie-farm-buddy",
+    "scheme": "maggie-farm-buddy",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/boviLogo.png",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0f1117",
     "runtimeVersion": "1.0.0",
@@ -22,12 +22,13 @@
       "bundleIdentifier": "com.konnerbrown.bessie.test99"
     },
     "android": {
+      "versionCode": 5,
       "minSdkVersion": 24,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/boviLogo.png",
         "backgroundColor": "#0f1117"
       },
-      "package": "com.konnerbrown.bessie",
+      "package": "com.maggie.farmbuddy",
       "softwareKeyboardLayoutMode": "resize",
       "permissions": [
         "android.permission.RECORD_AUDIO"
@@ -42,7 +43,9 @@
         {
           "microphonePermission": "Allow Bessie to use the microphone to listen for voice commands.",
           "speechRecognitionPermission": "Allow Bessie to use speech recognition to understand your farm commands.",
-          "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox"]
+          "androidSpeechServicePackages": [
+            "com.google.android.googlequicksearchbox"
+          ]
         }
       ],
       [
@@ -50,6 +53,10 @@
         {
           "ios": {
             "deploymentTarget": "16.0"
+          },
+          "android": {
+            "targetSdkVersion": 35,
+            "compileSdkVersion": 34
           }
         }
       ]

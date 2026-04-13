@@ -58,6 +58,11 @@ function AppMain() {
   const { session, user } = useAuth();
   const [gpsLocation, setGpsLocation] = useState(null);
   const [activeSessionId, setActiveSessionId] = useState(null);
+  const activeSessionIdRef = useRef(null);
+  const setActiveSession = useCallback((id) => {
+    activeSessionIdRef.current = id;
+    setActiveSessionId(id);
+  }, []);
   const [voiceTranscript, setVoiceTranscript] = useState('');
   const transcriptRef = useRef('');
   const [activeBackendUrl, setActiveBackendUrl] = useState(configuredBackendUrl);
@@ -128,6 +133,15 @@ function AppMain() {
   useEffect(() => { activeBackendUrlRef.current = activeBackendUrl; }, [activeBackendUrl]);
   useEffect(() => { isListeningActiveRef.current = isListeningActive; }, [isListeningActive]);
 
+  // Reset session when user changes
+  useEffect(() => {
+    if (user && isReady) {
+      if (!activeSessionId) {
+        createNewChatSession(true);
+      }
+    }
+  }, [user?.id, isReady]);
+
   const {
     loading,
     streamText,
@@ -142,12 +156,7 @@ function AppMain() {
       .map(m => ({ role: m.role, content: m.text }));
   }, [messages]);
 
-  const startNewChat = useCallback(() => {
-    setActiveSessionId(null);
-    setMessages([
-      { id: 'initial', role: 'assistant', text: 'Hello! I am Bessie, your farm assistant. How can I help you today?' }
-    ]);
-  }, []);
+
 
   const loadSession = useCallback(async (sessionId) => {
     try {
@@ -170,7 +179,7 @@ function AppMain() {
           { id: 'initial', role: 'assistant', text: 'Hello! I am Bessie, your farm assistant. How can I help you today?' },
           ...formattedMessages
         ]);
-        setActiveSessionId(sessionId);
+        setActiveSession(sessionId);
         setStatus('Ready');
       }
     } catch (error) {
@@ -233,13 +242,20 @@ function AppMain() {
     startListening,
     stopListening
   } = useNativeSpeech(onWakeWord, onExit, (txt) => {
-    // Also reset silence timers on partial results for extra safety
+    // Show live partial results in the UI as feedback
     if (modeRef.current === 'command') {
+      setVoiceTranscript(txt);
       clearTimeout(speechEndTimeoutRef.current);
       resetSilenceTimer();
     }
     onPartial(txt);
-  }, onResult, handleSpeechStart, handleSpeechEnd);
+  }, (txt) => {
+    // On final native result, update transcriptRef for fallback but stay in UI
+    if (modeRef.current === 'command') {
+      setVoiceTranscript(txt);
+    }
+    onResult(txt);
+  }, handleSpeechStart, handleSpeechEnd);
 
   const onSilence = useCallback(() => {
     console.log('[Audio] Silence Timed Out.');
@@ -470,8 +486,8 @@ function AppMain() {
         {
           headers: { 'Authorization': `Bearer ${token}` },
           location: gpsLocation,
-          sessionId: activeSessionId,
-          onSessionCreated: (id) => setActiveSessionId(id)
+          sessionId: activeSessionIdRef.current,
+          onSessionCreated: (id) => setActiveSession(id)
         }
       );
 
@@ -567,8 +583,8 @@ function AppMain() {
       }, {
         headers: { 'Authorization': `Bearer ${token}` },
         location: gpsLocation,
-        sessionId: activeSessionId,
-        onSessionCreated: (id) => setActiveSessionId(id)
+        sessionId: activeSessionIdRef.current,
+        onSessionCreated: (id) => setActiveSession(id)
       });
 
       if (isChatTtsEnabled && streamingSentenceBufferRef.current.trim()) {
@@ -611,7 +627,7 @@ function AppMain() {
       return;
     }
     if (recording) {
-      handleStopChat();
+      stopAndSendRecording('Manual Stop');
     } else {
       triggerCommandPrompt();
     }
@@ -659,6 +675,44 @@ function AppMain() {
       startWakeWordListening();
     }
   }, [isListeningActive, handleStopChat, startWakeWordListening]);
+
+  const createNewChatSession = useCallback(async (isInitial = false) => {
+    try {
+      if (!isInitial) setStatus('Creating session...');
+      const { data: { session: freshSession } } = await supabase.auth.getSession();
+      const token = freshSession?.access_token;
+
+      if (!token) return;
+
+      const response = await fetch(`${activeBackendUrl}/api/chat-sessions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ title: 'New Chat' })
+      });
+      const data = await response.json();
+
+      if (data.session) {
+        setActiveSession(data.session.id);
+        setMessages([
+          { id: 'initial', role: 'assistant', text: 'Hello! I am Bessie, your farm assistant. How can I help you today?' }
+        ]);
+        if (!isInitial) {
+          startWakeWordListening(true);
+        }
+      }
+    } catch (error) {
+      console.error('Error creating session:', error);
+      if (!isInitial) Alert.alert('Error', 'Failed to create new chat session');
+    }
+  }, [activeBackendUrl, startWakeWordListening, setActiveSession]);
+
+  const startNewChat = useCallback(() => {
+    createNewChatSession();
+  }, [createNewChatSession]);
+
 
   const toggleMenu = (open) => {
     setIsMenuOpen(open);
