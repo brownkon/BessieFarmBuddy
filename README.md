@@ -154,7 +154,7 @@ We support two environments: **Development** and **Production**.
 
 - **Local Backend (Dev)**: `cd backend && npm run dev`
 - **Frontend IP Update**: `node frontend/scripts/update-ip.js` (Updates `eas.json` with your current local IP for mobile testing)
-- **Frontend Build (Prod)**: `cd frontend && npm run build:prod`
+- **Frontend Build (Prod)**: `cd frontend && npm run build:prod` (Generates local AAB for Google Play)
 
 ---
 
@@ -173,5 +173,5 @@ Follow these steps to safely move a feature to production:
 
 #### 3. Go Live (Production)
 - **Deploy Backend**: `npm run deploy:prod` (Deploys to Fly.io).
-- **Deploy Frontend**: `npm run build:prod` (EAS build for Play Store/App Store).
+- **Deploy Frontend**: `npm run build:prod` (Generates local AAB using your Android SDK).
 - *Note: Production always uses **OpenAI** for maximum reasoning accuracy.*
