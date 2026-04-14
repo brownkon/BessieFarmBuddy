@@ -20,6 +20,11 @@ out/
 .expo/
 .vercel/
 coverage/
+*.aab
+*.apk
+*.ipa
+build-*.aab
+build-*.apk
 
 # macOS / OS generated files
 .DS_Store
