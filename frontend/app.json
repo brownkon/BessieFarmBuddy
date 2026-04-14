@@ -3,7 +3,7 @@
     "name": "Maggie",
     "slug": "frontend",
     "scheme": "maggie-farm-buddy",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/boviLogo.png",
     "userInterfaceStyle": "dark",
@@ -22,7 +22,7 @@
       "bundleIdentifier": "com.konnerbrown.bessie.test99"
     },
     "android": {
-      "versionCode": 5,
+      "versionCode": 6,
       "minSdkVersion": 24,
       "adaptiveIcon": {
         "foregroundImage": "./assets/boviLogo.png",
