@@ -132,3 +132,46 @@ The backend is organized into specialized service bundles:
 - `services/data-prep/`: Handles HTML cleaning and CSV parsing.
 - `services/cache/`: Global LRU caching to minimize API and database costs.
 - `tools/`: Modular definitions for AI function calling.
+
+---
+
+---
+
+## 🚀 Environments & Workflow
+
+We support two environments: **Development** and **Production**.
+
+### 🏗️ Environment Comparison
+
+| Feature | Development | Production |
+| :--- | :--- | :--- |
+| **Backend** | Local Laptop (`npm run dev`) | Fly.io (`npm run deploy:prod`) |
+| **AI Provider** | **Groq** (Free/Fast) | **OpenAI** (High Precision) |
+| **Database** | Cloud Supabase Dev Project | Cloud Supabase Live Project |
+| **Testing** | Active Development | Live Users |
+
+### 🛠️ Key Commands
+
+- **Local Backend (Dev)**: `cd backend && npm run dev`
+- **Frontend IP Update**: `node frontend/scripts/update-ip.js` (Updates `eas.json` with your current local IP for mobile testing)
+- **Frontend Build (Prod)**: `cd frontend && npm run build:prod`
+
+---
+
+### 🔄 Progressive Workflow (Dev → Prod)
+
+Follow these steps to safely move a feature to production:
+
+#### 1. Develop Locally (Dev)
+- Run `npm run dev` in the backend. 
+- All LLM calls will use **Groq** (save credits).
+- Use the **Dev Supabase** project for testing new schemas.
+
+#### 2. Synchronize Database (Prod)
+- If your feature added new tables or columns, run the same SQL scripts in your **Production Supabase Project**'s SQL Editor.
+- Ensure any new environment variables are set in Fly.io using `fly secrets set`.
+
+#### 3. Go Live (Production)
+- **Deploy Backend**: `npm run deploy:prod` (Deploys to Fly.io).
+- **Deploy Frontend**: `npm run build:prod` (EAS build for Play Store/App Store).
+- *Note: Production always uses **OpenAI** for maximum reasoning accuracy.*

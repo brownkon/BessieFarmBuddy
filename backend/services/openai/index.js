@@ -1,17 +1,29 @@
 const OpenAI = require('openai');
+const Groq = require('groq-sdk');
 const { classifyRequest } = require('./classifier');
 const { streamResponse } = require('./orchestrator');
 require('dotenv').config();
 
+const LLM_PROVIDER = process.env.LLM_PROVIDER || 'openai'; // 'openai' or 'groq'
 const CONFIDENCE_THRESHOLD = parseFloat(process.env.CONFIDENCE_THRESHOLD) || 0.7;
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Initialize the correct client
+let client;
+let mainModel;
+
+if (LLM_PROVIDER === 'groq') {
+  console.log('[AI Service] Initializing Groq for development...');
+  client = new Groq({ apiKey: process.env.GROQ_API_KEY });
+  mainModel = 'llama-3.1-70b-versatile'; // Powerful and fast for orchestrating
+} else {
+  console.log('[AI Service] Initializing OpenAI for production...');
+  client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  mainModel = 'gpt-4o-mini'; // Reliable for production
+}
 
 const openaiService = {
   /**
-   * Get a streaming response from OpenAI with cost-efficient tool handling.
+   * Get a streaming response from the configured AI provider with cost-efficient tool handling.
    */
   async getChatStream({ text, history = [], language = 'en', systemMessage = null, context = {} }) {
     const finalSystemMessage = systemMessage || `You are Bessie, a helpful farmer's assistant AI. 
@@ -34,7 +46,9 @@ const openaiService = {
     try {
       // 1. Initial Routing logic
       const routingStart = Date.now();
-      const classification = await classifyRequest(client, text, history);
+      // Only classify if using OpenAI (for JSON reliability) or if Groq is specified. 
+      // Groq handles JSON well in llama-3.1.
+      const classification = await classifyRequest(client, text, history, LLM_PROVIDER);
       console.log(`[Timer] Classification took: ${Date.now() - routingStart}ms`);
 
       // 2. Early Execution & Early Exit
@@ -67,22 +81,23 @@ const openaiService = {
           });
         } catch (toolErr) {
           console.error(`[Router] Tool execution failed: ${toolErr.message}`);
-          // If tool fails, we might still want to let the main model try or explain the failure
         }
       }
 
       const streamStart = Date.now();
       const result = await streamResponse({
-        openai: client,
+        client: client,
+        model: mainModel,
         messages,
-        needsTool: false, // NO tools passed to the second model to save costs
-        context
+        needsTool: false, // NO tools passed to the second model for speed/cost
+        context,
+        provider: LLM_PROVIDER
       });
       console.log(`[Timer] Total pre-stream took: ${Date.now() - startTime}ms`);
       return result;
 
     } catch (error) {
-      console.error("[OpenAI Service] Routing error:", error);
+      console.error("[AI Service] Routing error:", error);
       throw error;
     }
   }

@@ -4,15 +4,15 @@ const cacheService = require('../cache');
 /**
  * Orchestrator module handles the tool execution loop and streaming responses.
  */
-async function streamResponse({ openai, messages, needsTool, toolCallsCount = 0, context = {} }) {
+async function streamResponse({ client, model, messages, needsTool, toolCallsCount = 0, context = {}, provider = 'openai' }) {
   const creationStart = Date.now();
-  const completion = await openai.chat.completions.create({
-    model: 'gpt-5-mini',
+  const completion = await client.chat.completions.create({
+    model: model,
     messages: messages,
     tools: needsTool ? getToolDefinitions() : undefined,
     stream: true,
   });
-  console.log(`[Timer] OpenAI create call took: ${Date.now() - creationStart}ms`);
+  console.log(`[Timer] ${provider} create call took: ${Date.now() - creationStart}ms`);
 
   return (async function* () {
     let currentToolCall = null;
@@ -88,18 +88,20 @@ async function streamResponse({ openai, messages, needsTool, toolCallsCount = 0,
 
           // Recursive call for multi-turn tools (cap at 2)
           const followUpStream = await streamResponse({
-            openai,
+            client,
+            model,
             messages: systemFollowup,
             needsTool: true,
             toolCallsCount: toolCallsCount + 1,
-            context
+            context,
+            provider
           });
 
           for await (const chunk of followUpStream) {
             yield chunk;
           }
         } catch (err) {
-          console.error("[OpenAI] Tool execution error:", err);
+          console.error(`[${provider}] Tool execution error:`, err);
           yield { content: " I'm sorry, I encountered an error retrieving that data." };
         }
       }

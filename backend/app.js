@@ -6,6 +6,11 @@ const fastify = require('fastify')({
 require('dotenv').config();
 const { dataProcessor } = require('./services/data-prep');
 
+const env = process.env.ENVIRONMENT || 'development';
+const provider = process.env.LLM_PROVIDER || 'openai';
+console.log(`\n🚀 [Bessie Backend] Starting in ${env.toUpperCase()} mode`);
+console.log(`🤖 [AI Provider] Using ${provider.toUpperCase()}\n`);
+
 // Register plugins
 fastify.register(require('@fastify/cors'), { origin: true });
 fastify.register(require('@fastify/multipart'), {

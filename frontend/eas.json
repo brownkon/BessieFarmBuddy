@@ -9,17 +9,11 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
-      }
-    },
-    "preview": {
-      "distribution": "internal",
-      "android": {
-        "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_BACKEND_URL": "https://backend-broken-snowflake-7642.fly.dev",
-        "EXPO_PUBLIC_SUPABASE_URL": "https://yayfujthpiokoecwyumk.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlheWZ1anRocGlva29lY3d5dW1rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1MTY5ODMsImV4cCI6MjA5MTA5Mjk4M30.PFyYaMhdC1pLquK4pXFSe5t6TPQk4gxqrzePljNFWLQ"
+        "EXPO_PUBLIC_BACKEND_URL": "http://144.39.117.142:3000",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://your-dev-project.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "YOUR_DEV_ANON_KEY"
       }
     },
     "production": {
