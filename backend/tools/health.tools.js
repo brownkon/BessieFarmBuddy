@@ -1,3 +1,4 @@
+const { formatAllDates } = require('./utils');
 const supabase = require('../services/supabase');
 
 const healthAlerts = {
@@ -18,7 +19,9 @@ const healthAlerts = {
       .order('sick_chance', { ascending: false });
 
     if (error) return `Error fetching health alerts: ${error.message}`;
-    if (data.length === 0) return "No high-risk health alerts at this time.";
+    if (data && data.length > 0) {
+      return formatAllDates(data);
+    }
     return data;
   }
 };

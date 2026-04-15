@@ -1,5 +1,5 @@
 const supabase = require('../services/supabase');
-const { getUserOrganization } = require('./utils');
+const { getUserOrganization, formatAllDates } = require('./utils');
 
 const recordNote = {
   definition: {
@@ -74,7 +74,9 @@ const getRecentNotes = {
     const { data, error } = await query;
     if (error) return `Error retrieving notes: ${error.message}`;
     if (data.length === 0) return "No recent notes found.";
-    return data;
+    
+    // Automatically format all date strings (including created_at)
+    return formatAllDates(data);
   }
 };
 

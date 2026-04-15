@@ -22,7 +22,7 @@
       "bundleIdentifier": "com.konnerbrown.bessie.test99"
     },
     "android": {
-      "versionCode": 6,
+      "versionCode": 7,
       "minSdkVersion": 24,
       "adaptiveIcon": {
         "foregroundImage": "./assets/boviLogo.png",
