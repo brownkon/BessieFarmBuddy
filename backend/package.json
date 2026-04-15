@@ -22,7 +22,10 @@
     "fs-extra": "^11.3.4",
     "groq-sdk": "^1.1.2",
     "lru-cache": "^11.3.2",
-    "openai": "^6.32.0"
+    "node-cron": "^4.2.1",
+    "openai": "^6.32.0",
+    "resend": "^6.11.0",
+    "twilio": "^5.13.1"
   },
   "devDependencies": {
     "@flydotio/dockerfile": "^0.7.10"

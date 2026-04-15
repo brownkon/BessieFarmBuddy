@@ -2,7 +2,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const { parse } = require('csv-parse/sync');
 const supabase = require('../supabase');
-const { cleanNumber, mapSensorData } = require('./cleaner.js');
+const { cleanNumber, mapSensorData, formatDate } = require('./cleaner.js');
 
 const DATA_DIR = path.join(__dirname, '../../../data/CSV');
 
@@ -87,10 +87,10 @@ class DataProcessor {
         day_production: cleanNumber(record['Day Production (24h)']) || cleanNumber(record['Day Production']),
         day_production_deviation: cleanNumber(record['Day Production (24h) Deviation']),
         reproduction_status: record['Reproduction Status'] || record['Pregnancy Status'] || null,
-        last_insemination: record['Last Insemination'] || null,
+        last_insemination: formatDate(record['Last Insemination']),
         days_pregnant: cleanNumber(record['Days Pregnant']),
         days_to_dry_off: cleanNumber(record['Days to Dry Off']),
-        expected_calving_date: record['Expected Calving Date'] || record['Expected Calving'] || null,
+        expected_calving_date: formatDate(record['Expected Calving Date'] || record['Expected Calving']),
         production_status: record['Production Status'] || null,
         gender: record['Gender'] || null,
         
@@ -103,18 +103,18 @@ class DataProcessor {
         fat_protein_ratio: cleanNumber(record['Fat/Protein Ratio']),
         nr_of_refusal: cleanNumber(record['Nr of Refusal']),
         color_code: record['Color Code LF-LR-RF-RR'] || null,
-        end_milk_till: record['End Milk Till'] || null,
+        end_milk_till: formatDate(record['End Milk Till']),
         milk_separation: record['Milk Separation'] || null,
         body_score: cleanNumber(record['Body Score']),
         intake_total: cleanNumber(record['Intake Total']),
         rest_feed_total: cleanNumber(record['Rest Feed Total']),
         scc_indication: cleanNumber(record['SCC Indication']),
-        last_fertility_diagnose: record['Last Fertility Diagnose'] || null,
+        last_fertility_diagnose: formatDate(record['Last Fertility Diagnose']),
         last_fertility_remarks: record['Last Fertility Remarks'] || null,
-        last_fertility: record['Last Fertility'] || null,
+        last_fertility: formatDate(record['Last Fertility']),
         days_since_heat: cleanNumber(record['Days Since Heat']),
         insemination_no: cleanNumber(record['Insemination No.']),
-        pregnancy_check_date: record['Pregnancy Check Date'] || null,
+        pregnancy_check_date: formatDate(record['Pregnancy Check Date']),
         lf: cleanNumber(record['LF']),
         lr: cleanNumber(record['LR']),
         rr: cleanNumber(record['RR']),
@@ -129,9 +129,9 @@ class DataProcessor {
         inseminate: record['Inseminate'] || null,
         too_late_for_milking: record['Too Late for Milking'] || null,
         milk_visit_yield: cleanNumber(record['Milk Visit Yield']),
-        last_milk: record['Last Milk'] || null,
+        last_milk: formatDate(record['Last Milk']),
         train_cow: record['Train Cow'] || null,
-        calving_date: record['Calving Date'] || null,
+        calving_date: formatDate(record['Calving Date']),
         sick_chance: cleanNumber(record['Sick Chance']),
         sick_change_status: record['Sick Change Status'] || null,
 

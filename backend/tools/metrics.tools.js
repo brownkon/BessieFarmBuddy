@@ -1,5 +1,5 @@
 const supabase = require('../services/supabase');
-const { getUserOrganization } = require('./utils');
+const { getUserOrganization, formatAllDates } = require('./utils');
 
 const getSpecificMetric = {
   definition: {
@@ -27,7 +27,14 @@ const getSpecificMetric = {
     if (error) return `Error retrieving metric: ${error.message}`;
     
     if (data.length === 0) return "No cows found.";
-    return data.map(c => `${c.animal_number}: ${c[metric_name] !== null ? c[metric_name] : 'N/A'}`).join('\n');
+
+    // Automatically format any date strings found in the results
+    const formattedData = formatAllDates(data);
+
+    return formattedData.map(c => {
+      const val = c[metric_name];
+      return `${c.animal_number}: ${val !== null && val !== undefined ? val : 'N/A'}`;
+    }).join('\n');
   }
 };
 
