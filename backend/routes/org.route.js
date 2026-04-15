@@ -57,12 +57,12 @@ async function orgRoutes(fastify, options) {
 
       // 2. Add User as Boss
       const { error: memberError } = await supabase
-        .from('organization_members')
-        .insert({
+        .from('profiles')
+        .update({
           organization_id: orgData.id,
-          user_id: user.id,
           role: 'boss'
-        });
+        })
+        .eq('id', user.id);
 
       if (memberError) {
         fastify.log.error(`[Org] Error creating member: ${memberError.message}`);
@@ -98,25 +98,24 @@ async function orgRoutes(fastify, options) {
       const organization = orgs[0];
 
       // 2. Check if already a member
-      const { data: existingMember } = await supabase
-        .from('organization_members')
+      const { data: existingProfile } = await supabase
+        .from('profiles')
         .select('*')
-        .eq('organization_id', organization.id)
-        .eq('user_id', user.id)
+        .eq('id', user.id)
         .single();
         
-      if (existingMember) {
-        return reply.code(400).send({ error: 'You are already a member of this organization' });
+      if (existingProfile && existingProfile.organization_id) {
+        return reply.code(400).send({ error: 'You are already a member of an organization' });
       }
 
       // 3. Add User as Employee
       const { error: memberError } = await supabase
-        .from('organization_members')
-        .insert({
+        .from('profiles')
+        .update({
           organization_id: organization.id,
-          user_id: user.id,
           role: 'employee'
-        });
+        })
+        .eq('id', user.id);
 
       if (memberError) {
         fastify.log.error(`[Org] Error joining org: ${memberError.message}`);

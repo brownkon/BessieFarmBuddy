@@ -269,7 +269,7 @@ const SideMenu = ({
   async function fetchUserOrg() {
     try {
       const { data: memberData, error } = await supabase
-        .from('organization_members')
+        .from('profiles')
         .select(`
           role,
           organizations (
@@ -277,7 +277,7 @@ const SideMenu = ({
             access_code
           )
         `)
-        .eq('user_id', user.id)
+        .eq('id', user.id)
         .single();
 
       if (!error && memberData && memberData.role === 'boss') {

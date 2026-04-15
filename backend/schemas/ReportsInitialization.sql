@@ -77,7 +77,7 @@ ALTER TABLE public.cow_data ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Members can read their cow data" ON public.cow_data
   FOR SELECT USING (
     organization_id IN (
-      SELECT organization_id FROM public.organization_members WHERE user_id = auth.uid()
+      SELECT organization_id FROM public.profiles WHERE id = auth.uid()
     )
   );
 
@@ -85,9 +85,9 @@ CREATE POLICY "Members can read their cow data" ON public.cow_data
 CREATE POLICY "Leaders can manage cow data" ON public.cow_data
   FOR ALL USING (
     EXISTS (
-      SELECT 1 FROM public.organization_members 
+      SELECT 1 FROM public.profiles 
       WHERE organization_id = public.cow_data.organization_id 
-      AND user_id = auth.uid() 
+      AND id = auth.uid() 
       AND role = 'boss'
     )
   );
@@ -110,7 +110,7 @@ ALTER TABLE public.farmer_notes ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can read their organization's notes" ON public.farmer_notes
   FOR SELECT USING (
     organization_id IN (
-      SELECT organization_id FROM public.organization_members WHERE user_id = auth.uid()
+      SELECT organization_id FROM public.profiles WHERE id = auth.uid()
     )
   );
 
@@ -119,6 +119,6 @@ CREATE POLICY "Users can insert their own notes" ON public.farmer_notes
   FOR INSERT WITH CHECK (
     user_id = auth.uid() AND
     organization_id IN (
-      SELECT organization_id FROM public.organization_members WHERE user_id = auth.uid()
+      SELECT organization_id FROM public.profiles WHERE id = auth.uid()
     )
   );

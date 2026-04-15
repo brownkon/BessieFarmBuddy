@@ -20,17 +20,11 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email text UNIQUE,
   display_name text,
-  created_at timestamptz DEFAULT now()
-);
-
--- Organization Members Table (Join table for users and orgs)
-CREATE TABLE IF NOT EXISTS public.organization_members (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id uuid REFERENCES public.organizations(id) ON DELETE CASCADE,
-  user_id uuid REFERENCES public.profiles(id) ON DELETE CASCADE,
+  organization_id uuid REFERENCES public.organizations(id) ON DELETE SET NULL,
   role text DEFAULT 'employee' CHECK (role IN ('boss', 'employee')),
   created_at timestamptz DEFAULT now()
 );
+
 
 -- Chat Sessions Table (Groups of messages)
 CREATE TABLE IF NOT EXISTS public.chat_sessions (
@@ -62,7 +56,6 @@ CREATE INDEX IF NOT EXISTS idx_chats_session_id ON public.chats(session_id);
 -- Enable RLS on all tables
 ALTER TABLE public.organizations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.organization_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.chat_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.chats ENABLE ROW LEVEL SECURITY;
 
@@ -74,17 +67,17 @@ CREATE POLICY "Users can manage own profile" ON public.profiles
 CREATE POLICY "Members can read their organizations" ON public.organizations
   FOR SELECT USING (
     EXISTS (
-      SELECT 1 FROM public.organization_members 
+      SELECT 1 FROM public.profiles 
       WHERE organization_id = public.organizations.id 
-      AND user_id = auth.uid()
+      AND id = auth.uid()
     )
   );
 
--- 3. Organization Members: Users can see teammates and their own link
-CREATE POLICY "Members can see their team" ON public.organization_members
+-- 3. Profiles: Users can see teammates
+CREATE POLICY "Users can see teammates" ON public.profiles
   FOR SELECT USING (
     organization_id IN (
-      SELECT organization_id FROM public.organization_members WHERE user_id = auth.uid()
+      SELECT organization_id FROM public.profiles WHERE id = auth.uid()
     )
   );
 
@@ -100,21 +93,21 @@ CREATE POLICY "Users can manage own chats" ON public.chats
 CREATE POLICY "Leaders can manage organization chats" ON public.chats
   FOR SELECT USING (
     EXISTS (
-      SELECT 1 FROM public.organization_members 
+      SELECT 1 FROM public.profiles 
       WHERE organization_id IN (
-        SELECT organization_id FROM public.organization_members WHERE user_id = auth.uid() AND role = 'boss'
+        SELECT organization_id FROM public.profiles WHERE id = auth.uid() AND role = 'boss'
       )
-      AND user_id = public.chats.user_id
+      AND id = public.chats.user_id
     )
   );
 
-CREATE POLICY "Leaders can manage organization members" ON public.organization_members
+CREATE POLICY "Leaders can manage team profiles" ON public.profiles
   FOR ALL USING (
     EXISTS (
-      SELECT 1 FROM public.organization_members 
-      WHERE organization_id = public.organization_members.organization_id 
-      AND user_id = auth.uid() 
-      AND role = 'boss'
+      SELECT 1 FROM public.profiles p
+      WHERE p.organization_id = public.profiles.organization_id 
+      AND p.id = auth.uid() 
+      AND p.role = 'boss'
     )
   );
 
