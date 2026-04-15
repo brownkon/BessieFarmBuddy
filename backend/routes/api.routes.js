@@ -16,3 +16,4 @@ async function apiRoutes(fastify, options) {
 }
 
 module.exports = apiRoutes;
+

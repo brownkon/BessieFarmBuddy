@@ -4,16 +4,24 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
-  Switch,
   Animated,
   Dimensions,
   Alert,
   Platform,
-  Modal,
-  TextInput
 } from 'react-native';
 import { supabase } from '../services/supabase';
 import styles from '../styles/AppStyles';
+import {
+  getReportPreferences,
+  saveReportPreferences,
+  triggerReport,
+} from '../services/reportApi';
+
+// Modular Components
+import HistorySection from './SideMenu/HistorySection';
+import SettingsSection from './SideMenu/SettingsSection';
+import ReportSettingsSection from './SideMenu/ReportSettingsSection';
+import SideMenuModals from './SideMenu/SideMenuModals';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -54,6 +62,18 @@ const SideMenu = ({
   const [isOptionsMenuVisible, setIsOptionsMenuVisible] = React.useState(false);
   const [selectedSessionForMenu, setSelectedSessionForMenu] = React.useState(null);
 
+  // Report Preferences State
+  const [reportMethod, setReportMethod] = React.useState('email');
+  const [reportDestination, setReportDestination] = React.useState('');
+  const [scheduleEnabled, setScheduleEnabled] = React.useState(true);
+  const [scheduleTime, setScheduleTime] = React.useState('18:00');
+  const [reportTimezone, setReportTimezone] = React.useState('America/Denver');
+  const [reportLoading, setReportLoading] = React.useState(false);
+  const [reportSending, setReportSending] = React.useState(false);
+  const [reportDirty, setReportDirty] = React.useState(false);
+  const [rateLimited, setRateLimited] = React.useState(false);
+  const [sendsToday, setSendsToday] = React.useState(0);
+
   const LIMIT = 10;
 
   React.useEffect(() => {
@@ -63,6 +83,88 @@ const SideMenu = ({
       fetchSessions(true);
     }
   }, [isMenuOpen, user]);
+
+  React.useEffect(() => {
+    if (isSettingsMode && user) {
+      fetchReportPrefs();
+    }
+  }, [isSettingsMode, user]);
+
+  async function fetchReportPrefs() {
+    try {
+      setReportLoading(true);
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const token = authSession?.access_token;
+      if (!token) return;
+
+      const prefs = await getReportPreferences(token, activeBackendUrl);
+      if (prefs) {
+        setReportMethod(prefs.delivery_method || 'email');
+        setReportDestination(prefs.delivery_destination || user.email || '');
+        setScheduleEnabled(prefs.schedule_enabled !== undefined ? prefs.schedule_enabled : true);
+        setScheduleTime(prefs.schedule_time?.substring(0, 5) || '18:00');
+        setReportTimezone(prefs.timezone || 'America/Denver');
+      }
+      setReportDirty(false);
+    } catch (err) {
+      console.log('Error fetching report prefs:', err.message);
+    } finally {
+      setReportLoading(false);
+    }
+  }
+
+  async function handleSaveReportPrefs() {
+    try {
+      setReportLoading(true);
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const token = authSession?.access_token;
+      if (!token) return;
+
+      await saveReportPreferences(token, activeBackendUrl, {
+        delivery_method: reportMethod,
+        delivery_destination: reportDestination,
+        schedule_enabled: scheduleEnabled,
+        schedule_time: scheduleTime,
+        timezone: reportTimezone,
+      });
+
+      setReportDirty(false);
+      Alert.alert('Saved', 'Report preferences updated.');
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Failed to save preferences.');
+    } finally {
+      setReportLoading(false);
+    }
+  }
+
+  async function handleSendReport() {
+    try {
+      setReportSending(true);
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const token = authSession?.access_token;
+      if (!token) return;
+
+      const result = await triggerReport(token, activeBackendUrl);
+
+      if (result.rateLimited) {
+        setRateLimited(true);
+        setSendsToday(result.sends_today);
+        Alert.alert('Limit Reached', result.error);
+        return;
+      }
+
+      setSendsToday(result.sends_today || 0);
+      if (result.sends_today >= (result.max_sends || 3)) {
+        setRateLimited(true);
+      }
+
+      Alert.alert('Report Sent', result.message || 'Your daily report has been sent!');
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Failed to send report.');
+    } finally {
+      setReportSending(false);
+    }
+  }
 
   async function fetchSessions(reset = false) {
     try {
@@ -216,99 +318,45 @@ const SideMenu = ({
         <ScrollView contentContainerStyle={styles.drawerContent}>
           {isSettingsMode ? (
             <View>
-              {user && (
-                <View style={styles.statusBoxSmall}>
-                  <Text style={styles.statusLabelSmall}>Logged in as</Text>
-                  <Text style={styles.statusTextSmall}>{user.email}</Text>
-                </View>
-              )}
+              <SettingsSection
+                user={user}
+                orgData={orgData}
+                selectedLanguage={selectedLanguage}
+                setIsLangModalVisible={setIsLangModalVisible}
+                setIsModalVisible={setIsModalVisible}
+                isChatTtsEnabled={isChatTtsEnabled}
+                setIsChatTtsEnabled={setIsChatTtsEnabled}
+                ttsVolume={ttsVolume}
+                setTtsVolume={setTtsVolume}
+                ttsRate={ttsRate}
+                setTtsRate={setTtsRate}
+                handleStopChat={handleStopChat}
+                toggleMenu={toggleMenu}
+                handleSignOut={handleSignOut}
+              />
 
-              {orgData && (
-                <View style={styles.drawerItem}>
-                  <Text style={styles.settingLabel}>Organization: {orgData.name}</Text>
-                  <View style={{ backgroundColor: '#111827', padding: 10, borderRadius: 8, marginTop: 5, borderWidth: 1, borderColor: '#374151' }}>
-                    <Text style={{ color: '#9ca3af', fontSize: 12 }}>Invite Code</Text>
-                    <Text selectable style={{ color: '#34d399', fontSize: 18, fontWeight: 'bold', marginTop: 5, letterSpacing: 2 }}>
-                      {orgData.accessCode || 'Pending Drop...'}
-                    </Text>
-                  </View>
-                </View>
-              )}
-
-              <Text style={styles.drawerSectionLabel}>CONFIGURATION</Text>
-
-              <View style={styles.drawerItem}>
-                <Text style={styles.settingLabel}>Language</Text>
-                <TouchableOpacity style={styles.voiceButton} onPress={() => setIsLangModalVisible(true)}>
-                  <Text style={styles.voiceButtonText}>🌐 {selectedLanguage.label}</Text>
-                </TouchableOpacity>
-              </View>
-
-
-              <View style={styles.drawerItem}>
-                <Text style={styles.settingLabel}>Voice Profile</Text>
-                <TouchableOpacity style={styles.voiceButton} onPress={() => setIsModalVisible(true)}>
-                  <Text style={styles.voiceButtonText}>🗣️ Speaker Profile</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.drawerItem}>
-                <Text style={styles.settingLabel}>Text Chat Audio</Text>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
-                  <Text style={{ color: '#9ca3af', fontSize: 13 }}>{isChatTtsEnabled ? 'Enabled' : 'Disabled'}</Text>
-                  <Switch
-                    value={isChatTtsEnabled}
-                    onValueChange={setIsChatTtsEnabled}
-                    thumbColor={isChatTtsEnabled ? '#2ecc71' : '#f4f3f4'}
-                    trackColor={{ false: '#3e3e3e', true: '#10b981' }}
-                  />
-                </View>
-              </View>
-
-              <View style={styles.drawerItem}>
-                <Text style={styles.settingLabel}>TTS Volume: {(ttsVolume * 100).toFixed(0)}%</Text>
-                <View style={styles.stepperContainer}>
-                  <TouchableOpacity
-                    style={styles.stepperButton}
-                    onPress={() => setTtsVolume(Math.max(0, ttsVolume - 0.1))}
-                  >
-                    <Text style={styles.stepperLabel}>-</Text>
-                  </TouchableOpacity>
-                  <View style={styles.stepperTrack}>
-                    <View style={[styles.stepperFill, { width: `${ttsVolume * 100}%` }]} />
-                  </View>
-                  <TouchableOpacity
-                    style={styles.stepperButton}
-                    onPress={() => setTtsVolume(Math.min(1.0, ttsVolume + 0.1))}
-                  >
-                    <Text style={styles.stepperLabel}>+</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <View style={styles.drawerItem}>
-                <Text style={styles.settingLabel}>TTS Speed: {ttsRate.toFixed(1)}x</Text>
-                <View style={styles.stepperContainer}>
-                  <TouchableOpacity
-                    style={styles.stepperButton}
-                    onPress={() => setTtsRate(Math.max(0.5, ttsRate - 0.1))}
-                  >
-                    <Text style={styles.stepperLabel}>-</Text>
-                  </TouchableOpacity>
-                  <View style={styles.stepperTrack}>
-                    <View style={[styles.stepperFill, { width: `${((ttsRate - 0.5) / 1.5) * 100}%` }]} />
-                  </View>
-                  <TouchableOpacity
-                    style={styles.stepperButton}
-                    onPress={() => setTtsRate(Math.min(2.0, ttsRate + 0.1))}
-                  >
-                    <Text style={styles.stepperLabel}>+</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
+              <ReportSettingsSection
+                user={user}
+                reportLoading={reportLoading}
+                reportMethod={reportMethod}
+                setReportMethod={setReportMethod}
+                setReportDirty={setReportDirty}
+                setReportDestination={setReportDestination}
+                reportDestination={reportDestination}
+                scheduleEnabled={scheduleEnabled}
+                setScheduleEnabled={setScheduleEnabled}
+                scheduleTime={scheduleTime}
+                setScheduleTime={setScheduleTime}
+                reportDirty={reportDirty}
+                handleSaveReportPrefs={handleSaveReportPrefs}
+                rateLimited={rateLimited}
+                handleSendReport={handleSendReport}
+                reportSending={reportSending}
+                sendsToday={sendsToday}
+              />
 
               <TouchableOpacity
-                style={styles.stopButton}
+                style={[styles.stopButton, { marginTop: 30 }]}
                 onPress={() => { handleStopChat(); toggleMenu(false); }}
               >
                 <Text style={styles.stopButtonText}>Emergency Stop</Text>
@@ -322,66 +370,19 @@ const SideMenu = ({
               </TouchableOpacity>
             </View>
           ) : (
-            <View>
-              <TouchableOpacity 
-                style={styles.newChatButton} 
-                onPress={() => { 
-                  startNewChat(); 
-                  toggleMenu(false); 
-                }}
-              >
-                <Text style={styles.newChatButtonText}>+ New Chat</Text>
-              </TouchableOpacity>
 
-              <View style={[styles.drawerItem, { marginBottom: 30 }]}>
-                <Text style={styles.drawerSectionLabel}>RECORDS</Text>
-                <TouchableOpacity
-                  style={[styles.voiceButton, { borderColor: '#34d399', backgroundColor: 'rgba(52, 211, 153, 0.1)' }]}
-                  onPress={() => { setIsNotesModalVisible(true); toggleMenu(false); }}
-                >
-                  <Text style={[styles.voiceButtonText, { color: '#34d399' }]}>📝 View Farmer Notes</Text>
-                </TouchableOpacity>
-              </View>
-
-              <Text style={styles.drawerSectionLabel}>RECENT CHATS</Text>
-              
-              {sessions.map(sess => (
-                <TouchableOpacity 
-                  key={sess.id} 
-                  style={[styles.historyItem, activeSessionId === sess.id && styles.historyItemActive]}
-                  onPress={() => {
-                    loadSession(sess.id);
-                    toggleMenu(false);
-                  }}
-                >
-                  <Text style={styles.historyItemTitle} numberOfLines={1}>
-                    {sess.title || 'Untitled Chat'}
-                  </Text>
-                  <TouchableOpacity 
-                    style={styles.historyDeleteButton}
-                    onPress={() => showSessionMenu(sess)}
-                  >
-                    <Text style={[styles.historyDeleteText, { fontSize: 18, color: '#9ca3af' }]}>⋮</Text>
-                  </TouchableOpacity>
-                </TouchableOpacity>
-              ))}
-
-              {sessions.length < totalSessions && (
-                <TouchableOpacity 
-                  style={styles.seeMoreButton} 
-                  onPress={() => fetchSessions(false)}
-                  disabled={loadingSessions}
-                >
-                  <Text style={styles.seeMoreText}>
-                    {loadingSessions ? 'Loading...' : 'See More'}
-                  </Text>
-                </TouchableOpacity>
-              )}
-
-              {sessions.length === 0 && !loadingSessions && (
-                <Text style={{ color: '#6b7280', textAlign: 'center', marginTop: 20 }}>No history yet</Text>
-              )}
-            </View>
+            <HistorySection
+              sessions={sessions}
+              activeSessionId={activeSessionId}
+              totalSessions={totalSessions}
+              loadingSessions={loadingSessions}
+              fetchSessions={fetchSessions}
+              loadSession={loadSession}
+              startNewChat={startNewChat}
+              toggleMenu={toggleMenu}
+              setIsNotesModalVisible={setIsNotesModalVisible}
+              showSessionMenu={showSessionMenu}
+            />
           )}
 
           <View style={{ height: 40 }} />
@@ -402,84 +403,18 @@ const SideMenu = ({
         <View style={{ height: Platform.OS === 'ios' ? 40 : 20 }} />
       </Animated.View>
 
-      <Modal
-        visible={isRenameModalVisible}
-        transparent={true}
-        animationType="fade"
-      >
-        <View style={styles.modalContainer}>
-          <View style={[styles.modalContent, { height: 'auto', padding: 24 }]}>
-            <Text style={styles.modalTitle}>Rename Chat</Text>
-            <TextInput
-              style={styles.renameInput}
-              value={newTitleText}
-              onChangeText={setNewTitleText}
-              placeholder="Enter new title..."
-              placeholderTextColor="#6b7280"
-              autoFocus={true}
-            />
-            <View style={styles.modalButtonContainer}>
-              <TouchableOpacity 
-                style={styles.modalButton} 
-                onPress={() => setIsRenameModalVisible(false)}
-              >
-                <Text style={styles.modalButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.modalButtonPrimary]} 
-                onPress={confirmRename}
-              >
-                <Text style={styles.modalButtonText}>Rename</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      <Modal
-        visible={isOptionsMenuVisible}
-        transparent={true}
-        animationType="slide"
-      >
-        <TouchableOpacity 
-          style={styles.modalContainer} 
-          activeOpacity={1} 
-          onPress={() => setIsOptionsMenuVisible(false)}
-        >
-          <View style={[styles.modalContent, { height: 'auto', padding: 24, marginTop: 'auto', marginBottom: 40 }]}>
-            <Text style={[styles.modalTitle, { marginBottom: 20 }]}>
-              {selectedSessionForMenu?.title || 'Chat Options'}
-            </Text>
-            
-            <TouchableOpacity 
-              style={[styles.voiceButton, { marginBottom: 12 }]} 
-              onPress={() => {
-                setIsOptionsMenuVisible(false);
-                handleRenameSession(selectedSessionForMenu.id, selectedSessionForMenu.title);
-              }}
-            >
-              <Text style={styles.voiceButtonText}>✏️ Rename Chat</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[styles.voiceButton, { borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.05)', marginBottom: 12 }]} 
-              onPress={() => {
-                setIsOptionsMenuVisible(false);
-                handleDeleteSession(selectedSessionForMenu.id);
-              }}
-            >
-              <Text style={[styles.voiceButtonText, { color: '#ef4444' }]}>🗑️ Delete Chat</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[styles.modalButton, { marginTop: 10, alignSelf: 'center', borderWidth: 0 }]} 
-              onPress={() => setIsOptionsMenuVisible(false)}
-            >
-              <Text style={[styles.modalButtonText, { color: '#9ca3af' }]}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+      <SideMenuModals
+        isRenameModalVisible={isRenameModalVisible}
+        setIsRenameModalVisible={setIsRenameModalVisible}
+        newTitleText={newTitleText}
+        setNewTitleText={setNewTitleText}
+        confirmRename={confirmRename}
+        isOptionsMenuVisible={isOptionsMenuVisible}
+        setIsOptionsMenuVisible={setIsOptionsMenuVisible}
+        selectedSessionForMenu={selectedSessionForMenu}
+        handleRenameSession={handleRenameSession}
+        handleDeleteSession={handleDeleteSession}
+      />
     </>
   );
 };
