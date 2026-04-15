@@ -72,10 +72,42 @@ function mapSensorData(sensorHtml, valueHtml, severenessHtml) {
   };
 }
 
+/**
+ * Standardizes dates for TTS (e.g., "2024-04-08" -> "April 8").
+ * @param {string|Date} rawDate 
+ * @returns {string} Human-readable date
+ */
+function formatDate(rawDate) {
+  if (!rawDate) return rawDate;
+  const date = new Date(rawDate);
+  if (isNaN(date.getTime())) return rawDate;
+
+  const now = new Date();
+  
+  // Set times to midnight to calculate pure day difference
+  const dateMidnight = new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+  const nowMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  
+  const diffMs = nowMidnight - dateMidnight;
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays > 1 && diffDays <= 7) return `${diffDays} days ago`;
+
+  const months = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+  
+  return `${months[date.getUTCMonth()]} ${date.getUTCDate()}`;
+}
+
 module.exports = {
   stripHtml,
   parseMultiline,
   parseSevereness,
   cleanNumber,
-  mapSensorData
+  mapSensorData,
+  formatDate
 };

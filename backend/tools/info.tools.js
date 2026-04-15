@@ -1,3 +1,4 @@
+const { formatAllDates } = require('./utils');
 const supabase = require('../services/supabase');
 
 const cowTools = {
@@ -27,7 +28,9 @@ const cowTools = {
       if (error.code === 'PGRST116') return `Cow ${animalNumber} not found in the records.`;
       return `Error retrieving cow data: ${error.message}`;
     }
-    return data;
+
+    // Automatically format all date strings in the data
+    return formatAllDates(data);
   }
 };
 
@@ -59,12 +62,12 @@ const groupStatus = {
     const avgProduct = data.reduce((acc, curr) => acc + (curr.day_production || 0), 0) / data.length;
     const sickCount = data.filter(c => c.sick_chance > 50).length;
 
-    return {
+    return formatAllDates({
       group: groupName,
       total_cows: data.length,
       average_production: avgProduct.toFixed(2),
       cows_at_risk: sickCount
-    };
+    });
   }
 };
 
