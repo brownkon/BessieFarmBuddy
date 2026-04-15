@@ -2,6 +2,14 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 --------------------------------------------------------------------------------
+-- RESET SCHEMA
+--------------------------------------------------------------------------------
+DROP TABLE IF EXISTS public.chats CASCADE;
+DROP TABLE IF EXISTS public.chat_sessions CASCADE;
+DROP TABLE IF EXISTS public.profiles CASCADE;
+DROP TABLE IF EXISTS public.organizations CASCADE;
+
+--------------------------------------------------------------------------------
 -- TABLES
 --------------------------------------------------------------------------------
 
@@ -22,6 +30,11 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   display_name text,
   organization_id uuid REFERENCES public.organizations(id) ON DELETE SET NULL,
   role text DEFAULT 'employee' CHECK (role IN ('boss', 'employee')),
+  report_delivery_method text DEFAULT 'email' CHECK (report_delivery_method IN ('email', 'none')),
+  report_delivery_destination text,
+  report_schedule_enabled boolean DEFAULT true,
+  report_schedule_time time DEFAULT '18:00',
+  report_timezone text DEFAULT 'America/Denver',
   created_at timestamptz DEFAULT now()
 );
 
@@ -63,22 +76,25 @@ ALTER TABLE public.chats ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can manage own profile" ON public.profiles
   FOR ALL USING (auth.uid() = id);
 
+-- HELPER FUNCTIONS FOR RLS TO PREVENT INFINITE RECURSION
+CREATE OR REPLACE FUNCTION public.get_auth_user_org_id()
+RETURNS uuid LANGUAGE sql SECURITY DEFINER SET search_path = public
+AS $$ SELECT organization_id FROM public.profiles WHERE id = auth.uid(); $$;
+
+CREATE OR REPLACE FUNCTION public.get_auth_user_role()
+RETURNS text LANGUAGE sql SECURITY DEFINER SET search_path = public
+AS $$ SELECT role FROM public.profiles WHERE id = auth.uid(); $$;
+
 -- 2. Organizations: Users can read organizations they belong to
 CREATE POLICY "Members can read their organizations" ON public.organizations
   FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles 
-      WHERE organization_id = public.organizations.id 
-      AND id = auth.uid()
-    )
+    id = public.get_auth_user_org_id()
   );
 
 -- 3. Profiles: Users can see teammates
 CREATE POLICY "Users can see teammates" ON public.profiles
   FOR SELECT USING (
-    organization_id IN (
-      SELECT organization_id FROM public.profiles WHERE id = auth.uid()
-    )
+    organization_id = public.get_auth_user_org_id()
   );
 
 -- 4. Chat Sessions: Users can manage own sessions
@@ -92,23 +108,13 @@ CREATE POLICY "Users can manage own chats" ON public.chats
 -- 5. Organization Leaders: 'boss' role can read/write for anyone in their organization
 CREATE POLICY "Leaders can manage organization chats" ON public.chats
   FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles 
-      WHERE organization_id IN (
-        SELECT organization_id FROM public.profiles WHERE id = auth.uid() AND role = 'boss'
-      )
-      AND id = public.chats.user_id
-    )
+    public.get_auth_user_role() = 'boss' AND
+    user_id IN (SELECT id FROM public.profiles WHERE organization_id = public.get_auth_user_org_id())
   );
 
 CREATE POLICY "Leaders can manage team profiles" ON public.profiles
   FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles p
-      WHERE p.organization_id = public.profiles.organization_id 
-      AND p.id = auth.uid() 
-      AND p.role = 'boss'
-    )
+    organization_id = public.get_auth_user_org_id() AND public.get_auth_user_role() = 'boss'
   );
 
 --------------------------------------------------------------------------------

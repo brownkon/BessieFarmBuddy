@@ -1,0 +1,9 @@
+{
+  "ignore": [
+    ".git",
+    "node_modules",
+    "supabase",
+    "tests"
+  ],
+  "ext": "js,json"
+}
