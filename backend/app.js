@@ -5,6 +5,7 @@ const fastify = require('fastify')({
 
 require('dotenv').config();
 const { dataProcessor } = require('./services/data-prep');
+const { startScheduler, stopScheduler } = require('./services/report/scheduler');
 
 const env = process.env.ENVIRONMENT || 'development';
 const provider = process.env.LLM_PROVIDER || 'openai';
@@ -29,6 +30,10 @@ fastify.get('/health', async () => ({ status: 'ok' }));
 // API routes
 fastify.register(require('./routes/api.routes'), { prefix: '/api' });
 
+// Report routes registered separately to avoid nested plugin scoping issues in Fastify v5
+fastify.register(require('./routes/report.route'), { prefix: '/api/report' });
+
+
 // Automation: Hourly sync
 const SYNC_INTERVAL = 60 * 60 * 1000; // 1 hour
 const syncIntervalId = setInterval(() => {
@@ -38,10 +43,14 @@ const syncIntervalId = setInterval(() => {
   });
 }, SYNC_INTERVAL);
 
+// Automation: Daily report scheduler
+startScheduler();
+
 // Handle cleanup
 fastify.addHook('onClose', async (instance) => {
   clearInterval(syncIntervalId);
-  instance.log.info('[Automation] Sync interval cleared.');
+  stopScheduler();
+  instance.log.info('[Automation] Sync interval and report scheduler cleared.');
 });
 
 

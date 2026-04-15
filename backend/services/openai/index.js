@@ -14,7 +14,7 @@ let mainModel;
 if (LLM_PROVIDER === 'groq') {
   console.log('[AI Service] Initializing Groq for development...');
   client = new Groq({ apiKey: process.env.GROQ_API_KEY });
-  mainModel = 'llama-3.1-70b-versatile'; // Powerful and fast for orchestrating
+  mainModel = 'llama-3.3-70b-versatile'; // Powerful and fast for orchestrating
 } else {
   console.log('[AI Service] Initializing OpenAI for production...');
   client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
