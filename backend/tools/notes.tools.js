@@ -1,5 +1,5 @@
 const supabase = require('../services/supabase');
-const { getUserOrganization, formatAllDates } = require('./utils');
+const { getUserOrganization, formatAllDates } = require('../services/data-prep/utils');
 
 const recordNote = {
   definition: {
@@ -20,16 +20,16 @@ const recordNote = {
   async handler({ note_content, animal_number }, context = {}) {
     if (!supabase) return "Supabase not initialized.";
     if (!context.userId) return "User context not provided, cannot record note.";
-    
+
     const orgId = await getUserOrganization(context.userId);
     if (!orgId) return "Organization not found for user.";
 
     const { error } = await supabase
       .from('farmer_notes')
       .insert([
-        { 
-          user_id: context.userId, 
-          organization_id: orgId, 
+        {
+          user_id: context.userId,
+          organization_id: orgId,
           content: note_content,
           animal_number: animal_number || null
         }
@@ -59,22 +59,22 @@ const getRecentNotes = {
     if (!supabase) return "Supabase not initialized.";
     const orgId = context.userId ? await getUserOrganization(context.userId) : null;
     if (!orgId) return "Organization not found for user.";
-    
+
     const dateLimit = new Date();
     dateLimit.setDate(dateLimit.getDate() - days_back);
-    
+
     let query = supabase.from('farmer_notes')
       .select('content, animal_number, created_at')
       .eq('organization_id', orgId)
       .gte('created_at', dateLimit.toISOString())
       .order('created_at', { ascending: false });
-      
+
     if (animal_number) query = query.eq('animal_number', animal_number.toString());
 
     const { data, error } = await query;
     if (error) return `Error retrieving notes: ${error.message}`;
     if (data.length === 0) return "No recent notes found.";
-    
+
     // Automatically format all date strings (including created_at)
     return formatAllDates(data);
   }

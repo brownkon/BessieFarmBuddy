@@ -1,5 +1,5 @@
 const supabase = require('../services/supabase');
-const { getUserOrganization, formatAllDates } = require('./utils');
+const { getUserOrganization, formatAllDates } = require('../services/data-prep/utils');
 
 const getSpecificMetric = {
   definition: {
@@ -19,13 +19,13 @@ const getSpecificMetric = {
   async handler({ metric_name }, context = {}) {
     if (!supabase) return "Supabase not initialized.";
     const orgId = context.userId ? await getUserOrganization(context.userId) : null;
-    
+
     let query = supabase.from('cow_data').select(`animal_number, ${metric_name}`);
     if (orgId) query = query.eq('organization_id', orgId);
 
     const { data, error } = await query;
     if (error) return `Error retrieving metric: ${error.message}`;
-    
+
     if (data.length === 0) return "No cows found.";
 
     // Automatically format any date strings found in the results

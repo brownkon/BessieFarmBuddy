@@ -1,5 +1,5 @@
 const supabase = require('../services/supabase');
-const { getUserOrganization, formatAllDates } = require('./utils');
+const { getUserOrganization, formatAllDates } = require('../services/data-prep/utils');
 
 const pregnancyStatus = {
   definition: {
@@ -17,7 +17,7 @@ const pregnancyStatus = {
     let query = supabase
       .from('cow_data')
       .select('animal_number, reproduction_status, expected_calving_date, days_pregnant');
-    
+
     if (orgId) query = query.eq('organization_id', orgId);
 
     const { data, error } = await query;
