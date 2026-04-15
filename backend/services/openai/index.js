@@ -14,7 +14,7 @@ let mainModel;
 if (LLM_PROVIDER === 'groq') {
   console.log('[AI Service] Initializing Groq for development...');
   client = new Groq({ apiKey: process.env.GROQ_API_KEY });
-  mainModel = 'llama-3.3-70b-versatile'; // Powerful and fast for orchestrating
+  mainModel = 'llama-3.1-8b-instant'; // Faster with higher rate limits for dev
 } else {
   console.log('[AI Service] Initializing OpenAI for production...');
   client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -36,9 +36,12 @@ const openaiService = {
         - Assume that "cal" should mean "cow".
         - Current language: ${language}. Always respond in ${language}.`;
 
+    // Trim history to stay within context limits
+    const trimmedHistory = history.slice(-10);
+
     const messages = [
       { role: 'system', content: finalSystemMessage },
-      ...history,
+      ...trimmedHistory,
       { role: 'user', content: text }
     ];
 
@@ -55,13 +58,16 @@ const openaiService = {
       let toolResult = null;
       let finalNeedsTool = false;
 
+      let earlyToolName = null;
       if (classification.should_call_tool && classification.confidence >= CONFIDENCE_THRESHOLD) {
         const { tool_name, arguments: args } = classification;
+        earlyToolName = tool_name;
         console.log(`[Router] Executing ${tool_name} early with args: ${JSON.stringify(args)}`);
 
         // Special Case: Early Exit for Termination
         if (tool_name === 'terminate_conversation') {
           return (async function* () {
+            yield { toolCall: 'terminate_conversation' };
             yield { content: " Goodbye!", terminate: true };
           })();
         }
@@ -81,11 +87,12 @@ const openaiService = {
           });
         } catch (toolErr) {
           console.error(`[Router] Tool execution failed: ${toolErr.message}`);
+          earlyToolName = null; // Don't log if it failed
         }
       }
 
       const streamStart = Date.now();
-      const result = await streamResponse({
+      const mainStream = await streamResponse({
         client: client,
         model: mainModel,
         messages,
@@ -94,7 +101,13 @@ const openaiService = {
         provider: LLM_PROVIDER
       });
       console.log(`[Timer] Total pre-stream took: ${Date.now() - startTime}ms`);
-      return result;
+
+      return (async function* () {
+        if (earlyToolName) yield { toolCall: earlyToolName };
+        for await (const chunk of mainStream) {
+          yield chunk;
+        }
+      })();
 
     } catch (error) {
       console.error("[AI Service] Routing error:", error);

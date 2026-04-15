@@ -9,9 +9,42 @@ async function chatRoutes(fastify, options) {
       let { text, history, language, location, sessionId } = request.body;
       const user = request.user;
 
-      if (!text) return reply.code(400).send({ error: 'Text input is required' });
+      if (!text) {
+        fastify.log.warn({ sessionId }, 'Chat request rejected: missing text');
+        return reply.code(400).send({ error: 'Text input is required' });
+      }
+
+      // Smart Session Recovery: If sessionId is null/missing, find last or create new
       if (!sessionId || sessionId === 'null' || sessionId === 'undefined') {
-        return reply.code(400).send({ error: 'sessionId is required. Create a session first via POST /api/chat-sessions.' });
+        fastify.log.info({ userId: user.id }, 'Session ID missing, attempting recovery...');
+        
+        // 1. Try to find the most recent session
+        const { data: latestSession } = await supabase
+          .from('chat_sessions')
+          .select('id')
+          .eq('user_id', user.id)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (latestSession) {
+          sessionId = latestSession.id;
+          fastify.log.info({ sessionId }, 'Recovered existing session');
+        } else {
+          // 2. Create a new one if none found
+          const { data: newSession, error: createError } = await supabase
+            .from('chat_sessions')
+            .insert({ user_id: user.id, title: 'New Chat' })
+            .select()
+            .single();
+          
+          if (createError) {
+            fastify.log.error({ error: createError.message }, 'Failed to auto-create session');
+            return reply.code(500).send({ error: 'Could not create or find a chat session' });
+          }
+          sessionId = newSession.id;
+          fastify.log.info({ sessionId }, 'Auto-created new session');
+        }
       }
 
       // Auto-title the session on its first real message
@@ -47,6 +80,7 @@ async function chatRoutes(fastify, options) {
       for await (const chunk of stream) {
         if (chunk.content) fullResponse += chunk.content;
         if (chunk.terminate) toolsUsed.push('terminate_conversation');
+        if (chunk.toolCall && !toolsUsed.includes(chunk.toolCall)) toolsUsed.push(chunk.toolCall);
         reply.raw.write(`data: ${JSON.stringify(chunk)}\n\n`);
       }
 

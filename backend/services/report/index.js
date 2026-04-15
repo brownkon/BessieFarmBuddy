@@ -230,7 +230,7 @@ async function summarizeWithLlm(prompt) {
 
   if (provider === 'groq') {
     client = new Groq({ apiKey: process.env.GROQ_API_KEY });
-    model = 'llama-3.3-70b-versatile';
+    model = 'llama-3.1-8b-instant';
   } else {
     client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     model = 'gpt-4o-mini';

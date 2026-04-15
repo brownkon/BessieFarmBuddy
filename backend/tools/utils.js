@@ -10,7 +10,7 @@ const supabase = require('../services/supabase');
 async function getUserOrganization(userId) {
   if (!supabase) return null;
   const { data, error } = await supabase
-    .from('organization_users')
+    .from('organization_members')
     .select('organization_id')
     .eq('user_id', userId)
     .limit(1)

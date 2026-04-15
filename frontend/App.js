@@ -5,7 +5,6 @@ import {
   Text,
   View,
   TouchableOpacity,
-  ActivityIndicator,
   Platform,
   LogBox,
   ScrollView,

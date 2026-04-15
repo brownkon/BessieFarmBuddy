@@ -53,12 +53,38 @@ async function voiceChatRoutes(fastify, options) {
         return;
       }
 
-      // Require sessionId — session creation is the frontend's responsibility
+      // Smart Session Recovery: If sessionId is null/missing, find last or create new
       if (!sessionId || sessionId === 'null' || sessionId === 'undefined') {
-        reply.raw.write(`data: ${JSON.stringify({ error: 'sessionId is required. Create a session first via POST /api/chat-sessions.' })}\n\n`);
-        reply.raw.write('data: [DONE]\n\n');
-        reply.raw.end();
-        return;
+        console.log(`[Voice] Session ID missing for user ${user.id}, attempting recovery...`);
+        
+        const { data: latestSession } = await supabase
+          .from('chat_sessions')
+          .select('id')
+          .eq('user_id', user.id)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (latestSession) {
+          sessionId = latestSession.id;
+          console.log(`[Voice] Recovered existing session: ${sessionId}`);
+        } else {
+          const { data: newSession, error: createError } = await supabase
+            .from('chat_sessions')
+            .insert({ user_id: user.id, title: 'New Voice Chat' })
+            .select()
+            .single();
+          
+          if (createError) {
+            console.error(`[Voice] Failed to auto-create session: ${createError.message}`);
+            reply.raw.write(`data: ${JSON.stringify({ error: 'Could not create or find a chat session.' })}\n\n`);
+            reply.raw.write('data: [DONE]\n\n');
+            reply.raw.end();
+            return;
+          }
+          sessionId = newSession.id;
+          console.log(`[Voice] Auto-created new session: ${sessionId}`);
+        }
       }
 
       // Auto-title the session on its first real message
@@ -94,6 +120,7 @@ async function voiceChatRoutes(fastify, options) {
       for await (const chunk of stream) {
         if (chunk.content) fullResponse += chunk.content;
         if (chunk.terminate) toolsUsed.push('terminate_conversation');
+        if (chunk.toolCall && !toolsUsed.includes(chunk.toolCall)) toolsUsed.push(chunk.toolCall);
         reply.raw.write(`data: ${JSON.stringify(chunk)}\n\n`);
       }
 

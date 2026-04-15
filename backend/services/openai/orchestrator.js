@@ -6,12 +6,25 @@ const cacheService = require('../cache');
  */
 async function streamResponse({ client, model, messages, needsTool, toolCallsCount = 0, context = {}, provider = 'openai' }) {
   const creationStart = Date.now();
-  const completion = await client.chat.completions.create({
-    model: model,
-    messages: messages,
-    tools: needsTool ? getToolDefinitions() : undefined,
-    stream: true,
-  });
+  console.log(`[AI Service] Starting stream for model: ${model}`);
+  let completion;
+  try {
+    completion = await client.chat.completions.create({
+      model: model,
+      messages: messages,
+      tools: needsTool ? getToolDefinitions() : undefined,
+      stream: true,
+    });
+  } catch (err) {
+    console.error(`[${provider}] API Error:`, err.message);
+    return (async function* () {
+      if (err.message.includes('rate_limit') || err.status === 413) {
+        yield { content: " I'm sorry, that request was too large for my current capacity. Please try a shorter question or start a new chat." };
+      } else {
+        yield { content: ` I'm sorry, I encountered an API error: ${err.message}` };
+      }
+    })();
+  }
   console.log(`[Timer] ${provider} create call took: ${Date.now() - creationStart}ms`);
 
   return (async function* () {
@@ -40,10 +53,13 @@ async function streamResponse({ client, model, messages, needsTool, toolCallsCou
         // Execute Tool with Caching
         let result = "";
         try {
+          // Track the tool call
+          yield { toolCall: currentToolCall };
+
           const args = toolArguments ? JSON.parse(toolArguments) : {};
 
           if (currentToolCall === 'terminate_conversation') {
-            yield { content: " Goodbye!", terminate: true };
+            yield { terminate: true, content: " Goodbye!" };
             return;
           }
 
