@@ -55,3 +55,4 @@ temp/
 frontend/vosk-model-*.zip
 frontend/vosk-model-*/
 **/model-en-us/
+dairy-voice-app/

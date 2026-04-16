@@ -1,7 +1,10 @@
 import { setupURLPolyfill } from 'react-native-url-polyfill';
 setupURLPolyfill();
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
+  AppRegistry,
+  AppState,
   Text,
   View,
   TouchableOpacity,
@@ -39,6 +42,14 @@ import { useNativeSpeech } from './src/hooks/useNativeSpeech';
 import { useAudioRecording } from './src/hooks/useAudioRecording';
 import { useWhisperApi } from './src/hooks/useWhisperApi';
 import { startDucking, stopDucking, cleanupAudio } from './src/utils/audioUtils';
+import HeadlessVoiceTask from './src/background/HeadlessVoiceTask';
+import { persistActiveBackendUrl } from './src/background/backend-url';
+import {
+  addWakeWordListener,
+  setForegroundVoiceTabActive as setBackgroundVoiceTabActive,
+  startListening as startBackgroundWakeService,
+  stopListening as stopBackgroundWakeService,
+} from './src/background/WakeWord';
 
 import styles from './src/styles/AppStyles';
 
@@ -52,9 +63,16 @@ import ChatMessage from './src/components/ChatMessage';
 import NotesModal from './src/components/NotesModal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const BACKGROUND_WAKE_PREF_KEY = 'bessie:background-wake-enabled:v1';
+
+if (!global.__BESSIE_HEADLESS_TASK_REGISTERED__) {
+  AppRegistry.registerHeadlessTask('DairyVoiceBackgroundLoop', () => HeadlessVoiceTask);
+  global.__BESSIE_HEADLESS_TASK_REGISTERED__ = true;
+}
 
 function AppMain() {
   const { session, user } = useAuth();
+  const [appState, setAppState] = useState(AppState.currentState);
   const [gpsLocation, setGpsLocation] = useState(null);
   const [activeSessionId, setActiveSessionId] = useState(null);
   const activeSessionIdRef = useRef(null);
@@ -82,6 +100,8 @@ function AppMain() {
   const [isChatTtsEnabled, setIsChatTtsEnabled] = useState(true);
   const [isListeningActive, setIsListeningActive] = useState(true);
   const isListeningActiveRef = useRef(true);
+  const [backgroundServiceEnabled, setBackgroundServiceEnabled] = useState(false);
+  const backgroundServiceEnabledRef = useRef(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [ttsRate, setTtsRate] = useState(1.0);
   const [ttsVolume, setTtsVolume] = useState(1.0);
@@ -131,6 +151,15 @@ function AppMain() {
   useEffect(() => { preferredVoiceRef.current = preferredVoice; }, [preferredVoice]);
   useEffect(() => { activeBackendUrlRef.current = activeBackendUrl; }, [activeBackendUrl]);
   useEffect(() => { isListeningActiveRef.current = isListeningActive; }, [isListeningActive]);
+  useEffect(() => { backgroundServiceEnabledRef.current = backgroundServiceEnabled; }, [backgroundServiceEnabled]);
+
+  useEffect(() => {
+    if (!activeBackendUrl) {
+      return;
+    }
+
+    void persistActiveBackendUrl(activeBackendUrl);
+  }, [activeBackendUrl]);
 
   // Reset session when user changes
   useEffect(() => {
@@ -140,6 +169,35 @@ function AppMain() {
       }
     }
   }, [user?.id, isReady]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      setAppState(nextState);
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') {
+      return;
+    }
+
+    const loadBackgroundPreference = async () => {
+      try {
+        const raw = await AsyncStorage.getItem(BACKGROUND_WAKE_PREF_KEY);
+        const enabled = raw === 'true';
+        backgroundServiceEnabledRef.current = enabled;
+        setBackgroundServiceEnabled(enabled);
+      } catch (error) {
+        console.warn('[App] Failed to load background wake preference', error);
+      }
+    };
+
+    void loadBackgroundPreference();
+  }, []);
 
   const {
     loading,
@@ -641,7 +699,7 @@ function AppMain() {
     clearTimeout(terminationRestartTimerRef.current);
     Speech.stop();
 
-    // Only stop recording here; let startWakeWordListening handle Vosk reset
+    // Only stop recording here; let startWakeWordListening handle wake listener reset
     await stopRecordingManual().catch(() => { });
 
     modeRef.current = 'wake';
@@ -674,6 +732,39 @@ function AppMain() {
       startWakeWordListening();
     }
   }, [isListeningActive, handleStopChat, startWakeWordListening]);
+
+  const toggleBackgroundServiceEnabled = useCallback(async (enabled) => {
+    backgroundServiceEnabledRef.current = enabled;
+    setBackgroundServiceEnabled(enabled);
+
+    try {
+      await AsyncStorage.setItem(BACKGROUND_WAKE_PREF_KEY, enabled ? 'true' : 'false');
+    } catch (error) {
+      console.warn('[App] Failed to persist background wake preference', error);
+    }
+
+    if (Platform.OS !== 'android') {
+      return;
+    }
+
+    if (!enabled) {
+      await setBackgroundVoiceTabActive(false);
+      await stopBackgroundWakeService();
+      return;
+    }
+
+    if (!isReady || !isListeningActiveRef.current) {
+      return;
+    }
+
+    const didStart = await startBackgroundWakeService();
+    if (!didStart) {
+      console.warn('[App] Failed to start background wake service after enabling toggle.');
+      return;
+    }
+
+    await setBackgroundVoiceTabActive(appState === 'active');
+  }, [isReady, appState]);
 
   const createNewChatSession = useCallback(async (isInitial = false) => {
     try {
@@ -777,6 +868,9 @@ function AppMain() {
     return () => {
       clearTimeout(restartTimerRef.current);
       stopListening();
+      if (Platform.OS === 'android' && !backgroundServiceEnabledRef.current) {
+        void stopBackgroundWakeService();
+      }
       if (silentSoundRef.current) silentSoundRef.current.unloadAsync();
     };
   }, []);
@@ -787,6 +881,55 @@ function AppMain() {
       startWakeWordListening();
     }
   }, [isReady]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'android' || !isReady) {
+      return;
+    }
+
+    const syncBackgroundWakeService = async () => {
+      const shouldRunBackgroundService = isListeningActiveRef.current && backgroundServiceEnabledRef.current;
+
+      if (!shouldRunBackgroundService) {
+        await stopBackgroundWakeService();
+        await setBackgroundVoiceTabActive(false);
+        return;
+      }
+
+      const didStart = await startBackgroundWakeService();
+      if (!didStart) {
+        console.warn('[App] Failed to start background wake service during lifecycle sync.');
+        return;
+      }
+
+      await setBackgroundVoiceTabActive(appState === 'active');
+    };
+
+    void syncBackgroundWakeService();
+  }, [appState, isReady, isListeningActive, backgroundServiceEnabled]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') {
+      return;
+    }
+
+    const subscription = addWakeWordListener((event) => {
+      if (appState !== 'active') {
+        return;
+      }
+
+      if (modeRef.current === 'command' || modeRef.current === 'thinking' || isStartingRef.current) {
+        return;
+      }
+
+      console.log('[App] Native wake event received:', event?.wakeWord || 'unknown');
+      triggerCommandPrompt();
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [appState, triggerCommandPrompt]);
 
   if (!user) return <AuthScreen />;
 
@@ -863,6 +1006,8 @@ function AppMain() {
         setTtsRate={setTtsRate}
         ttsVolume={ttsVolume}
         setTtsVolume={setTtsVolume}
+        backgroundServiceEnabled={backgroundServiceEnabled}
+        setBackgroundServiceEnabled={toggleBackgroundServiceEnabled}
         user={user}
         setIsNotesModalVisible={setIsNotesModalVisible}
         activeSessionId={activeSessionId}

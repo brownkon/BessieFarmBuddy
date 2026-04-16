@@ -14,6 +14,8 @@ const SettingsSection = ({
   setTtsVolume,
   ttsRate,
   setTtsRate,
+  backgroundServiceEnabled,
+  setBackgroundServiceEnabled,
   handleStopChat,
   toggleMenu,
   handleSignOut
@@ -65,6 +67,22 @@ const SettingsSection = ({
             value={isChatTtsEnabled}
             onValueChange={setIsChatTtsEnabled}
             thumbColor={isChatTtsEnabled ? '#2ecc71' : '#f4f3f4'}
+            trackColor={{ false: '#3e3e3e', true: '#10b981' }}
+          />
+        </View>
+      </View>
+
+      <View style={styles.drawerItem}>
+        <Text style={styles.settingLabel}>Background Process</Text>
+        <Text style={{ color: '#9ca3af', fontSize: 12, marginTop: 6, lineHeight: 17 }}>
+          Keep a foreground notification running so wake-word detection continues after you close the app.
+        </Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
+          <Text style={{ color: '#9ca3af', fontSize: 13 }}>{backgroundServiceEnabled ? 'Enabled' : 'Disabled'}</Text>
+          <Switch
+            value={backgroundServiceEnabled}
+            onValueChange={setBackgroundServiceEnabled}
+            thumbColor={backgroundServiceEnabled ? '#2ecc71' : '#f4f3f4'}
             trackColor={{ false: '#3e3e3e', true: '#10b981' }}
           />
         </View>

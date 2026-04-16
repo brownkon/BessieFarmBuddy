@@ -167,6 +167,16 @@ export const useNativeSpeech = (onWakeWord, onExit, onPartial, onResult, onSpeec
       if (event.error === 'no-speech' || event.error === 'aborted') {
         return;
       }
+
+      // Android emits transient client errors during recognizer handoff.
+      if (
+        event.error === 'client' &&
+        typeof event.message === 'string' &&
+        event.message.toLowerCase().includes('other client side errors')
+      ) {
+        return;
+      }
+
       console.error('[NativeSpeech] Error:', event.error, event.message);
       isRecognizingRef.current = false;
       setRecognizing(false);

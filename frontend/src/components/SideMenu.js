@@ -40,6 +40,8 @@ const SideMenu = ({
   setTtsRate,
   ttsVolume,
   setTtsVolume,
+  backgroundServiceEnabled,
+  setBackgroundServiceEnabled,
   user,
   setIsNotesModalVisible,
   activeSessionId,
@@ -339,6 +341,8 @@ const SideMenu = ({
                 setTtsVolume={setTtsVolume}
                 ttsRate={ttsRate}
                 setTtsRate={setTtsRate}
+                backgroundServiceEnabled={backgroundServiceEnabled}
+                setBackgroundServiceEnabled={setBackgroundServiceEnabled}
                 handleStopChat={handleStopChat}
                 toggleMenu={toggleMenu}
                 handleSignOut={handleSignOut}
