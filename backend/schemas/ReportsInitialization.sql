@@ -76,20 +76,13 @@ ALTER TABLE public.cow_data ENABLE ROW LEVEL SECURITY;
 -- RLS Policy: Members can read their organization's cow data
 CREATE POLICY "Members can read their cow data" ON public.cow_data
   FOR SELECT USING (
-    organization_id IN (
-      SELECT organization_id FROM public.profiles WHERE id = auth.uid()
-    )
+    organization_id = public.get_auth_user_org_id()
   );
 
 -- RLS Policy: Leaders can manage cow data
 CREATE POLICY "Leaders can manage cow data" ON public.cow_data
   FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles 
-      WHERE organization_id = public.cow_data.organization_id 
-      AND id = auth.uid() 
-      AND role = 'boss'
-    )
+    organization_id = public.get_auth_user_org_id() AND public.get_auth_user_role() = 'boss'
   );
 
 -- Farmer Notes Table
@@ -109,16 +102,12 @@ ALTER TABLE public.farmer_notes ENABLE ROW LEVEL SECURITY;
 -- RLS Policy: Users can view notes for their organization
 CREATE POLICY "Users can read their organization's notes" ON public.farmer_notes
   FOR SELECT USING (
-    organization_id IN (
-      SELECT organization_id FROM public.profiles WHERE id = auth.uid()
-    )
+    organization_id = public.get_auth_user_org_id()
   );
 
 -- RLS Policy: Users can insert their own notes
 CREATE POLICY "Users can insert their own notes" ON public.farmer_notes
   FOR INSERT WITH CHECK (
     user_id = auth.uid() AND
-    organization_id IN (
-      SELECT organization_id FROM public.profiles WHERE id = auth.uid()
-    )
+    organization_id = public.get_auth_user_org_id()
   );

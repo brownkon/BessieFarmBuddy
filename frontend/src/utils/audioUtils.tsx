@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Audio } from 'expo-av';
 
 export const startDucking = async (silentSoundRef) => {

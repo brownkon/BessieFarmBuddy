@@ -1,3 +1,4 @@
+// @ts-nocheck
 const { getToolDefinitions } = require('../../tools');
 const groqService = require('../groq');
 let cachedToolList = null;

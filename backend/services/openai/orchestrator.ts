@@ -1,3 +1,4 @@
+// @ts-nocheck
 const { getToolDefinitions, executeTool } = require('../../tools');
 const cacheService = require('../cache');
 

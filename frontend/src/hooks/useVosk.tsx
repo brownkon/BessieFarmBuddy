@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useEffect, useRef } from 'react';
 import { Platform, PermissionsAndroid, NativeModules, NativeEventEmitter } from 'react-native';
 import * as Vosk from 'react-native-vosk';

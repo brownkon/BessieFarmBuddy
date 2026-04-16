@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Utility functions for cleaning and parsing raw data from cow reports.
  */

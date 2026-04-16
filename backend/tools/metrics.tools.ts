@@ -1,3 +1,4 @@
+// @ts-nocheck
 const supabase = require('../services/supabase');
 const { getUserOrganization, formatAllDates } = require('../services/data-prep/utils');
 

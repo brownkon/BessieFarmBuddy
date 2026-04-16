@@ -33,15 +33,23 @@ const mockOpenAI = {
 };
 
 test('OpenAI Classifier: returns valid decision', async (t) => {
-  const decision = await classifyRequest(mockOpenAI, 'How is cow 77?', []);
-  assert.strictEqual(decision.should_call_tool, true);
-  assert.strictEqual(decision.tool_name, 'get_cow_info');
-  assert.strictEqual(decision.confidence, 0.9);
+  const groqService = require('../../groq');
+  const originalChat = groqService.chatCompletion;
+  groqService.chatCompletion = async () => JSON.stringify({ should_call_tool: true, tool_name: 'get_cow_info', confidence: 0.9 });
+  
+  try {
+    const decision = await classifyRequest(mockOpenAI, 'How is cow 77?', []);
+    assert.strictEqual(decision.should_call_tool, true);
+    assert.strictEqual(decision.tool_name, 'get_cow_info');
+    assert.strictEqual(decision.confidence, 0.9);
+  } finally {
+    groqService.chatCompletion = originalChat;
+  }
 });
 
 test('OpenAI Orchestrator: handle string response', async (t) => {
   const stream = await streamResponse({
-      openai: mockOpenAI,
+      client: mockOpenAI,
       messages: [{ role: 'user', content: 'Hello' }],
       needsTool: false
   });

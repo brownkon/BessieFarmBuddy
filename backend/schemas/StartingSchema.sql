@@ -78,12 +78,26 @@ CREATE POLICY "Users can manage own profile" ON public.profiles
 
 -- HELPER FUNCTIONS FOR RLS TO PREVENT INFINITE RECURSION
 CREATE OR REPLACE FUNCTION public.get_auth_user_org_id()
-RETURNS uuid LANGUAGE sql SECURITY DEFINER SET search_path = public
-AS $$ SELECT organization_id FROM public.profiles WHERE id = auth.uid(); $$;
+RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
+AS $$
+DECLARE
+  org_id uuid;
+BEGIN
+  SELECT organization_id INTO org_id FROM public.profiles WHERE id = auth.uid();
+  RETURN org_id;
+END;
+$$;
 
 CREATE OR REPLACE FUNCTION public.get_auth_user_role()
-RETURNS text LANGUAGE sql SECURITY DEFINER SET search_path = public
-AS $$ SELECT role FROM public.profiles WHERE id = auth.uid(); $$;
+RETURNS text LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
+AS $$
+DECLARE
+  user_role text;
+BEGIN
+  SELECT role INTO user_role FROM public.profiles WHERE id = auth.uid();
+  RETURN user_role;
+END;
+$$;
 
 -- 2. Organizations: Users can read organizations they belong to
 CREATE POLICY "Members can read their organizations" ON public.organizations

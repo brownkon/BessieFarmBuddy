@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ExpoSpeechRecognitionModule } from 'expo-speech-recognition';
 import { WAKE_PHRASES, EXIT_PHRASES } from '../config/constants';

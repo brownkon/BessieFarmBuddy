@@ -4,21 +4,23 @@ const start = async (retries = 2) => {
   try {
     const port = process.env.PORT || 3000;
     await fastify.listen({ port, host: '0.0.0.0' });
+    console.log(`✅ Server successfully listening on http://localhost:${port}`);
     fastify.log.info(`server listening on ${fastify.server.address().port}`);
   } catch (err) {
     if (err.code === 'EADDRINUSE' && retries > 0) {
-      fastify.log.warn(`Port 3000 in use, retrying in 1s... (${retries} left)`);
+      console.warn(`⏳ Port 3000 in use, retrying in 1s... (${retries} left)`);
+      fastify.log.warn(`Port 3000 in use...`);
       await new Promise(resolve => setTimeout(resolve, 1000));
       return start(retries - 1);
     }
+    console.error('❌ Failed to start server:', err);
     fastify.log.error(err);
     process.exit(1);
   }
 };
 
-if (require.main === module) {
-  start();
-}
+// Start immediately
+start();
 
 // Graceful shutdown
 const signals = ['SIGINT', 'SIGTERM'];

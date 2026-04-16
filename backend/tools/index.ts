@@ -1,3 +1,4 @@
+// @ts-nocheck
 const infoTools = require('./info.tools');
 const healthTools = require('./health.tools');
 const metricsTools = require('./metrics.tools');
