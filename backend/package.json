@@ -6,7 +6,7 @@
     "start": "node index.js",
     "dev": "nodemon index.js",
     "test": "node --test index.test.js",
-    "deploy:prod": "fly deploy"
+    "deploy:prod": "fly deploy --depot=false"
   },
   "keywords": [],
   "author": "",
