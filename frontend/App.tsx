@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { setupURLPolyfill } from 'react-native-url-polyfill';
 setupURLPolyfill();
 import React, { useState, useEffect, useRef, useCallback } from 'react';

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useRef, useEffect } from 'react';
 import { Audio } from 'expo-av';
 import { cleanupAudio } from '../utils/audioUtils';

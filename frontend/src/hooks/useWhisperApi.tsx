@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useRef } from 'react';
 
 export const useWhisperApi = (activeBackendUrl) => {
