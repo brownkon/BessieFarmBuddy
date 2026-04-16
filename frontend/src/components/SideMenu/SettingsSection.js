@@ -30,12 +30,14 @@ const SettingsSection = ({
       {orgData && (
         <View style={styles.drawerItem}>
           <Text style={styles.settingLabel}>Organization: {orgData.name}</Text>
-          <View style={{ backgroundColor: '#111827', padding: 10, borderRadius: 8, marginTop: 5, borderWidth: 1, borderColor: '#374151' }}>
-            <Text style={{ color: '#9ca3af', fontSize: 12 }}>Invite Code</Text>
-            <Text selectable style={{ color: '#34d399', fontSize: 18, fontWeight: 'bold', marginTop: 5, letterSpacing: 2 }}>
-              {orgData.accessCode || 'Pending Drop...'}
-            </Text>
-          </View>
+          {orgData.role === 'boss' && (
+            <View style={{ backgroundColor: '#111827', padding: 10, borderRadius: 8, marginTop: 5, borderWidth: 1, borderColor: '#374151' }}>
+              <Text style={{ color: '#9ca3af', fontSize: 12 }}>Invite Code</Text>
+              <Text selectable style={{ color: '#34d399', fontSize: 18, fontWeight: 'bold', marginTop: 5, letterSpacing: 2 }}>
+                {orgData.accessCode || 'Pending Drop...'}
+              </Text>
+            </View>
+          )}
         </View>
       )}
 

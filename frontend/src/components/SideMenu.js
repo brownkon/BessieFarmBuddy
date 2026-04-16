@@ -269,27 +269,36 @@ const SideMenu = ({
   async function fetchUserOrg() {
     try {
       const { data: memberData, error } = await supabase
-        .from('organization_members')
-        .select(`
-          role,
-          organizations (
-            name,
-            access_code
-          )
-        `)
-        .eq('user_id', user.id)
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
         .single();
 
-      if (!error && memberData && memberData.role === 'boss') {
-        setOrgData({
-          name: memberData.organizations.name,
-          accessCode: memberData.organizations.access_code
-        });
-      } else {
-        setOrgData(null);
+      console.log('fetchUserOrg memberData:', { memberData, error });
+
+      if (!error && memberData && memberData.organization_id) {
+        const { data: orgInfo, error: orgError } = await supabase
+          .from('organizations')
+          .select('*')
+          .eq('id', memberData.organization_id)
+          .single();
+        
+        console.log('fetchUserOrg orgInfo:', { orgInfo, orgError });
+
+        if (!orgError && orgInfo) {
+          setOrgData({
+            name: orgInfo.name,
+            accessCode: orgInfo.access_code,
+            role: memberData.role
+          });
+          return;
+        }
       }
+      
+      setOrgData(null);
     } catch (err) {
       console.log('Error fetching org:', err);
+      setOrgData(null);
     }
   }
 

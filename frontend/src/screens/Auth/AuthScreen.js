@@ -11,8 +11,10 @@ import {
   Alert,
 } from 'react-native';
 import { supabase } from '../../services/supabase';
+import { useAuth } from '../../context/AuthContext';
 
 export default function AuthScreen() {
+  const { setAuthLocked } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -32,14 +34,17 @@ export default function AuthScreen() {
     setLoading(true);
     try {
       if (isSignUp) {
+        setAuthLocked(true);
         if (orgMode === 'create' && (!orgName || !orgAddress)) {
           Alert.alert('Error', 'Please provide both an organization name and address');
           setLoading(false);
+          setAuthLocked(false);
           return;
         }
         if (orgMode === 'join' && !accessCode) {
           Alert.alert('Error', 'Please provide an access code');
           setLoading(false);
+          setAuthLocked(false);
           return;
         }
 
@@ -52,6 +57,7 @@ export default function AuthScreen() {
           if (!preValRes.ok) {
             Alert.alert('Error', 'Invalid access code or organization not found.');
             setLoading(false);
+            setAuthLocked(false);
             return;
           }
         }
@@ -66,6 +72,7 @@ export default function AuthScreen() {
             'An account with this email already exists. Please sign in instead, or use a different email.'
           );
           setLoading(false);
+          setAuthLocked(false);
           return;
         }
 
@@ -78,6 +85,7 @@ export default function AuthScreen() {
               'An account with this email already exists. Please sign in instead, or use a different email.'
             );
             setLoading(false);
+            setAuthLocked(false);
             return;
           }
           throw error;
@@ -107,6 +115,7 @@ export default function AuthScreen() {
             'Your Supabase project has email confirmation enabled. Please disable it in Supabase Dashboard → Authentication → Providers → Email → "Confirm email" toggle, then try again.'
           );
           setLoading(false);
+          setAuthLocked(false);
           return;
         }
 
@@ -155,6 +164,9 @@ export default function AuthScreen() {
     } catch (error) {
       Alert.alert('Authentication Error', error.message);
     } finally {
+      if (isSignUp) {
+        setAuthLocked(false);
+      }
       setLoading(false);
     }
   }
