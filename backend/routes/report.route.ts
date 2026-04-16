@@ -1,16 +1,16 @@
+import { authenticate } from '../middleware/auth.middleware';
+import reportService from '../services/report';
+
 /**
  * Report API Routes
  * Manages report preferences and manual report triggering.
  * Registered at prefix /api/report in app.js
  */
 
-const { authenticate } = require('../middleware/auth.middleware');
-const reportService = require('../services/report');
-
-async function reportRoutes(fastify, options) {
+async function reportRoutes(fastify: any, options: any) {
 
   // GET /api/report/preferences — Get user's report preferences
-  fastify.get('/preferences', { preHandler: [authenticate] }, async (request, reply) => {
+  fastify.get('/preferences', { preHandler: [authenticate] }, async (request: any, reply: any) => {
     try {
       const user = request.user;
       fastify.log.info({ userId: user.id }, '[Report] Fetching preferences');
@@ -32,17 +32,17 @@ async function reportRoutes(fastify, options) {
       }
 
       return { preferences: prefs };
-    } catch (error) {
+    } catch (error: any) {
       fastify.log.error({ err: error.message, stack: error.stack }, '[Report] GET preferences failed');
       return reply.code(500).send({ error: 'Failed to fetch report preferences' });
     }
   });
 
   // PUT /api/report/preferences — Save/update report preferences
-  fastify.put('/preferences', { preHandler: [authenticate] }, async (request, reply) => {
+  fastify.put('/preferences', { preHandler: [authenticate] }, async (request: any, reply: any) => {
     try {
       const user = request.user;
-      const body = request.body || {};
+      const body = (request.body as any) || {};
       fastify.log.info({ userId: user.id, body }, '[Report] Saving preferences');
 
       const { delivery_method, delivery_destination, schedule_enabled, schedule_time, timezone } = body;
@@ -74,14 +74,14 @@ async function reportRoutes(fastify, options) {
 
       fastify.log.info({ userId: user.id }, '[Report] Preferences saved successfully');
       return { success: true };
-    } catch (error) {
+    } catch (error: any) {
       fastify.log.error({ err: error.message, stack: error.stack }, '[Report] PUT preferences failed');
       return reply.code(500).send({ error: 'Failed to save report preferences' });
     }
   });
 
   // POST /api/report/generate — Manually trigger a report
-  fastify.post('/generate', { preHandler: [authenticate] }, async (request, reply) => {
+  fastify.post('/generate', { preHandler: [authenticate] }, async (request: any, reply: any) => {
     try {
       const user = request.user;
       fastify.log.info({ userId: user.id }, '[Report] Manual generate triggered');
@@ -93,7 +93,7 @@ async function reportRoutes(fastify, options) {
       const timezone = prefs?.timezone || 'America/Denver';
 
       // Rate limit check
-      const sendCount = await reportService.getTodaySendCount(user.id, timezone);
+      const sendCount = await (reportService.getTodaySendCount as any)(user.id, timezone);
       if (sendCount >= reportService.MAX_DAILY_SENDS) {
         return reply.code(429).send({
           error: `You've reached your daily report limit (${reportService.MAX_DAILY_SENDS} per day). Try again tomorrow.`,
@@ -130,11 +130,11 @@ async function reportRoutes(fastify, options) {
         sends_today: sendCount + 1,
         max_sends: reportService.MAX_DAILY_SENDS,
       };
-    } catch (error) {
+    } catch (error: any) {
       fastify.log.error({ err: error.message, stack: error.stack }, '[Report] POST generate failed');
       return reply.code(500).send({ error: 'Failed to generate report' });
     }
   });
 }
 
-module.exports = reportRoutes;
+export default reportRoutes;

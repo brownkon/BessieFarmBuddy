@@ -1,12 +1,12 @@
+import { Resend } from 'resend';
+import { buildEmailHtml } from './template';
+
 /**
  * Report Delivery Service
  * Handles sending reports via Email (Resend).
  */
 
-const { Resend } = require('resend');
-const { buildEmailHtml } = require('./template');
-
-let resendClient = null;
+let resendClient: Resend | null = null;
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const FROM_EMAIL = process.env.REPORT_FROM_EMAIL || 'reports@bessie.farm';
@@ -26,7 +26,7 @@ if (RESEND_API_KEY) {
  * @param {string} dateStr - Human-readable date string.
  * @returns {Promise<{success: boolean, error?: string}>}
  */
-async function sendEmail(toEmail, reportData, userName, dateStr) {
+export async function sendEmail(toEmail: string, reportData: any, userName: string, dateStr: string) {
   if (!resendClient) {
     return { success: false, error: 'Email service not configured (missing RESEND_API_KEY).' };
   }
@@ -43,12 +43,12 @@ async function sendEmail(toEmail, reportData, userName, dateStr) {
 
     if (error) {
       console.error('[Report/Delivery] Resend error:', error);
-      return { success: false, error: error.message || 'Email send failed.' };
+      return { success: false, error: (error as any).message || 'Email send failed.' };
     }
 
     console.log(`[Report/Delivery] Email sent to ${toEmail}`);
     return { success: true };
-  } catch (err) {
+  } catch (err: any) {
     console.error('[Report/Delivery] Email delivery error:', err.message);
     return { success: false, error: err.message };
   }
@@ -63,11 +63,11 @@ async function sendEmail(toEmail, reportData, userName, dateStr) {
  * @param {string} dateStr - Formatted date.
  * @returns {Promise<{success: boolean, error?: string}>}
  */
-async function deliverReport(method, destination, reportData, userName, dateStr) {
+export async function deliverReport(method: string, destination: string, reportData: any, userName: string, dateStr: string) {
   if (method === 'email') {
     return sendEmail(destination, reportData, userName, dateStr);
   }
   return { success: false, error: `Daily reports are currently disabled or method ${method} is invalid.` };
 }
 
-module.exports = { sendEmail, deliverReport };
+export default { sendEmail, deliverReport };

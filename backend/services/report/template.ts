@@ -3,6 +3,13 @@
  * Generates a clean, farmer-friendly report layout.
  */
 
+interface ReportParams {
+  summary: string;
+  keyTopics: string[];
+  notes: string[];
+  actionItems: string[];
+}
+
 /**
  * Builds an HTML email body for the daily report.
  * @param {object} reportData - The structured report data from the LLM.
@@ -14,7 +21,7 @@
  * @param {string} dateStr - Formatted date string (e.g., "April 14, 2026").
  * @returns {string} HTML string.
  */
-function buildEmailHtml({ summary, keyTopics, notes, actionItems }, userName, dateStr) {
+export function buildEmailHtml({ summary, keyTopics, notes, actionItems }: ReportParams, userName: string, dateStr: string): string {
   const topicsList = (keyTopics || [])
     .map(t => `<li style="margin-bottom:6px;color:#e5e7eb;">${escapeHtml(t)}</li>`)
     .join('');
@@ -78,7 +85,7 @@ function buildEmailHtml({ summary, keyTopics, notes, actionItems }, userName, da
 }
 
 /** Simple HTML escape to prevent injection in email templates. */
-function escapeHtml(str) {
+function escapeHtml(str: string): string {
   if (!str) return '';
   return str
     .replace(/&/g, '&amp;')
@@ -87,4 +94,4 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
-module.exports = { buildEmailHtml };
+export default buildEmailHtml;

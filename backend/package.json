@@ -6,7 +6,7 @@
     "start": "node dist/index.js",
     "dev": "tsx watch index.ts",
     "build": "tsc",
-    "test": "tsx --test index.test.ts",
+    "test": "tsx --test tests/*.test.ts",
     "deploy:prod": "fly deploy --depot=false"
   },
   "keywords": [],

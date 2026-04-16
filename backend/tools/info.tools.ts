@@ -1,7 +1,7 @@
-const { formatAllDates } = require('../services/data-prep/utils');
-const supabase = require('../services/supabase');
+import { formatAllDates } from '../services/data-prep/utils';
+import supabase from '../services/supabase';
 
-const cowTools = {
+export const get_cow_info = {
   definition: {
     type: "function",
     function: {
@@ -16,9 +16,9 @@ const cowTools = {
       }
     }
   },
-  async handler({ animalNumber }) {
+  async handler({ animalNumber }: { animalNumber: string }) {
     if (!supabase) return "Supabase not initialized.";
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('cow_data')
       .select('*')
       .eq('animal_number', animalNumber.toString())
@@ -34,7 +34,7 @@ const cowTools = {
   }
 };
 
-const groupStatus = {
+export const get_group_status = {
   definition: {
     type: "function",
     function: {
@@ -49,9 +49,9 @@ const groupStatus = {
       }
     }
   },
-  async handler({ groupName }) {
+  async handler({ groupName }: { groupName: string }) {
     if (!supabase) return "Supabase not initialized.";
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('cow_data')
       .select('animal_number, sick_chance, day_production')
       .ilike('cow_group', `%${groupName}%`);
@@ -59,8 +59,8 @@ const groupStatus = {
     if (error) return `Error fetching group status: ${error.message}`;
     if (data.length === 0) return `No cows found in group "${groupName}".`;
 
-    const avgProduct = data.reduce((acc, curr) => acc + (curr.day_production || 0), 0) / data.length;
-    const sickCount = data.filter(c => c.sick_chance > 50).length;
+    const avgProduct = data.reduce((acc: number, curr: any) => acc + (curr.day_production || 0), 0) / data.length;
+    const sickCount = data.filter((c: any) => c.sick_chance > 50).length;
 
     return formatAllDates({
       group: groupName,
@@ -69,9 +69,4 @@ const groupStatus = {
       cows_at_risk: sickCount
     });
   }
-};
-
-module.exports = {
-  get_cow_info: cowTools,
-  get_group_status: groupStatus
 };

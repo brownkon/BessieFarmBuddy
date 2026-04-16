@@ -4,11 +4,11 @@
  * delivery abstraction, rate limiting, and scheduler logic.
  */
 
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
 
 // ── Template Tests ──
-const { buildEmailHtml } = require('../services/report/template');
+import { buildEmailHtml } from '../services/report/template';
 
 describe('Report Template', () => {
   const sampleReport = {
@@ -58,7 +58,7 @@ describe('Report Template', () => {
 });
 
 // ── Report Service Logic Tests ──
-const { buildLlmPrompt, MAX_DAILY_SENDS } = require('../services/report');
+import { buildLlmPrompt, MAX_DAILY_SENDS } from '../services/report';
 
 describe('Report Service', () => {
   describe('buildLlmPrompt', () => {
@@ -119,7 +119,7 @@ describe('Report Preferences Normalization', () => {
    * Simulate what getPreferences does with a row from profiles.
    * Mirrors the normalization block in services/report/index.js.
    */
-  function normalizeProfileRow(row, userId) {
+  function normalizeProfileRow(row: any, userId: string) {
     if (!row) return null;
     return {
       user_id:              userId,
@@ -135,7 +135,7 @@ describe('Report Preferences Normalization', () => {
    * Simulate what savePreferences writes to profiles.
    * Mirrors the update payload in services/report/index.js.
    */
-  function buildSavePayload(prefs) {
+  function buildSavePayload(prefs: any) {
     return {
       report_delivery_method:      prefs.delivery_method      ?? 'email',
       report_delivery_destination: prefs.delivery_destination ?? null,
@@ -157,12 +157,13 @@ describe('Report Preferences Normalization', () => {
     };
     const prefs = normalizeProfileRow(row, userId);
 
-    assert.strictEqual(prefs.user_id,              userId);
-    assert.strictEqual(prefs.delivery_method,      'email');
-    assert.strictEqual(prefs.delivery_destination, 'farmer@example.com');
-    assert.strictEqual(prefs.schedule_enabled,     true);
-    assert.strictEqual(prefs.schedule_time,        '17:00');
-    assert.strictEqual(prefs.timezone,             'America/Chicago');
+    assert.ok(prefs);
+    assert.strictEqual(prefs!.user_id,              userId);
+    assert.strictEqual(prefs!.delivery_method,      'email');
+    assert.strictEqual(prefs!.delivery_destination, 'farmer@example.com');
+    assert.strictEqual(prefs!.schedule_enabled,     true);
+    assert.strictEqual(prefs!.schedule_time,        '17:00');
+    assert.strictEqual(prefs!.timezone,             'America/Chicago');
   });
 
   it('should apply defaults when profile columns are null', () => {
@@ -175,10 +176,11 @@ describe('Report Preferences Normalization', () => {
     };
     const prefs = normalizeProfileRow(row, userId);
 
-    assert.strictEqual(prefs.delivery_method,  'email');
-    assert.strictEqual(prefs.schedule_enabled, true);
-    assert.strictEqual(prefs.schedule_time,    '18:00');
-    assert.strictEqual(prefs.timezone,         'America/Denver');
+    assert.ok(prefs);
+    assert.strictEqual(prefs!.delivery_method,  'email');
+    assert.strictEqual(prefs!.schedule_enabled, true);
+    assert.strictEqual(prefs!.schedule_time,    '18:00');
+    assert.strictEqual(prefs!.timezone,         'America/Denver');
   });
 
   it('should return null when row is null', () => {
@@ -213,7 +215,7 @@ describe('Report Preferences Normalization', () => {
 });
 
 // ── Scheduler Logic Tests ──
-const { isTimeToSend } = require('../services/report/scheduler');
+import { isTimeToSend } from '../services/report/scheduler';
 
 describe('Report Scheduler', () => {
   describe('isTimeToSend', () => {
@@ -251,7 +253,7 @@ describe('Report Scheduler', () => {
     it('should default to America/Denver when timezone is null', () => {
       const now = new Date();
       // Should not throw
-      const result = isTimeToSend(now, '99:99', null);
+      const result = isTimeToSend(now, '99:99', null as any);
       assert.strictEqual(result, false, 'Should not match impossible time');
     });
   });

@@ -1,18 +1,18 @@
-require('dotenv').config();
-const supabase = require('../supabase');
-const openaiService = require('../openai/index');
+import 'dotenv/config';
+import supabase from '../supabase';
+import { openaiService } from '../openai/index';
 
 /**
  * Script to generate a daily report for an organization.
  * Fetches all notes from the current day and uses an LLM to summarize them.
  */
-async function generateDailyReport(organizationId) {
+export async function generateDailyReport(organizationId: string) {
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     // Fetch notes recorded today for the given organization
-    const { data: notes, error: notesError } = await supabase
+    const { data: notes, error: notesError } = await (supabase as any)
       .from('farmer_notes')
       .select('content, animal_number, created_at, user_id')
       .eq('organization_id', organizationId)
@@ -26,7 +26,7 @@ async function generateDailyReport(organizationId) {
     }
 
     // Prepare context for the LLM
-    const notesText = notes.map(n => 
+    const notesText = notes.map((n: any) => 
       `- Note for cow ${n.animal_number || 'General'}: "${n.content}" (recorded at ${new Date(n.created_at).toLocaleTimeString()})`
     ).join('\n');
 
@@ -41,7 +41,7 @@ async function generateDailyReport(organizationId) {
     
     // Future expansion: Save to a `daily_reports` table or email it.
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error generating daily report:', error.message);
   }
 }
@@ -55,5 +55,3 @@ if (require.main === module) {
     generateDailyReport(args[0]).then(() => process.exit(0));
   }
 }
-
-module.exports = { generateDailyReport };

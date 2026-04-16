@@ -1,21 +1,21 @@
+import cron from 'node-cron';
+import supabase from '../supabase';
+import { generateAndDeliver } from './index';
+
 /**
  * Report Scheduler
  * Uses node-cron to check every minute for users whose scheduled
  * report time matches the current time (adjusted for timezone).
  */
 
-const cron = require('node-cron');
-const supabase = require('../supabase');
-const { generateAndDeliver } = require('./index');
-
-let cronJob = null;
+let cronJob: any = null;
 
 /**
  * Start the report scheduler.
  * Runs every minute, checks for users whose schedule_time (in their timezone)
  * matches the current HH:MM.
  */
-function startScheduler() {
+export function startScheduler() {
   if (!supabase) {
     console.warn('[Report/Scheduler] Supabase not initialized — scheduler disabled.');
     return;
@@ -25,7 +25,7 @@ function startScheduler() {
   cronJob = cron.schedule('* * * * *', async () => {
     try {
       await processScheduledReports();
-    } catch (err) {
+    } catch (err: any) {
       console.error('[Report/Scheduler] Unexpected error:', err.message);
     }
   });
@@ -36,9 +36,10 @@ function startScheduler() {
 /**
  * Process all users whose report time matches now.
  */
-async function processScheduledReports() {
+export async function processScheduledReports() {
+  if (!supabase) return;
   // Query profiles for users who have scheduling enabled
-  const { data: rows, error } = await supabase
+  const { data: rows, error } = await (supabase as any)
     .from('profiles')
     .select('id, report_delivery_method, report_delivery_destination, report_schedule_enabled, report_schedule_time, report_timezone')
     .eq('report_schedule_enabled', true)
@@ -75,7 +76,7 @@ async function processScheduledReports() {
         } else {
           console.error(`[Report/Scheduler] Report failed for user ${pref.user_id}:`, result.error);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error(`[Report/Scheduler] Error for user ${pref.user_id}:`, err.message);
       }
     }
@@ -90,7 +91,7 @@ async function processScheduledReports() {
  * @param {string} timezone - IANA timezone string.
  * @returns {boolean}
  */
-function isTimeToSend(now, scheduleTime, timezone) {
+export function isTimeToSend(now: Date, scheduleTime: string, timezone: string): boolean {
   try {
     const tz = timezone || 'America/Denver';
     const formatter = new Intl.DateTimeFormat('en-US', {
@@ -109,7 +110,7 @@ function isTimeToSend(now, scheduleTime, timezone) {
     const targetTime = scheduleTime?.substring(0, 5) || '18:00';
 
     return currentTime === targetTime;
-  } catch (err) {
+  } catch (err: any) {
     console.error('[Report/Scheduler] Timezone error:', err.message);
     return false;
   }
@@ -118,7 +119,7 @@ function isTimeToSend(now, scheduleTime, timezone) {
 /**
  * Stop the scheduler (for cleanup on server shutdown).
  */
-function stopScheduler() {
+export function stopScheduler() {
   if (cronJob) {
     cronJob.stop();
     cronJob = null;
@@ -126,4 +127,4 @@ function stopScheduler() {
   }
 }
 
-module.exports = { startScheduler, stopScheduler, isTimeToSend, processScheduledReports };
+export default { startScheduler, stopScheduler, isTimeToSend, processScheduledReports };

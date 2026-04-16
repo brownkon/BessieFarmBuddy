@@ -1,8 +1,7 @@
-// @ts-nocheck
-const supabase = require('../services/supabase');
-const { getUserOrganization, formatAllDates } = require('../services/data-prep/utils');
+import supabase from '../services/supabase';
+import { getUserOrganization, formatAllDates } from '../services/data-prep/utils';
 
-const getSpecificMetric = {
+export const get_specific_metric = {
   definition: {
     type: "function",
     function: {
@@ -17,11 +16,11 @@ const getSpecificMetric = {
       }
     }
   },
-  async handler({ metric_name }, context = {}) {
+  async handler({ metric_name }: { metric_name: string }, context: any = {}) {
     if (!supabase) return "Supabase not initialized.";
     const orgId = context.userId ? await getUserOrganization(context.userId) : null;
 
-    let query = supabase.from('cow_data').select(`animal_number, ${metric_name}`);
+    let query = (supabase as any).from('cow_data').select(`animal_number, ${metric_name}`);
     if (orgId) query = query.eq('organization_id', orgId);
 
     const { data, error } = await query;
@@ -32,13 +31,9 @@ const getSpecificMetric = {
     // Automatically format any date strings found in the results
     const formattedData = formatAllDates(data);
 
-    return formattedData.map(c => {
+    return formattedData.map((c: any) => {
       const val = c[metric_name];
       return `${c.animal_number}: ${val !== null && val !== undefined ? val : 'N/A'}`;
     }).join('\n');
   }
-};
-
-module.exports = {
-  get_specific_metric: getSpecificMetric
 };

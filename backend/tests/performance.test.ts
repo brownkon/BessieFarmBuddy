@@ -1,5 +1,5 @@
-require('dotenv').config();
-const openaiService = require('../services/openai');
+import 'dotenv/config';
+import { openaiService } from '../services/openai';
 
 async function testPerformance() {
     console.log("--- Starting Full Performance Test ---");
@@ -12,7 +12,7 @@ async function testPerformance() {
     ];
 
     try {
-        const stream = await openaiService.getChatStream({
+        const stream = await (openaiService as any).getChatStream({
             text,
             history,
             language: 'en'
@@ -21,7 +21,7 @@ async function testPerformance() {
         console.log(`[Full Test] getChatStream call returned in ${Date.now() - startTime}ms`);
         
         let firstChunkTime = null;
-        for await (const chunk of stream) {
+        for await (const chunk of (stream as any)) {
             if (!firstChunkTime) {
                 firstChunkTime = Date.now();
                 console.log(`[Full Test] FIRST CHUNK received in ${firstChunkTime - startTime}ms from total start`);
@@ -30,8 +30,8 @@ async function testPerformance() {
         
         console.log(`[Full Test] Final response finished in ${Date.now() - startTime}ms`);
 
-    } catch (err) {
-        console.error("Test failed:", err);
+    } catch (err: any) {
+        console.error("Test failed:", err?.message || err);
     }
 }
 

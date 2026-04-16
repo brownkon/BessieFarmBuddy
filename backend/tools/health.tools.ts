@@ -1,7 +1,7 @@
-const { formatAllDates } = require('../services/data-prep/utils');
-const supabase = require('../services/supabase');
+import { formatAllDates } from '../services/data-prep/utils';
+import supabase from '../services/supabase';
 
-const healthAlerts = {
+export const get_health_alerts = {
   definition: {
     type: "function",
     function: {
@@ -12,7 +12,7 @@ const healthAlerts = {
   },
   async handler() {
     if (!supabase) return "Supabase not initialized.";
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('cow_data')
       .select('animal_number, sick_chance, sick_change_status, sensors')
       .gt('sick_chance', 50)
@@ -24,8 +24,4 @@ const healthAlerts = {
     }
     return data;
   }
-};
-
-module.exports = {
-  get_health_alerts: healthAlerts
 };

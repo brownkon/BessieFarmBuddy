@@ -1,21 +1,21 @@
-const fs = require('fs-extra');
-const path = require('path');
-const { parse } = require('csv-parse/sync');
-const supabase = require('../supabase');
-const { cleanNumber, mapSensorData, formatDate } = require('./cleaner.js');
+import fs from 'fs-extra';
+import path from 'path';
+import { parse } from 'csv-parse/sync';
+import supabase from '../supabase';
+import { cleanNumber, mapSensorData, formatDate } from './cleaner';
 
 const DATA_DIR = path.join(__dirname, '../../../data/CSV');
 
 /**
  * Main service to process cow reports and sync them to Supabase.
  */
-class DataProcessor {
+export class DataProcessor {
   /**
    * Fetches the first organization ID to use as a default for the "one farmer" setup.
    */
-  async getDefaultOrganizationId() {
+  async getDefaultOrganizationId(): Promise<string | null> {
     if (!supabase) return null;
-    const { data, error } = await supabase.from('organizations').select('id').limit(1);
+    const { data, error } = await (supabase as any).from('organizations').select('id').limit(1);
     if (error) {
       console.error('[DataProcessor] Error fetching organization:', error.message);
       return null;
@@ -26,7 +26,7 @@ class DataProcessor {
   /**
    * Parses a single CSV file and returns records as a Map.
    */
-  async parseFile(filePath, orgId) {
+  async parseFile(filePath: string, orgId: string): Promise<Map<string, any>> {
     console.log(`[DataProcessor] Parsing file: ${path.basename(filePath)}`);
     const content = await fs.readFile(filePath, 'utf-8');
     
@@ -44,8 +44,8 @@ class DataProcessor {
 
     // Parse CSV with duplicate column handling
     const records = parse(content, {
-      columns: header => {
-        const counts = {};
+      columns: (header: string[]) => {
+        const counts: Record<string, number> = {};
         return header.map(col => {
           const name = col.trim();
           counts[name] = (counts[name] || 0) + 1;
@@ -58,13 +58,13 @@ class DataProcessor {
       bom: true
     });
 
-    const cowMap = new Map();
+    const cowMap = new Map<string, any>();
 
-    records.forEach(record => {
+    records.forEach((record: any) => {
       const animalNumber = (record['Animal Number'] || record['Animal Tag Id'] || '').trim();
       
       // Skip sum/avg lines and internal markers
-      if (!animalNumber || isNaN(animalNumber) || animalNumber === '0' || animalNumber === 'SUM' || animalNumber === 'AVG') {
+      if (!animalNumber || isNaN(animalNumber as any) || animalNumber === '0' || animalNumber === 'SUM' || animalNumber === 'AVG') {
         return;
       }
 
@@ -149,12 +149,12 @@ class DataProcessor {
   /**
    * Merges two cow data objects, keeping the most informative values.
    */
-  mergeCowData(existing, incoming) {
+  mergeCowData(existing: any, incoming: any): any {
     const merged = { ...existing };
     for (const [key, value] of Object.entries(incoming)) {
       if (value !== null && value !== undefined) {
         if ((key === 'sensors' || key === 'severeness') && merged[key] && typeof value === 'object') {
-          merged[key] = { ...merged[key], ...value };
+          merged[key] = { ...merged[key], ...value as object };
         } else {
           merged[key] = value;
         }
@@ -166,7 +166,7 @@ class DataProcessor {
   /**
    * Scans the data directory and processes all CSV files, merging them before sync.
    */
-  async syncAll() {
+  async syncAll(): Promise<void> {
     if (!supabase) {
       console.error('[DataProcessor] Supabase client not initialized.');
       return;
@@ -184,7 +184,7 @@ class DataProcessor {
         f.endsWith('.csv') && !f.toLowerCase().includes('historical')
       );
 
-      const masterCowMap = new Map();
+      const masterCowMap = new Map<string, any>();
 
       for (const file of csvFiles) {
         const filePath = path.join(DATA_DIR, file);
@@ -208,7 +208,7 @@ class DataProcessor {
       console.log(`[DataProcessor] Syncing ${allCows.length} unique cows to Supabase...`);
 
       // Supabase Upsert
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('cow_data')
         .upsert(allCows, { onConflict: 'organization_id, animal_number' });
 
@@ -217,10 +217,10 @@ class DataProcessor {
       } else {
         console.log(`[DataProcessor] Sync complete. Successfully upserted ${allCows.length} records.`);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('[DataProcessor] Sync failed:', err.message);
     }
   }
 }
 
-module.exports = new DataProcessor();
+export default new DataProcessor();

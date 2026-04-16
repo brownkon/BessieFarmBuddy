@@ -1,13 +1,16 @@
+import supabase from '../supabase';
+import { deliverReport } from './delivery';
+import OpenAI from 'openai';
+import Groq from 'groq-sdk';
+import 'dotenv/config';
+
 /**
  * Report Generation Service
  * Aggregates daily chat messages and farmer notes, then uses the LLM
  * to produce a structured summary with action items.
  */
 
-const supabase = require('../supabase');
-const { deliverReport } = require('./delivery');
-
-const MAX_DAILY_SENDS = 3;
+export const MAX_DAILY_SENDS = 3;
 const SESSION_CONTEXT_LOOKBACK = 5; // messages from prior days for cross-day sessions
 
 /**
@@ -15,14 +18,13 @@ const SESSION_CONTEXT_LOOKBACK = 5; // messages from prior days for cross-day se
  * @param {string} timezone - IANA timezone string (e.g. "America/Denver").
  * @returns {{ startOfDay: string, endOfDay: string }} ISO strings in UTC.
  */
-function getDayBoundaries(timezone) {
+export function getDayBoundaries(timezone: string) {
   const now = new Date();
   // Format the current date in the user's timezone to get YYYY-MM-DD
   const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' });
   const localDate = formatter.format(now); // e.g., "2026-04-14"
 
   // Create start/end boundaries by parsing in the user's timezone
-  // Approximate: build a Date for midnight local time
   const startLocal = new Date(`${localDate}T00:00:00`);
   const endLocal = new Date(`${localDate}T23:59:59`);
 
@@ -42,7 +44,7 @@ function getDayBoundaries(timezone) {
  * @param {string} timezone
  * @returns {number} offset in milliseconds
  */
-function getTimezoneOffsetMs(timezone) {
+export function getTimezoneOffsetMs(timezone: string): number {
   const now = new Date();
   const utcStr = now.toLocaleString('en-US', { timeZone: 'UTC' });
   const localStr = now.toLocaleString('en-US', { timeZone: timezone });
@@ -55,12 +57,12 @@ function getTimezoneOffsetMs(timezone) {
  * @param {string} timezone
  * @returns {Promise<number>}
  */
-async function getTodaySendCount(userId, timezone) {
+export async function getTodaySendCount(userId: string, timezone: string): Promise<number> {
   if (!supabase) return 0;
 
   const { startOfDay, endOfDay } = getDayBoundaries(timezone);
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('report_send_log')
     .select('id', { count: 'exact' })
     .eq('user_id', userId)
@@ -81,10 +83,10 @@ async function getTodaySendCount(userId, timezone) {
  * @param {string} method
  * @param {boolean} success
  */
-async function logReportSend(userId, method, success) {
+export async function logReportSend(userId: string, method: string, success: boolean) {
   if (!supabase) return;
 
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from('report_send_log')
     .insert({ user_id: userId, delivery_method: method, success });
 
@@ -98,15 +100,15 @@ async function logReportSend(userId, method, success) {
  * For sessions that span multiple days, includes prior context.
  * @param {string} userId
  * @param {string} timezone
- * @returns {Promise<{ chats: object[], notes: object[], sessionContext: object[] }>}
+ * @returns {Promise<{ chats: any[], notes: any[], sessionContext: any[] }>}
  */
-async function aggregateDailyData(userId, timezone) {
+export async function aggregateDailyData(userId: string, timezone: string) {
   if (!supabase) return { chats: [], notes: [], sessionContext: [] };
 
   const { startOfDay, endOfDay } = getDayBoundaries(timezone);
 
   // 1. Get today's chat messages
-  const { data: todayChats, error: chatErr } = await supabase
+  const { data: todayChats, error: chatErr } = await (supabase as any)
     .from('chats')
     .select('prompt, response, timestamp, session_id, tools_used')
     .eq('user_id', userId)
@@ -121,12 +123,12 @@ async function aggregateDailyData(userId, timezone) {
   const chats = todayChats || [];
 
   // 2. Find sessions that started before today (cross-day context)
-  const sessionIds = [...new Set(chats.map(c => c.session_id).filter(Boolean))];
-  let sessionContext = [];
+  const sessionIds = [...new Set(chats.map((c: any) => c.session_id).filter(Boolean))];
+  let sessionContext: any[] = [];
 
   if (sessionIds.length > 0) {
     // Check which sessions have messages from before today
-    const { data: priorMessages, error: priorErr } = await supabase
+    const { data: priorMessages, error: priorErr } = await (supabase as any)
       .from('chats')
       .select('prompt, response, timestamp, session_id')
       .in('session_id', sessionIds)
@@ -140,7 +142,7 @@ async function aggregateDailyData(userId, timezone) {
   }
 
   // 3. Get today's farmer notes
-  const { data: todayNotes, error: noteErr } = await supabase
+  const { data: todayNotes, error: noteErr } = await (supabase as any)
     .from('farmer_notes')
     .select('content, animal_number, created_at')
     .eq('user_id', userId)
@@ -164,7 +166,7 @@ async function aggregateDailyData(userId, timezone) {
  * @param {object} dailyData - From aggregateDailyData.
  * @returns {string} The prompt text.
  */
-function buildLlmPrompt(dailyData) {
+export function buildLlmPrompt(dailyData: { chats: any[], notes: any[], sessionContext: any[] }) {
   const { chats, notes, sessionContext } = dailyData;
 
   let prompt = `You are a farm management assistant. Generate a concise daily report from today's activity.
@@ -220,13 +222,9 @@ Rules:
  * @param {string} prompt
  * @returns {Promise<object>} Parsed report data.
  */
-async function summarizeWithLlm(prompt) {
-  // Dynamic import to avoid circular deps + respect provider config
-  const OpenAI = require('openai');
-  const Groq = require('groq-sdk');
-
+export async function summarizeWithLlm(prompt: string): Promise<any> {
   const provider = process.env.LLM_PROVIDER || 'openai';
-  let client, model;
+  let client: any, model: string;
 
   if (provider === 'groq') {
     client = new Groq({ apiKey: process.env.GROQ_API_KEY });
@@ -259,7 +257,7 @@ async function summarizeWithLlm(prompt) {
       notes: [],
       actionItems: [],
     };
-  } catch (err) {
+  } catch (err: any) {
     console.error('[Report] LLM summarization error:', err.message);
     return {
       summary: 'Unable to generate AI summary for today.',
@@ -276,10 +274,10 @@ async function summarizeWithLlm(prompt) {
  * @param {string} userId
  * @returns {Promise<object|null>}
  */
-async function getPreferences(userId) {
+export async function getPreferences(userId: string): Promise<any> {
   if (!supabase) return null;
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('profiles')
     .select('report_delivery_method, report_delivery_destination, report_schedule_enabled, report_schedule_time, report_timezone')
     .eq('id', userId)
@@ -310,10 +308,10 @@ async function getPreferences(userId) {
  * @param {object} prefs
  * @returns {Promise<{success: boolean, error?: string}>}
  */
-async function savePreferences(userId, prefs) {
+export async function savePreferences(userId: string, prefs: any) {
   if (!supabase) return { success: false, error: 'Database not available.' };
 
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from('profiles')
     .update({
       report_delivery_method:      prefs.delivery_method      ?? 'email',
@@ -338,7 +336,7 @@ async function savePreferences(userId, prefs) {
  * @param {object} [overridePrefs] - Optional overrides (for manual trigger).
  * @returns {Promise<{success: boolean, reportData?: object, error?: string}>}
  */
-async function generateAndDeliver(userId, overridePrefs = null) {
+export async function generateAndDeliver(userId: string, overridePrefs: any = null) {
   // 1. Get preferences
   const prefs = overridePrefs || await getPreferences(userId);
   if (!prefs || prefs.delivery_method === 'none') {
@@ -355,7 +353,7 @@ async function generateAndDeliver(userId, overridePrefs = null) {
   const reportData = await summarizeWithLlm(prompt);
 
   // 4. Get user info for email template
-  const { data: profile } = await supabase
+  const { data: profile } = await (supabase as any)
     .from('profiles')
     .select('email, display_name')
     .eq('id', userId)
@@ -388,7 +386,7 @@ async function generateAndDeliver(userId, overridePrefs = null) {
   };
 }
 
-module.exports = {
+export default {
   generateAndDeliver,
   getPreferences,
   savePreferences,

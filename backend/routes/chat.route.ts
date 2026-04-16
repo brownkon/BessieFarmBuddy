@@ -1,10 +1,10 @@
-const openaiService = require('../services/openai');
-const { authenticate } = require('../middleware/auth.middleware');
-const supabase = require('../services/supabase');
+import { openaiService } from '../services/openai';
+import { authenticate } from '../middleware/auth.middleware';
+import supabase from '../services/supabase';
 
-async function chatRoutes(fastify, options) {
+async function chatRoutes(fastify: any, options: any) {
   // Unified Text Chat (Streaming) - Protected
-  fastify.post('/chat', { preHandler: [authenticate] }, async (request, reply) => {
+  fastify.post('/chat', { preHandler: [authenticate] }, async (request: any, reply: any) => {
     try {
       let { text, history, language, location, sessionId } = request.body;
       const user = request.user;
@@ -19,7 +19,7 @@ async function chatRoutes(fastify, options) {
         fastify.log.info({ userId: user.id }, 'Session ID missing, attempting recovery...');
         
         // 1. Try to find the most recent session
-        const { data: latestSession } = await supabase
+        const { data: latestSession } = await (supabase as any)
           .from('chat_sessions')
           .select('id')
           .eq('user_id', user.id)
@@ -32,7 +32,7 @@ async function chatRoutes(fastify, options) {
           fastify.log.info({ sessionId }, 'Recovered existing session');
         } else {
           // 2. Create a new one if none found
-          const { data: newSession, error: createError } = await supabase
+          const { data: newSession, error: createError } = await (supabase as any)
             .from('chat_sessions')
             .insert({ user_id: user.id, title: 'New Chat' })
             .select()
@@ -48,7 +48,7 @@ async function chatRoutes(fastify, options) {
       }
 
       // Auto-title the session on its first real message
-      const { data: currentSession } = await supabase
+      const { data: currentSession } = await (supabase as any)
         .from('chat_sessions')
         .select('title')
         .eq('id', sessionId)
@@ -56,7 +56,7 @@ async function chatRoutes(fastify, options) {
         .single();
 
       if (currentSession && (currentSession.title === 'New Chat' || !currentSession.title)) {
-        await supabase
+        await (supabase as any)
           .from('chat_sessions')
           .update({ title: text.substring(0, 40) + (text.length > 40 ? '...' : '') })
           .eq('id', sessionId);
@@ -75,9 +75,9 @@ async function chatRoutes(fastify, options) {
       reply.raw.setHeader('Connection', 'keep-alive');
 
       let fullResponse = "";
-      const toolsUsed = [];
+      const toolsUsed: any[] = [];
 
-      for await (const chunk of stream) {
+      for await (const chunk of (stream as any)) {
         if (chunk.content) fullResponse += chunk.content;
         if (chunk.terminate) toolsUsed.push('terminate_conversation');
         if (chunk.toolCall && !toolsUsed.includes(chunk.toolCall)) toolsUsed.push(chunk.toolCall);
@@ -89,27 +89,27 @@ async function chatRoutes(fastify, options) {
 
       // Async Log to Supabase (Background)
       setImmediate(() => {
-        supabase.from('chats').insert({
+        (supabase as any).from('chats').insert({
           session_id: sessionId,
           user_id: user.id,
           prompt: text,
           response: fullResponse,
           gps_coordinates: location || null,
           tools_used: toolsUsed
-        }).then(({ error }) => {
+        }).then(({ error }: any) => {
           if (error) fastify.log.error({ error: error.message }, 'Error saving chat');
           else fastify.log.info({ email: user.email }, 'Saved chat');
         });
 
-        supabase.from('chat_sessions')
+        (supabase as any).from('chat_sessions')
           .update({ updated_at: new Date() })
           .eq('id', sessionId)
-          .then(({ error }) => {
+          .then(({ error }: any) => {
             if (error) fastify.log.error({ error: error.message }, 'Error updating session timestamp');
           });
       });
 
-    } catch (error) {
+    } catch (error: any) {
       fastify.log.error(error);
       if (!reply.raw.writableEnded) {
         reply.raw.write(`data: ${JSON.stringify({ error: 'Internal Server Error' })}\n\n`);
@@ -119,4 +119,4 @@ async function chatRoutes(fastify, options) {
   });
 }
 
-module.exports = chatRoutes;
+export default chatRoutes;

@@ -1,12 +1,12 @@
-// @ts-nocheck
-const { getToolDefinitions } = require('../../tools');
-const groqService = require('../groq');
-let cachedToolList = null;
+import { getToolDefinitions } from '../../tools';
+import groqService from '../groq';
+
+let cachedToolList: string | null = null;
 
 /**
  * Classifier module handles routing the user request to determine if a tool is needed.
  */
-async function classifyRequest(openai, text, history) {
+export async function classifyRequest(client: any, text: string, history: any[], provider: string = 'openai') {
   const start = Date.now();
   // Fast-track: phrase-based matching (no LLM needed for clear closures/greetings)
   const lowerText = text.toLowerCase().trim().replace(/[!.?]/g, '');
@@ -30,9 +30,9 @@ async function classifyRequest(openai, text, history) {
   // Generate tool list once and cache it
   if (!cachedToolList) {
     const toolDefs = getToolDefinitions();
-    cachedToolList = toolDefs.map(t => {
+    cachedToolList = toolDefs.map((t: any) => {
       const params = Object.entries(t.function.parameters.properties || {})
-        .map(([name, schema]) => `${name}: ${schema.description}`)
+        .map(([name, schema]: [string, any]) => `${name}: ${schema.description}`)
         .join(', ');
       return `- ${t.function.name}: ${t.function.description} (${params})`;
     }).join('\n');
@@ -68,13 +68,14 @@ Respond ONLY with valid JSON:
       response_format: 'json_object'
     });
 
+    if (!response) throw new Error('No response from Groq');
     const result = JSON.parse(response);
     console.log(`[Classifier] Groq latency: ${Date.now() - start}ms | Result: ${JSON.stringify(result)}`);
     return result;
-  } catch (err) {
-    console.error(`[Classifier] Groq Routing error:`, err);
+  } catch (err: any) {
+    console.error(`[Classifier] Groq Routing error:`, err.message);
     return { should_call_tool: false, tool_name: null, arguments: null, confidence: 0 };
   }
 }
 
-module.exports = { classifyRequest };
+export default { classifyRequest };

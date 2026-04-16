@@ -1,8 +1,7 @@
-// @ts-nocheck
-const supabase = require('../services/supabase');
-const { getUserOrganization, formatAllDates } = require('../services/data-prep/utils');
+import supabase from '../services/supabase';
+import { getUserOrganization, formatAllDates } from '../services/data-prep/utils';
 
-const pregnancyStatus = {
+export const get_pregnancy_status = {
   definition: {
     type: "function",
     function: {
@@ -11,11 +10,11 @@ const pregnancyStatus = {
       parameters: { type: "object", properties: {} }
     }
   },
-  async handler(_, context = {}) {
+  async handler(_: any, context: any = {}) {
     if (!supabase) return "Supabase not initialized.";
     const orgId = context.userId ? await getUserOrganization(context.userId) : null;
 
-    let query = supabase
+    let query = (supabase as any)
       .from('cow_data')
       .select('animal_number, reproduction_status, expected_calving_date, days_pregnant');
 
@@ -28,8 +27,4 @@ const pregnancyStatus = {
     // Automatically format all date strings in the result set
     return formatAllDates(data);
   }
-};
-
-module.exports = {
-  get_pregnancy_status: pregnancyStatus
 };

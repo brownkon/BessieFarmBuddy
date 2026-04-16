@@ -1,35 +1,35 @@
-const groqService = require('../services/groq');
-const openaiService = require('../services/openai');
-const { authenticate } = require('../middleware/auth.middleware');
-const supabase = require('../services/supabase');
-const fs = require('fs-extra');
-const path = require('path');
-const os = require('os');
+import groqService from '../services/groq';
+import { openaiService } from '../services/openai';
+import { authenticate } from '../middleware/auth.middleware';
+import supabase from '../services/supabase';
+import fs from 'fs-extra';
+import path from 'path';
+import os from 'os';
 
-async function voiceChatRoutes(fastify, options) {
+async function voiceChatRoutes(fastify: any, options: any) {
   // Unified Voice Chat (Transcription + Streaming) - Protected
-  fastify.post('/voice-chat', { preHandler: [authenticate] }, async (request, reply) => {
-    let tempFilePath = null;
+  fastify.post('/voice-chat', { preHandler: [authenticate] }, async (request: any, reply: any) => {
+    let tempFilePath: string | null = null;
     const user = request.user;
     try {
       const parts = request.parts();
-      let audioBuffer = null;
+      let audioBuffer: Buffer | null = null;
       let language = 'en';
-      let history = [];
-      let location = null;
-      let sessionId = null;
+      let history: any[] = [];
+      let location: any = null;
+      let sessionId: string | null = null;
 
       for await (const part of parts) {
         if (part.file) {
-          audioBuffer = await part.toBuffer();
+          audioBuffer = await part.toBuffer() as Buffer;
         } else if (part.fieldname === 'language') {
-          language = part.value;
+          language = part.value as string;
         } else if (part.fieldname === 'history') {
-          try { history = JSON.parse(part.value); } catch (e) { }
+          try { history = JSON.parse(part.value as string); } catch (e) { }
         } else if (part.fieldname === 'location') {
-          try { location = JSON.parse(part.value); } catch (e) { }
+          try { location = JSON.parse(part.value as string); } catch (e) { }
         } else if (part.fieldname === 'sessionId') {
-          sessionId = part.value === 'null' || part.value === 'undefined' ? null : part.value;
+          sessionId = part.value === 'null' || part.value === 'undefined' ? null : (part.value as string);
         }
       }
 
@@ -57,7 +57,7 @@ async function voiceChatRoutes(fastify, options) {
       if (!sessionId || sessionId === 'null' || sessionId === 'undefined') {
         console.log(`[Voice] Session ID missing for user ${user.id}, attempting recovery...`);
         
-        const { data: latestSession } = await supabase
+        const { data: latestSession } = await (supabase as any)
           .from('chat_sessions')
           .select('id')
           .eq('user_id', user.id)
@@ -69,7 +69,7 @@ async function voiceChatRoutes(fastify, options) {
           sessionId = latestSession.id;
           console.log(`[Voice] Recovered existing session: ${sessionId}`);
         } else {
-          const { data: newSession, error: createError } = await supabase
+          const { data: newSession, error: createError } = await (supabase as any)
             .from('chat_sessions')
             .insert({ user_id: user.id, title: 'New Voice Chat' })
             .select()
@@ -88,7 +88,7 @@ async function voiceChatRoutes(fastify, options) {
       }
 
       // Auto-title the session on its first real message
-      const { data: currentSession } = await supabase
+      const { data: currentSession } = await (supabase as any)
         .from('chat_sessions')
         .select('title')
         .eq('id', sessionId)
@@ -96,7 +96,7 @@ async function voiceChatRoutes(fastify, options) {
         .single();
 
       if (currentSession && (currentSession.title === 'New Chat' || !currentSession.title)) {
-        await supabase
+        await (supabase as any)
           .from('chat_sessions')
           .update({ title: transcript.substring(0, 40) + (transcript.length > 40 ? '...' : '') })
           .eq('id', sessionId);
@@ -115,9 +115,9 @@ async function voiceChatRoutes(fastify, options) {
       console.log(`[Timer] getChatStream started in: ${Date.now() - aiStart}ms`);
 
       let fullResponse = "";
-      const toolsUsed = [];
+      const toolsUsed: any[] = [];
 
-      for await (const chunk of stream) {
+      for await (const chunk of (stream as any)) {
         if (chunk.content) fullResponse += chunk.content;
         if (chunk.terminate) toolsUsed.push('terminate_conversation');
         if (chunk.toolCall && !toolsUsed.includes(chunk.toolCall)) toolsUsed.push(chunk.toolCall);
@@ -130,28 +130,28 @@ async function voiceChatRoutes(fastify, options) {
       // Async Log to Supabase (Background)
       setImmediate(() => {
         // Save message
-        supabase.from('chats').insert({
+        (supabase as any).from('chats').insert({
           session_id: sessionId,
           user_id: user.id,
           prompt: transcript,
           response: fullResponse,
           gps_coordinates: location || null,
           tools_used: toolsUsed
-        }).then(({ error }) => {
+        }).then(({ error }: any) => {
           if (error) fastify.log.error({ error: error.message }, 'Error saving voice chat');
           else fastify.log.info({ email: user.email }, 'Saved voice chat');
         });
 
         // Update session timestamp
-        supabase.from('chat_sessions')
+        (supabase as any).from('chat_sessions')
           .update({ updated_at: new Date() })
           .eq('id', sessionId)
-          .then(({ error }) => {
+          .then(({ error }: any) => {
             if (error) fastify.log.error({ error: error.message }, 'Error updating session timestamp');
           });
       });
 
-    } catch (error) {
+    } catch (error: any) {
       fastify.log.error(error);
       if (!reply.raw.writableEnded) reply.raw.end();
     } finally {
@@ -160,4 +160,4 @@ async function voiceChatRoutes(fastify, options) {
   });
 }
 
-module.exports = voiceChatRoutes;
+export default voiceChatRoutes;

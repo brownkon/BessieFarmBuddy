@@ -1,7 +1,7 @@
-const Groq = require('groq-sdk');
-require('dotenv').config();
+import Groq from 'groq-sdk';
+import 'dotenv/config';
 
-const service = {
+export const groqService = {
   groq: new Groq({
     apiKey: process.env.GROQ_API_KEY,
   }),
@@ -13,7 +13,7 @@ const service = {
    * @param {object} fs - File system module
    * @returns {Promise<string>} - Transcribed text
    */
-  async transcribeAudio(tempFilePath, language, fs) {
+  async transcribeAudio(tempFilePath: string, language: string, fs: any): Promise<string> {
     try {
       const transcription = await this.groq.audio.transcriptions.create({
         file: fs.createReadStream(tempFilePath),
@@ -31,12 +31,16 @@ const service = {
   /**
    * Fast chat completion for routing/classification
    */
-  async chatCompletion({ messages, model = "llama-3.1-8b-instant", response_format = null }) {
+  async chatCompletion({ messages, model = "llama-3.1-8b-instant", response_format = null }: { 
+    messages: any[], 
+    model?: string, 
+    response_format?: string | null 
+  }): Promise<string | null> {
     try {
       const response = await this.groq.chat.completions.create({
         model,
         messages,
-        response_format: response_format ? { type: response_format } : undefined,
+        response_format: response_format ? { type: response_format as any } : undefined,
       });
       return response.choices[0].message.content;
     } catch (error) {
@@ -46,4 +50,4 @@ const service = {
   }
 };
 
-module.exports = service;
+export default groqService;

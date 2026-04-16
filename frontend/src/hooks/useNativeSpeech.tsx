@@ -99,20 +99,20 @@ export const useNativeSpeech = (onWakeWord, onExit, onPartial, onResult, onSpeec
       }
     };
 
-    const startSub = ExpoSpeechRecognitionModule.addListener('start', () => {
+    const startSub = (ExpoSpeechRecognitionModule as any).addListener('start', () => {
       isRecognizingRef.current = true;
       setRecognizing(true);
     });
 
-    const speechStartSub = ExpoSpeechRecognitionModule.addListener('speechstart', () => {
+    const speechStartSub = (ExpoSpeechRecognitionModule as any).addListener('speechstart', () => {
       if (onSpeechStartRef.current) onSpeechStartRef.current();
     });
 
-    const speechEndSub = ExpoSpeechRecognitionModule.addListener('speechend', () => {
+    const speechEndSub = (ExpoSpeechRecognitionModule as any).addListener('speechend', () => {
       if (onSpeechEndRef.current) onSpeechEndRef.current();
     });
 
-    const endSub = ExpoSpeechRecognitionModule.addListener('end', () => {
+    const endSub = (ExpoSpeechRecognitionModule as any).addListener('end', () => {
 
       // In wake-word mode, auto-restart so we keep listening
       if (continuousRef.current && !restartingRef.current) {
@@ -136,7 +136,7 @@ export const useNativeSpeech = (onWakeWord, onExit, onPartial, onResult, onSpeec
       }
     });
 
-    const resultSub = ExpoSpeechRecognitionModule.addListener('result', (event) => {
+    const resultSub = (ExpoSpeechRecognitionModule as any).addListener('result', (event: any) => {
       if (!isRecognizingRef.current) return;
       const transcript = event.results[0]?.transcript ?? '';
       if (!transcript) return;
@@ -145,7 +145,7 @@ export const useNativeSpeech = (onWakeWord, onExit, onPartial, onResult, onSpeec
       checkWakeOrExit(transcript);
     });
 
-    const partialSub = ExpoSpeechRecognitionModule.addListener('partialresult', (event) => {
+    const partialSub = (ExpoSpeechRecognitionModule as any).addListener('partialresult', (event: any) => {
       if (!isRecognizingRef.current) return;
       const partial = event.results[0]?.transcript ?? '';
       if (!partial) return;
@@ -162,7 +162,7 @@ export const useNativeSpeech = (onWakeWord, onExit, onPartial, onResult, onSpeec
       }
     });
 
-    const errorSub = ExpoSpeechRecognitionModule.addListener('error', (event) => {
+    const errorSub = (ExpoSpeechRecognitionModule as any).addListener('error', (event: any) => {
       // 'no-speech' and 'aborted' are normal in wake-word mode — not real errors
       if (event.error === 'no-speech' || event.error === 'aborted') {
         return;

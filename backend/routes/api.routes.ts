@@ -1,11 +1,11 @@
-const healthRoutes = require('./health.route');
-const chatRoutes = require('./chat.route');
-const voiceChatRoutes = require('./voice-chat.route');
-const sessionRoutes = require('./sessions.route');
-const syncRoutes = require('./sync.route');
-const orgRoutes = require('./org.route');
+import healthRoutes from './health.route';
+import chatRoutes from './chat.route';
+import voiceChatRoutes from './voice-chat.route';
+import sessionRoutes from './sessions.route';
+import syncRoutes from './sync.route';
+import orgRoutes from './org.route';
 
-async function apiRoutes(fastify, options) {
+async function apiRoutes(fastify: any, options: any) {
   // Register modular routes
   fastify.register(healthRoutes);
   fastify.register(chatRoutes);
@@ -15,5 +15,4 @@ async function apiRoutes(fastify, options) {
   fastify.register(orgRoutes);
 }
 
-module.exports = apiRoutes;
-
+export default apiRoutes;

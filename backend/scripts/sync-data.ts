@@ -1,5 +1,5 @@
-require('dotenv').config();
-const dataProcessor = require('./services/data-prep/data-processor');
+import 'dotenv/config';
+import { dataProcessor } from '../services/data-prep';
 
 async function runSync() {
   console.log('--- Starting Data Synchronization ---');

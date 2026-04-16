@@ -1,5 +1,5 @@
-require('dotenv').config();
-const { dataProcessor } = require('./services/data-prep');
+import 'dotenv/config';
+import { dataProcessor } from '../services/data-prep';
 
 async function runTest() {
   console.log('--- Starting Data Processor Test ---');
@@ -14,9 +14,10 @@ async function runTest() {
     console.log('Syncing all CSV files...');
     await dataProcessor.syncAll();
     console.log('--- Test Complete ---');
-  } catch (err) {
-    console.error('Test failed:', err.message);
+  } catch (err: any) {
+    console.error('Test failed:', err?.message || err);
   }
 }
 
 runTest();
+

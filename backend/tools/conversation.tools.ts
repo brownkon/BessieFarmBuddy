@@ -2,7 +2,7 @@
  * Conversation-related tools for managing chat state.
  */
 
-const terminateConversation = {
+export const terminate_conversation = {
   definition: {
     type: "function",
     function: {
@@ -19,8 +19,4 @@ const terminateConversation = {
   async handler() {
     return { status: "terminating" };
   }
-};
-
-module.exports = {
-  terminate_conversation: terminateConversation
 };

@@ -1,14 +1,14 @@
-require('dotenv').config();
-const { executeTool } = require('./tools');
+import 'dotenv/config';
+import { executeTool } from '../tools';
 
 async function testTool() {
     console.log("--- Testing get_cow_info Latency ---");
     const start = Date.now();
     try {
-        const result = await executeTool('get_cow_info', { animalNumber: "123" });
+        const result = await executeTool('get_cow_info', { animalNumber: "123" }, {});
         console.log(`Tool took: ${Date.now() - start}ms`);
         console.log("Result:", JSON.stringify(result).substring(0, 100));
-    } catch (err) {
+    } catch (err: any) {
         console.error("Tool failed:", err);
     }
 }

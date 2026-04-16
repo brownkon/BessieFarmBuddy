@@ -1,6 +1,9 @@
-const supabase = require('../services/supabase');
+import supabase from '../services/supabase';
 
-async function authenticate(request, reply) {
+/**
+ * Middleware to authenticate requests using Supabase Auth.
+ */
+export async function authenticate(request: any, reply: any) {
   if (!supabase) {
     request.log.error('[Auth] Supabase client is not initialized. Check environment variables.');
     return reply.code(503).send({ error: 'Authentication service unavailable (unconfigured)' });
@@ -22,7 +25,7 @@ async function authenticate(request, reply) {
     // DEBUG: Check for truncation
     request.log.info(`[Auth] Token received. Length: ${token.length}. Preview: ${token.substring(0, 10)}...${token.substring(token.length - 10)}`);
 
-    const { data: { user }, error } = await supabase.auth.getUser(token);
+    const { data: { user }, error } = await (supabase as any).auth.getUser(token);
     
     if (error) {
       request.log.error(`[Auth] Supabase error: ${error.message}`);
@@ -36,10 +39,8 @@ async function authenticate(request, reply) {
 
     request.user = user;
     request.log.info(`[Auth] Authenticated ${user.email}`);
-  } catch (error) {
+  } catch (error: any) {
     request.log.error(`[Auth] Critical check error: ${error.message}`);
     return reply.code(500).send({ error: 'Authentication failed' });
   }
 }
-
-module.exports = { authenticate };

@@ -1,14 +1,21 @@
-// @ts-nocheck
-const { getToolDefinitions, executeTool } = require('../../tools');
-const cacheService = require('../cache');
+import { getToolDefinitions, executeTool } from '../../tools';
+import cacheService from '../cache';
 
 /**
  * Orchestrator module handles the tool execution loop and streaming responses.
  */
-async function streamResponse({ client, model, messages, needsTool, toolCallsCount = 0, context = {}, provider = 'openai' }) {
+export async function streamResponse({ 
+  client, 
+  model, 
+  messages, 
+  needsTool, 
+  toolCallsCount = 0, 
+  context = {}, 
+  provider = 'openai' 
+}: any): Promise<AsyncGenerator<any, void, unknown>> {
   const creationStart = Date.now();
   console.log(`[AI Service] Starting stream for model: ${model}`);
-  let completion;
+  let completion: any;
   try {
     completion = await client.chat.completions.create({
       model: model,
@@ -16,7 +23,7 @@ async function streamResponse({ client, model, messages, needsTool, toolCallsCou
       tools: needsTool ? getToolDefinitions() : undefined,
       stream: true,
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error(`[${provider}] API Error:`, err.message);
     return (async function* () {
       if (err.message.includes('rate_limit') || err.status === 413) {
@@ -29,7 +36,7 @@ async function streamResponse({ client, model, messages, needsTool, toolCallsCou
   console.log(`[Timer] ${provider} create call took: ${Date.now() - creationStart}ms`);
 
   return (async function* () {
-    let currentToolCall = null;
+    let currentToolCall: string | null = null;
     let toolArguments = "";
 
     for await (const chunk of completion) {
@@ -52,7 +59,7 @@ async function streamResponse({ client, model, messages, needsTool, toolCallsCou
 
       if (chunk.choices[0]?.finish_reason === 'tool_calls' && currentToolCall) {
         // Execute Tool with Caching
-        let result = "";
+        let result: any = "";
         try {
           // Track the tool call
           yield { toolCall: currentToolCall };
@@ -74,7 +81,7 @@ async function streamResponse({ client, model, messages, needsTool, toolCallsCou
             console.log(`[Cache] Miss for ${currentToolCall}`);
             result = await executeTool(currentToolCall, args, context);
             // Control output size
-            if (typeof result === 'object') {
+            if (typeof result === 'object' && result !== null) {
               const strResult = JSON.stringify(result);
               if (strResult.length > 2000) {
                 result = { summary: "Result too large, summarized.", data: strResult.substring(0, 1000) + "..." };
@@ -98,7 +105,7 @@ async function streamResponse({ client, model, messages, needsTool, toolCallsCou
             toolResultMessage,
             {
               role: 'tool',
-              tool_call_id: toolResultMessage.tool_calls[0].id,
+              tool_call_id: (toolResultMessage.tool_calls[0] as any).id,
               content: JSON.stringify(result)
             }
           ];
@@ -126,4 +133,4 @@ async function streamResponse({ client, model, messages, needsTool, toolCallsCou
   })();
 }
 
-module.exports = { streamResponse };
+export default { streamResponse };

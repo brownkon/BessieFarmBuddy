@@ -1,8 +1,7 @@
-// @ts-nocheck
-const supabase = require('../services/supabase');
-const { getUserOrganization, formatAllDates } = require('../services/data-prep/utils');
+import supabase from '../services/supabase';
+import { getUserOrganization, formatAllDates } from '../services/data-prep/utils';
 
-const recordNote = {
+export const record_note = {
   definition: {
     type: "function",
     function: {
@@ -18,14 +17,14 @@ const recordNote = {
       }
     }
   },
-  async handler({ note_content, animal_number }, context = {}) {
+  async handler({ note_content, animal_number }: { note_content: string, animal_number?: string }, context: any = {}) {
     if (!supabase) return "Supabase not initialized.";
     if (!context.userId) return "User context not provided, cannot record note.";
 
     const orgId = await getUserOrganization(context.userId);
     if (!orgId) return "Organization not found for user.";
 
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('farmer_notes')
       .insert([
         {
@@ -41,7 +40,7 @@ const recordNote = {
   }
 };
 
-const getRecentNotes = {
+export const get_recent_notes = {
   definition: {
     type: "function",
     function: {
@@ -56,7 +55,7 @@ const getRecentNotes = {
       }
     }
   },
-  async handler({ animal_number, days_back = 1 }, context = {}) {
+  async handler({ animal_number, days_back = 1 }: { animal_number?: string, days_back?: number }, context: any = {}) {
     if (!supabase) return "Supabase not initialized.";
     const orgId = context.userId ? await getUserOrganization(context.userId) : null;
     if (!orgId) return "Organization not found for user.";
@@ -64,7 +63,7 @@ const getRecentNotes = {
     const dateLimit = new Date();
     dateLimit.setDate(dateLimit.getDate() - days_back);
 
-    let query = supabase.from('farmer_notes')
+    let query = (supabase as any).from('farmer_notes')
       .select('content, animal_number, created_at')
       .eq('organization_id', orgId)
       .gte('created_at', dateLimit.toISOString())
@@ -79,9 +78,4 @@ const getRecentNotes = {
     // Automatically format all date strings (including created_at)
     return formatAllDates(data);
   }
-};
-
-module.exports = {
-  record_note: recordNote,
-  get_recent_notes: getRecentNotes
 };

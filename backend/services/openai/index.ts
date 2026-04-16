@@ -1,15 +1,15 @@
-const OpenAI = require('openai');
-const Groq = require('groq-sdk');
-const { classifyRequest } = require('./classifier');
-const { streamResponse } = require('./orchestrator');
-require('dotenv').config();
+import OpenAI from 'openai';
+import Groq from 'groq-sdk';
+import { classifyRequest } from './classifier';
+import { streamResponse } from './orchestrator';
+import 'dotenv/config';
 
 const LLM_PROVIDER = process.env.LLM_PROVIDER || 'openai'; // 'openai' or 'groq'
-const CONFIDENCE_THRESHOLD = parseFloat(process.env.CONFIDENCE_THRESHOLD) || 0.7;
+const CONFIDENCE_THRESHOLD = parseFloat(process.env.CONFIDENCE_THRESHOLD || '0.7');
 
 // Initialize the correct client
-let client;
-let mainModel;
+let client: any;
+let mainModel: string;
 
 if (LLM_PROVIDER === 'groq') {
   console.log('[AI Service] Initializing Groq for development...');
@@ -21,11 +21,11 @@ if (LLM_PROVIDER === 'groq') {
   mainModel = 'gpt-4o-mini'; // Reliable for production
 }
 
-const openaiService = {
+export const openaiService = {
   /**
    * Get a streaming response from the configured AI provider with cost-efficient tool handling.
    */
-  async getChatStream({ text, history = [], language = 'en', systemMessage = null, context = {} }) {
+  async getChatStream({ text, history = [], language = 'en', systemMessage = null, context = {} }: any) {
     const finalSystemMessage = systemMessage || `You are Bessie, a helpful farmer's assistant AI. 
         - Tools are expensive. Only use them when the answer cannot be reasonably inferred.
         - Before calling a tool, think through the problem and confirm it's strictly necessary.
@@ -56,8 +56,6 @@ const openaiService = {
 
       // 2. Early Execution & Early Exit
       let toolResult = null;
-      let finalNeedsTool = false;
-
       let earlyToolName = null;
       if (classification.should_call_tool && classification.confidence >= CONFIDENCE_THRESHOLD) {
         const { tool_name, arguments: args } = classification;
@@ -85,7 +83,7 @@ const openaiService = {
             content: `CRITICAL DATA: The tool ${tool_name} returned the following data. Use this data ONLY to answer the user's question precisely. 
             Data: ${JSON.stringify(result)}`
           });
-        } catch (toolErr) {
+        } catch (toolErr: any) {
           console.error(`[Router] Tool execution failed: ${toolErr.message}`);
           earlyToolName = null; // Don't log if it failed
         }
@@ -104,7 +102,7 @@ const openaiService = {
 
       return (async function* () {
         if (earlyToolName) yield { toolCall: earlyToolName };
-        for await (const chunk of mainStream) {
+        for await (const chunk of (mainStream as any)) {
           yield chunk;
         }
       })();
@@ -113,7 +111,21 @@ const openaiService = {
       console.error("[AI Service] Routing error:", error);
       throw error;
     }
+  },
+
+  /**
+   * Get a simple completion (non-streaming)
+   */
+  async generateCompletion(prompt: string, model: string = mainModel): Promise<string> {
+    try {
+      const response = await client.chat.completions.create({
+        model: model,
+        messages: [{ role: 'user', content: prompt }],
+      });
+      return response.choices[0].message.content || "";
+    } catch (error) {
+      console.error("[AI Service] Completion error:", error);
+      throw error;
+    }
   }
 };
-
-module.exports = openaiService;

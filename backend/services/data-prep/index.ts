@@ -1,7 +1,8 @@
-const cleaner = require('./cleaner');
-const dataProcessor = require('./data-processor');
+import cleaner from './cleaner';
+import dataProcessor from './data-processor';
 
-module.exports = {
+export {
   cleaner,
   dataProcessor
 };
+

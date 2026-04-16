@@ -1,5 +1,5 @@
-async function healthRoutes(fastify, options) {
+async function healthRoutes(fastify: any, options: any) {
   fastify.get('/health', async () => ({ status: 'ok' }));
 }
 
-module.exports = healthRoutes;
+export default healthRoutes;
