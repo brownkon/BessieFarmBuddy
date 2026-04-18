@@ -27,6 +27,7 @@ type WakeWordNativeModule = {
   openBatteryOptimizationSettings?: () => Promise<boolean>;
   isIgnoringBatteryOptimizations?: () => Promise<boolean>;
   updateNotification?: (text: string) => Promise<boolean>;
+  speakText?: (text: string) => Promise<boolean>;
   requestOverlayPermission?: () => Promise<boolean>;
   hasOverlayPermission?: () => Promise<boolean>;
   updateAssistantOverlayText?: (text: string) => Promise<boolean>;
@@ -194,6 +195,17 @@ export async function updateNotification(text: string): Promise<boolean> {
     return false;
   }
   return await module.updateNotification(text);
+}
+
+export async function speakText(text: string): Promise<boolean> {
+  if (Platform.OS !== 'android') {
+    return false;
+  }
+  const module = WakeWord as WakeWordNativeModule;
+  if (!module.speakText) {
+    return false;
+  }
+  return await module.speakText(text);
 }
 
 export async function requestOverlayPermission(): Promise<boolean> {

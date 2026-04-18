@@ -4,9 +4,12 @@ import android.app.Activity
 import android.app.ActivityManager
 import android.app.role.RoleManager
 import android.content.Intent
+import android.os.Handler
 import android.os.Build
+import android.os.Looper
 import android.os.PowerManager
 import android.provider.Settings
+import android.speech.tts.TextToSpeech
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import com.facebook.react.bridge.ActivityEventListener
@@ -16,6 +19,7 @@ import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
+import java.util.Locale
 
 class WakeWordModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaModule(reactContext) {
 
@@ -365,6 +369,90 @@ class WakeWordModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
             promise.resolve(true)
         } catch (e: Exception) {
             promise.reject("UPDATE_NOTIFICATION_ERROR", "Failed to update notification", e)
+        }
+    }
+
+    @ReactMethod
+    fun speakText(text: String, promise: Promise) {
+        if (text.isBlank()) {
+            promise.resolve(false)
+            return
+        }
+
+        var tts: TextToSpeech? = null
+        val utteranceId = "wakeword_tts_${System.currentTimeMillis()}"
+        val timeoutHandler = Handler(Looper.getMainLooper())
+        var settled = false
+
+        fun finish(success: Boolean) {
+            if (settled) return
+            settled = true
+            timeoutHandler.removeCallbacksAndMessages(null)
+            try {
+                tts?.stop()
+                tts?.shutdown()
+            } catch (_: Exception) {
+            }
+            promise.resolve(success)
+        }
+
+        try {
+            tts = TextToSpeech(reactApplicationContext) { status ->
+                if (status != TextToSpeech.SUCCESS) {
+                    Log.w(TAG, "TextToSpeech init failed with status $status")
+                    finish(false)
+                    return@TextToSpeech
+                }
+
+                val localeResult = tts?.setLanguage(Locale.US)
+                if (
+                    localeResult == TextToSpeech.LANG_MISSING_DATA ||
+                    localeResult == TextToSpeech.LANG_NOT_SUPPORTED
+                ) {
+                    // Fall back to device default locale if US English is unavailable.
+                    tts?.setLanguage(Locale.getDefault())
+                }
+
+                tts?.setOnUtteranceProgressListener(object : android.speech.tts.UtteranceProgressListener() {
+                    override fun onStart(utteranceId: String?) {
+                    }
+
+                    override fun onDone(utteranceId: String?) {
+                        finish(true)
+                    }
+
+                    @Deprecated("Deprecated in Java")
+                    override fun onError(utteranceId: String?) {
+                        finish(false)
+                    }
+
+                    override fun onError(utteranceId: String?, errorCode: Int) {
+                        finish(false)
+                    }
+                })
+
+                val result = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
+                } else {
+                    @Suppress("DEPRECATION")
+                    tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null)
+                }
+
+                if (result == TextToSpeech.ERROR) {
+                    Log.w(TAG, "TextToSpeech speak returned ERROR")
+                    finish(false)
+                    return@TextToSpeech
+                }
+
+                val timeoutMs = (text.length * 90L).coerceIn(5000L, 25000L)
+                timeoutHandler.postDelayed({
+                    Log.w(TAG, "TextToSpeech timed out for utterance: $utteranceId")
+                    finish(false)
+                }, timeoutMs)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to speak text", e)
+            finish(false)
         }
     }
 

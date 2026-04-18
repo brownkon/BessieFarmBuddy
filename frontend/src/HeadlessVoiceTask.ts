@@ -94,6 +94,19 @@ function parseSseResponse(rawResponse: string): SseParseResult {
 async function speakResponseText(text: string) {
   if (!text.trim()) return;
 
+  // Prefer native Android TTS in headless mode; Expo Speech can be unreliable
+  // when running without a foreground UI runtime.
+  try {
+    if (WakeWord?.speakText) {
+      const didSpeak = await WakeWord.speakText(text);
+      if (didSpeak) {
+        return;
+      }
+    }
+  } catch (nativeTtsError) {
+    console.warn('Native background TTS failed; falling back to Expo Speech', nativeTtsError);
+  }
+
   await new Promise<void>((resolve) => {
     let settled = false;
     const finish = () => {

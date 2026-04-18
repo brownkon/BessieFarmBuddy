@@ -164,6 +164,7 @@ function AppMain() {
   const checkDoneIntervalRef = useRef(null);
   const silentSoundRef = useRef(null);
   const speakTimeoutRef = useRef(null);
+  const speechWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const restartTimerRef = useRef(null);
   const terminationRestartTimerRef = useRef(null);
   const speechEndTimeoutRef = useRef(null);
@@ -409,6 +410,10 @@ function AppMain() {
     isProcessingRef.current = false;
     shouldTerminateRef.current = false;
     clearTimeout(speakTimeoutRef.current);
+    if (speechWatchdogRef.current) {
+      clearTimeout(speechWatchdogRef.current);
+      speechWatchdogRef.current = null;
+    }
     clearInterval(checkDoneIntervalRef.current);
     speechQueueRef.current = [];
     streamingSentenceBufferRef.current = '';
@@ -455,6 +460,29 @@ function AppMain() {
 
     setIsSpeaking(true);
     isSpeakingRef.current = true;
+    if (speechWatchdogRef.current) {
+      clearTimeout(speechWatchdogRef.current);
+      speechWatchdogRef.current = null;
+    }
+
+    const finishSentence = () => {
+      if (speechWatchdogRef.current) {
+        clearTimeout(speechWatchdogRef.current);
+        speechWatchdogRef.current = null;
+      }
+      setTimeout(() => {
+        setIsSpeaking(false);
+        isSpeakingRef.current = false;
+        speakNextSentence();
+      }, 50);
+    };
+
+    // Guard against platforms that occasionally never fire onDone/onError.
+    speechWatchdogRef.current = setTimeout(() => {
+      console.warn('[TTS] Speech watchdog fired; recovering queue state.');
+      finishSentence();
+    }, 12000);
+
     const bestVoiceMatch = availableVoices.find(v => v.language.startsWith(selectedLanguage.voicePrefix));
     const voiceId = bestVoiceMatch ? bestVoiceMatch.identifier : preferredVoiceRef.current;
 
@@ -462,18 +490,8 @@ function AppMain() {
       rate: ttsRate,
       volume: ttsVolume,
       voice: voiceId,
-      onDone: () => {
-        setTimeout(() => {
-          setIsSpeaking(false);
-          isSpeakingRef.current = false;
-          speakNextSentence();
-        }, 50);
-      },
-      onError: () => {
-        setIsSpeaking(false);
-        isSpeakingRef.current = false;
-        speakNextSentence();
-      },
+      onDone: finishSentence,
+      onError: finishSentence,
     });
   }, [isSpeaking, availableVoices, selectedLanguage.voicePrefix, preferredVoiceRef, ttsRate, ttsVolume]);
 
@@ -494,7 +512,8 @@ function AppMain() {
       const uri = await stopAndGetURI();
       if (!uri) { startWakeWordListening(); return; }
 
-      void playOneShotEffect(SUBMIT_CUE_SOUND, 'submit');
+      // Keep submit cue from overlapping with first spoken AI chunk.
+      await playOneShotEffect(SUBMIT_CUE_SOUND, 'submit');
       void startDucking(silentSoundRef);
       modeRef.current = 'thinking';
       setStatus('Reading...');
@@ -704,6 +723,10 @@ function AppMain() {
 
     clearTimeout(restartTimerRef.current);
     clearTimeout(speakTimeoutRef.current);
+    if (speechWatchdogRef.current) {
+      clearTimeout(speechWatchdogRef.current);
+      speechWatchdogRef.current = null;
+    }
     clearTimeout(terminationRestartTimerRef.current);
     Speech.stop();
 
@@ -842,6 +865,10 @@ function AppMain() {
     setup();
     return () => {
       clearTimeout(restartTimerRef.current);
+      if (speechWatchdogRef.current) {
+        clearTimeout(speechWatchdogRef.current);
+        speechWatchdogRef.current = null;
+      }
       stopListening();
       if (silentSoundRef.current) silentSoundRef.current.unloadAsync();
     };
