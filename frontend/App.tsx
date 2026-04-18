@@ -58,6 +58,42 @@ import ChatMessage from './src/components/ChatMessage';
 import NotesModal from './src/components/NotesModal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const WAKE_CUE_SOUND = require('./assets/sounds/transition_up.wav');
+const SUBMIT_CUE_SOUND = require('./assets/sounds/celebration.wav');
+const ERROR_CUE_SOUND = require('./assets/sounds/caution.wav');
+
+async function playOneShotEffect(source: number, label: string) {
+  try {
+    const { sound } = await Audio.Sound.createAsync(source, { shouldPlay: true });
+
+    await new Promise<void>((resolve) => {
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        sound.setOnPlaybackStatusUpdate(null);
+        resolve();
+      };
+
+      const timeout = setTimeout(finish, 2500);
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (!status.isLoaded) {
+          clearTimeout(timeout);
+          finish();
+          return;
+        }
+        if (status.didJustFinish) {
+          clearTimeout(timeout);
+          finish();
+        }
+      });
+    });
+
+    await sound.unloadAsync();
+  } catch (error) {
+    console.warn(`[Audio] Failed to play ${label} cue`, error);
+  }
+}
 
 function AppMain() {
   const { session, user } = useAuth();
@@ -353,6 +389,9 @@ function AppMain() {
   const triggerCommandPrompt = useCallback(async () => {
     console.log('[App] Interrupted by wake word, resetting state...');
 
+    // Fire wake cue without blocking fast command capture startup.
+    void playOneShotEffect(WAKE_CUE_SOUND, 'wake');
+
     // Pause native wake-word recognizer while foreground command capture is active.
     try {
       if (WakeWord?.pauseListening) {
@@ -455,6 +494,7 @@ function AppMain() {
       const uri = await stopAndGetURI();
       if (!uri) { startWakeWordListening(); return; }
 
+      void playOneShotEffect(SUBMIT_CUE_SOUND, 'submit');
       void startDucking(silentSoundRef);
       modeRef.current = 'thinking';
       setStatus('Reading...');
@@ -539,6 +579,7 @@ function AppMain() {
       }, 1000);
 
     } catch (error) {
+      void playOneShotEffect(ERROR_CUE_SOUND, 'error');
       void stopDucking(silentSoundRef);
       Alert.alert('Voice API failed', error.message);
       startWakeWordListening();
@@ -634,6 +675,7 @@ function AppMain() {
         }
       }, 1000);
     } catch (error) {
+      void playOneShotEffect(ERROR_CUE_SOUND, 'error');
       void stopDucking(silentSoundRef);
       Alert.alert('Text API failed', error.message);
       startWakeWordListening();
