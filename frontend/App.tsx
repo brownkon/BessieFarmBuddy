@@ -315,6 +315,24 @@ function AppMain() {
       setStatus('Say "Hey Bessie" to start...');
       setVoiceTranscript('');
       transcriptRef.current = '';
+      setNativeRecognizing(false);
+
+      // Always keep foreground wake listening active for the main chat page,
+      // even when background wake service is turned off.
+      let backgroundWakeRunning = false;
+      try {
+        if (WakeWord?.getWakeWordStatus) {
+          const wakeStatus = await WakeWord.getWakeWordStatus();
+          backgroundWakeRunning = Boolean(wakeStatus?.running);
+        }
+      } catch (statusError) {
+        console.warn('[App] Failed to read wake service status, defaulting to foreground mic listener.', statusError);
+      }
+
+      if (!backgroundWakeRunning) {
+        await startListening([...WAKE_PHRASES, ...EXIT_PHRASES], 'en-US', true);
+      }
+
       setNativeRecognizing(true);
 
       // Let WakeWordService resume listening natively
@@ -330,7 +348,7 @@ function AppMain() {
     } finally {
       isStartingRef.current = false;
     }
-  }, [stopListening, recordingRef, silentSoundRef]);
+  }, [stopListening, recordingRef, silentSoundRef, startListening]);
 
   const triggerCommandPrompt = useCallback(async () => {
     console.log('[App] Interrupted by wake word, resetting state...');
