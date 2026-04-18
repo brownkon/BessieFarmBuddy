@@ -401,9 +401,14 @@ class WakeWordService : Service(), RecognitionListener {
                             putExtra("wakeWord", spokenText.ifEmpty { "hey bovi" })
                             putExtra("nativeWakeTonePlayed", true)
                         }
-                        
-                        com.facebook.react.HeadlessJsTaskService.acquireWakeLockNow(this)
+                        try {
+                            com.facebook.react.HeadlessJsTaskService.acquireWakeLockNow(this)
+                        } catch (wakeLockError: Exception) {
+                            Log.w(TAG, "Failed to acquire wakelock for headless task, continuing startup: ${wakeLockError.message}")
+                        }
+
                         startService(serviceIntent)
+                        Log.d(TAG, "Headless task service start requested")
                     } catch (e: Exception) {
                         Log.e(TAG, "Failed to launch Headless Task: ${e.message}")
                     }

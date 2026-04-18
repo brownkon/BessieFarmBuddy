@@ -1,6 +1,6 @@
 import { Audio } from 'expo-av';
+import * as Speech from 'expo-speech';
 import { NativeModules } from 'react-native';
-import { loadCachedGpsPayload, saveCachedGpsPayload } from './lib/location-cache';
 import { supabase } from './services/supabase';
 import { startVoiceStream, startEarlyCapture, EarlyCaptureHandle } from './lib/voiceStreamClient';
 
@@ -9,6 +9,8 @@ const { WakeWord } = NativeModules;
 const WAKE_SOUND = require('../assets/sounds/transition_up.wav');
 const SUBMIT_SOUND = require('../assets/sounds/celebration.wav');
 const ERROR_SOUND = require('../assets/sounds/caution.wav');
+const ENABLE_WEBSOCKET_STT = false;
+const FALLBACK_RECORDING_MS = 5000;
 
 type GpsPayload = {
   latitude: number;
@@ -16,13 +18,10 @@ type GpsPayload = {
   captured_at: string;
 };
 
-function toGpsPayload(position: { coords: { latitude: number; longitude: number }; timestamp?: number | null }): GpsPayload {
-  return {
-    latitude: position.coords.latitude,
-    longitude: position.coords.longitude,
-    captured_at: new Date(position.timestamp ?? Date.now()).toISOString(),
-  };
-}
+type SseParseResult = {
+  transcript: string;
+  summary: string;
+};
 
 async function playOneShotEffect(source: number, label: string) {
   try {
@@ -59,86 +58,171 @@ async function playOneShotEffect(source: number, label: string) {
 }
 
 async function getHeadlessGpsPayload(): Promise<GpsPayload | null> {
-  try {
-    const cachedPayload = await loadCachedGpsPayload();
-    let LocationModule: typeof import('expo-location');
+  // GPS is intentionally disabled for now to avoid permission prompts and
+  // background delays while stabilizing wake->response behavior.
+  return null;
+}
+
+function parseSseResponse(rawResponse: string): SseParseResult {
+  const lines = rawResponse.split('\n');
+  let transcript = '';
+  let summary = '';
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line.startsWith('data:')) continue;
+
+    const payload = line.slice(5).trim();
+    if (!payload || payload === '[DONE]') continue;
 
     try {
-      LocationModule = await import('expo-location');
-    } catch (importError) {
-      console.warn('Headless GPS skipped: expo-location unavailable in headless runtime', importError);
-      return cachedPayload;
-    }
-
-    const Location = LocationModule;
-    const backgroundPermission = await Location.getBackgroundPermissionsAsync();
-    const foregroundPermission = await Location.getForegroundPermissionsAsync();
-
-    if (!backgroundPermission.granted && !foregroundPermission.granted) {
-      if (cachedPayload) {
-        return cachedPayload;
+      const parsed = JSON.parse(payload) as { transcript?: string; content?: string };
+      if (typeof parsed.transcript === 'string' && parsed.transcript.trim()) {
+        transcript = parsed.transcript.trim();
       }
-      console.warn('Headless GPS skipped: no location permission granted');
-      return null;
-    }
-
-    const providerStatus = await Location.getProviderStatusAsync().catch(() => null);
-
-    // Prefer cached location first so headless mode can still tag notes when a fresh fix is unavailable.
-    const relaxedLastKnown = await Location.getLastKnownPositionAsync({
-      maxAge: 24 * 60 * 60 * 1000,
-    });
-
-    if (relaxedLastKnown) {
-      const payload = toGpsPayload(relaxedLastKnown);
-      await saveCachedGpsPayload(payload).catch(() => {});
-      return payload;
-    }
-
-    if (providerStatus && !providerStatus.locationServicesEnabled) {
-      if (cachedPayload) {
-        return cachedPayload;
+      if (typeof parsed.content === 'string' && parsed.content.trim()) {
+        summary += parsed.content;
       }
-      console.warn('Headless GPS skipped: location services disabled and no last known position available');
-      return null;
+    } catch {
+      // Ignore malformed SSE chunks and keep parsing the rest.
     }
-
-    try {
-      const locationPromise = Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-        mayShowUserSettingsDialog: false,
-      });
-
-      const timeoutPromise = new Promise<never>((_resolve, reject) => {
-        setTimeout(() => reject(new Error('Timed out waiting for GPS')), 15000);
-      });
-
-      const position = await Promise.race([locationPromise, timeoutPromise]);
-      const payload = toGpsPayload(position);
-      await saveCachedGpsPayload(payload).catch(() => {});
-      return payload;
-    } catch (currentError) {
-      // One extra fallback attempt in case provider started delivering a cached fix after wake-up.
-      const fallbackLastKnown = await Location.getLastKnownPositionAsync({
-        maxAge: 24 * 60 * 60 * 1000,
-      });
-
-      if (fallbackLastKnown) {
-        const payload = toGpsPayload(fallbackLastKnown);
-        await saveCachedGpsPayload(payload).catch(() => {});
-        return payload;
-      }
-
-      if (cachedPayload) {
-        return cachedPayload;
-      }
-
-      throw currentError;
-    }
-  } catch (error) {
-    console.warn('Headless GPS capture skipped for this request', error);
-    return null;
   }
+
+  return { transcript, summary: summary.trim() };
+}
+
+async function speakResponseText(text: string) {
+  if (!text.trim()) return;
+
+  await new Promise<void>((resolve) => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      resolve();
+    };
+
+    const timeoutMs = Math.min(14000, Math.max(3500, text.length * 70));
+    const timeout = setTimeout(finish, timeoutMs);
+
+    try {
+      Speech.stop();
+      Speech.speak(text, {
+        rate: 0.98,
+        pitch: 1.0,
+        onDone: () => {
+          clearTimeout(timeout);
+          finish();
+        },
+        onError: () => {
+          clearTimeout(timeout);
+          finish();
+        },
+      });
+    } catch {
+      clearTimeout(timeout);
+      finish();
+    }
+  });
+}
+
+async function recordFallbackCommandAudio(durationMs = 6500): Promise<string> {
+  const recording = new Audio.Recording();
+  const options = {
+    android: {
+      extension: '.m4a',
+      outputFormat: Audio.AndroidOutputFormat.MPEG_4,
+      audioEncoder: Audio.AndroidAudioEncoder.AAC,
+      sampleRate: 16000,
+      numberOfChannels: 1,
+      bitRate: 64000,
+      isMeteringEnabled: false,
+    },
+    ios: {
+      extension: '.m4a',
+      audioQuality: Audio.IOSAudioQuality.MEDIUM,
+      sampleRate: 16000,
+      numberOfChannels: 1,
+      bitRate: 64000,
+      linearPCMBitDepth: 16,
+      linearPCMIsBigEndian: false,
+      linearPCMIsFloat: false,
+      isMeteringEnabled: false,
+    },
+  };
+
+  await recording.prepareToRecordAsync(options);
+  await recording.startAsync();
+  await new Promise((resolve) => setTimeout(resolve, durationMs));
+  await recording.stopAndUnloadAsync();
+
+  const uri = recording.getURI();
+  if (!uri) {
+    throw new Error('Fallback recording completed without an audio URI.');
+  }
+  return uri;
+}
+
+async function uploadAudioToVoiceChat(
+  backendUrl: string,
+  userToken: string,
+  audioUri: string,
+  gpsPayload: GpsPayload | null,
+): Promise<SseParseResult> {
+  const formData = new FormData();
+  formData.append('audio', {
+    uri: audioUri,
+    type: 'audio/m4a',
+    name: 'command.m4a',
+  } as any);
+  formData.append('language', 'en');
+  formData.append('history', JSON.stringify([]));
+  if (gpsPayload) {
+    formData.append('location', JSON.stringify(gpsPayload));
+  }
+
+  const response = await fetch(`${backendUrl}/api/voice-chat`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${userToken}`,
+    },
+    body: formData,
+  });
+
+  const responseText = await response.text();
+  if (!response.ok) {
+    throw new Error(`Voice chat upload failed [HTTP ${response.status}]: ${responseText}`);
+  }
+
+  return parseSseResponse(responseText);
+}
+
+async function sendTranscriptToChat(
+  backendUrl: string,
+  userToken: string,
+  transcript: string,
+  gpsPayload: GpsPayload | null,
+): Promise<string> {
+  const response = await fetch(`${backendUrl}/api/chat`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${userToken}`,
+    },
+    body: JSON.stringify({
+      text: transcript,
+      language: 'en',
+      history: [],
+      ...(gpsPayload ? { location: gpsPayload } : {}),
+    }),
+  });
+
+  const responseText = await response.text();
+  if (!response.ok) {
+    throw new Error(`Chat request failed [HTTP ${response.status}]: ${responseText}`);
+  }
+
+  return parseSseResponse(responseText).summary;
 }
 
 export default async function HeadlessVoiceTask(taskData: any) {
@@ -191,22 +275,57 @@ export default async function HeadlessVoiceTask(taskData: any) {
         throw new Error('No user session available. Please sign in opening the app.');
     }
 
-    // Step B: Stream audio to backend via WebSocket for Deepgram STT
-    // The mic is already capturing (via earlyCapture). startVoiceStream will
-    // flush all buffered audio once the WebSocket connects, then continue
-    // streaming live.
-    console.log('Starting WebSocket audio stream to backend...');
-    const transcriptResult = await startVoiceStream({
-      backendUrl,
-      token: userToken,
-      onInterimText: async (text: string) => {
-        if (WakeWord.updateAssistantOverlayText) {
-          await WakeWord.updateAssistantOverlayText(`YOU: ${text}`);
-        }
-      },
-      timeoutMs: 15000,
-      earlyCapture: earlyCapture ?? undefined,
-    });
+    let gpsPayload: GpsPayload | null = null;
+    let transcriptResult = '';
+    let assistantSummary = '';
+
+    // Step B: WebSocket STT endpoint is currently unavailable on backend, so
+    // we skip retry delays and go straight to direct upload transcription.
+    if (ENABLE_WEBSOCKET_STT) {
+      console.log('Starting WebSocket audio stream to backend...');
+      try {
+        transcriptResult = await startVoiceStream({
+          backendUrl,
+          token: userToken,
+          onInterimText: async (text: string) => {
+            if (WakeWord.updateAssistantOverlayText) {
+              await WakeWord.updateAssistantOverlayText(`YOU: ${text}`);
+            }
+          },
+          timeoutMs: 15000,
+          earlyCapture: earlyCapture ?? undefined,
+        });
+      } catch (streamError) {
+        const message = streamError instanceof Error ? streamError.message : String(streamError);
+        console.warn('[VoiceStream] Falling back to direct audio upload flow:', message);
+      }
+    }
+
+    if (!transcriptResult) {
+      if (earlyCapture) {
+        earlyCapture.stop();
+        earlyCapture = null;
+      }
+
+      if (WakeWord.updateNotification) {
+        await WakeWord.updateNotification('Recording command...');
+      }
+      if (WakeWord.updateAssistantOverlayText) {
+        await WakeWord.updateAssistantOverlayText('Listening...');
+      }
+
+      gpsPayload = await getHeadlessGpsPayload();
+      const fallbackAudioUri = await recordFallbackCommandAudio(FALLBACK_RECORDING_MS);
+      const fallbackResult = await uploadAudioToVoiceChat(
+        backendUrl,
+        userToken,
+        fallbackAudioUri,
+        gpsPayload,
+      );
+
+      transcriptResult = fallbackResult.transcript;
+      assistantSummary = fallbackResult.summary;
+    }
 
     console.log('Transcription finished, Text:', transcriptResult);
 
@@ -221,63 +340,32 @@ export default async function HeadlessVoiceTask(taskData: any) {
       }
       await playOneShotEffect(SUBMIT_SOUND, 'submit');
 
-      console.log(`Sending Background Request to: ${backendUrl}/api/voice-chat`);
+      console.log(`Sending Background Request to: ${backendUrl}/api/chat`);
       console.log(`Payload string: "${transcriptResult}"`);
 
-      const gpsPayload = await getHeadlessGpsPayload();
-
-      // Switch to the main json-based /api/voice-chat endpoint utilized by the frontend
-      const response = await fetch(`${backendUrl}/api/voice-chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${userToken}`,
-        },
-        body: JSON.stringify({
-          transcript: transcriptResult,
-          source: 'voice',
-          ...(gpsPayload ?? {}),
-        }),
-      });
-
-      const responseText = await response.text();
-
-      if (!response.ok) {
-        console.error(`Backend Error [HTTP ${response.status}]:`, responseText);
-        throw new Error(`Network response was not ok: ${response.status}. Details: ${responseText}`);
+      if (!gpsPayload) {
+        gpsPayload = await getHeadlessGpsPayload();
       }
 
-      // Parse JSON manually from our buffered text
-      const data = JSON.parse(responseText);
-      
-      console.log('Response received, playing audio LLM answer. Status:', response.ok);
-
-      // Step D: Playback LLM audio response while screen locked
-      if (data.summary) {
-          if (WakeWord.updateNotification) {
-              await WakeWord.updateNotification('AI: ' + data.summary);
-          }
-          if (WakeWord.updateAssistantOverlayText) {
-            await WakeWord.updateAssistantOverlayText(`AI: ${data.summary}`);
-          }
-      }
-
-      if (data.audioBase64) {
-        const { sound: responseSound } = await Audio.Sound.createAsync(
-          { uri: `data:audio/mp3;base64,${data.audioBase64}` },
-          { shouldPlay: true }
+      if (!assistantSummary) {
+        assistantSummary = await sendTranscriptToChat(
+          backendUrl,
+          userToken,
+          transcriptResult,
+          gpsPayload,
         );
-        
-        // Wait until it finishes playing
-        await new Promise((resolve, reject) => {
-          responseSound.setOnPlaybackStatusUpdate((status) => {
-            if (status.isLoaded && status.didJustFinish) {
-              resolve(true);
-            }
-          });
-        });
-        
-        await responseSound.unloadAsync();
+      }
+
+      // Step D: Playback LLM response while screen locked
+      if (assistantSummary) {
+        if (WakeWord.updateNotification) {
+          await WakeWord.updateNotification('AI: ' + assistantSummary);
+        }
+        if (WakeWord.updateAssistantOverlayText) {
+          await WakeWord.updateAssistantOverlayText(`AI: ${assistantSummary}`);
+        }
+
+        await speakResponseText(assistantSummary);
       }
     } else {
       if (WakeWord.updateAssistantOverlayText) {
