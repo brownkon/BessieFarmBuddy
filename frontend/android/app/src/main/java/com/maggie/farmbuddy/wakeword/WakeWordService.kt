@@ -23,7 +23,6 @@ import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.os.Handler
 import android.os.Looper
-import kotlinx.coroutines.*
 
 class WakeWordService : Service(), RecognitionListener {
 
@@ -35,7 +34,15 @@ class WakeWordService : Service(), RecognitionListener {
     private val WAKE_WORD_DISPLAY = "Hey Bessie / Ok Bessie"
     private var wakeToneGenerator: ToneGenerator? = null
     private val handler = Handler(Looper.getMainLooper())
+    private val RESTART_DELAY_MS = 900L
+    private val START_THROTTLE_MS = 700L
     private var isListening = false
+    private var lastStartAttemptMs = 0L
+    private val restartRunnable = Runnable {
+        if (isServiceRunning && !isListening && !isProcessingWakeWord && !isRecognitionPaused) {
+            startRecognition()
+        }
+    }
 
     private fun hasLocationPermission(): Boolean {
         val hasFine = ContextCompat.checkSelfPermission(
@@ -131,10 +138,14 @@ class WakeWordService : Service(), RecognitionListener {
         speechRecognizer?.setRecognitionListener(this)
 
         recognizerIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_WEB_SEARCH)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, packageName)
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-            // It's recommended to try fetching offline if needed or keep default
+            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+            putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 6000L)
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 2000L)
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2000L)
         }
 
         startRecognition()
@@ -142,6 +153,10 @@ class WakeWordService : Service(), RecognitionListener {
 
     private fun startRecognition() {
         if (speechRecognizer == null || isProcessingWakeWord || isRecognitionPaused) return
+        val now = System.currentTimeMillis()
+        if (now - lastStartAttemptMs < START_THROTTLE_MS) return
+        lastStartAttemptMs = now
+
         try {
             speechRecognizer?.startListening(recognizerIntent)
             isListening = true
@@ -156,16 +171,14 @@ class WakeWordService : Service(), RecognitionListener {
         isListening = false
         try {
             speechRecognizer?.stopListening()
+            speechRecognizer?.cancel()
         } catch (e: Exception) {}
     }
 
     private fun restartListeningDelayed() {
         if (!isServiceRunning || isProcessingWakeWord || isRecognitionPaused) return
-        handler.postDelayed({
-            if (isServiceRunning && !isListening && !isProcessingWakeWord && !isRecognitionPaused) {
-                startRecognition()
-            }
-        }, 300)
+        handler.removeCallbacks(restartRunnable)
+        handler.postDelayed(restartRunnable, RESTART_DELAY_MS)
     }
 
     companion object {

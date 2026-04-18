@@ -17,17 +17,12 @@ import {
   SafeAreaView,
   Dimensions,
   PanResponder,
-  AppRegistry,
   NativeModules,
   AppState,
   DeviceEventEmitter
 } from 'react-native';
 
 const { WakeWord } = NativeModules;
-
-// Lazy-load headless task to avoid startup crashes if optional native modules are unavailable.
-AppRegistry.registerHeadlessTask('DairyVoiceBackgroundLoop', () => require('./src/HeadlessVoiceTask').default);
-import { registerRootComponent } from 'expo';
 import { StatusBar } from 'expo-status-bar';
 import * as Speech from 'expo-speech';
 import { Audio } from 'expo-av';
@@ -373,25 +368,11 @@ function AppMain() {
     setVoiceTranscript('');
     transcriptRef.current = '';
 
-    await new Promise(r => setTimeout(r, 100));
-
-    const beepDone = () => {
-      clearTimeout(safetyBeepTimeout);
-      // @ts-ignore: Block-scoped declaration order
-      setTimeout(() => startCommandListening(), 300);
-    };
-
-    const safetyBeepTimeout = setTimeout(beepDone, 1500);
-
-    Speech.speak('Moooo', {
-      rate: ttsRate,
-      volume: ttsVolume,
-      voice: preferredVoiceRef.current,
-      onDone: beepDone,
-      onError: beepDone
-    });
+    // Start command capture immediately after wake detection to avoid clipping
+    // the first words the user says after the wake tone.
+    await startCommandListening();
     // @ts-ignore
-  }, [stopListening, stopRecordingManual, startCommandListening, ttsRate, ttsVolume]);
+  }, [stopListening, stopRecordingManual, startCommandListening]);
 
   const startCommandListening = useCallback(async (isFollowUp = false) => {
     modeRef.current = 'command';
@@ -1033,5 +1014,3 @@ export default function App() {
     </AuthProvider>
   );
 }
-
-registerRootComponent(App);

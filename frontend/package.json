@@ -1,7 +1,7 @@
 {
   "name": "frontend",
   "version": "1.1.0",
-  "main": "App.tsx",
+  "main": "index.js",
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",

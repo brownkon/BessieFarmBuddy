@@ -1,5 +1,4 @@
 import { Audio } from 'expo-av';
-import * as Location from 'expo-location';
 import { NativeModules } from 'react-native';
 import { loadCachedGpsPayload, saveCachedGpsPayload } from './lib/location-cache';
 import { supabase } from './services/supabase';
@@ -62,6 +61,16 @@ async function playOneShotEffect(source: number, label: string) {
 async function getHeadlessGpsPayload(): Promise<GpsPayload | null> {
   try {
     const cachedPayload = await loadCachedGpsPayload();
+    let LocationModule: typeof import('expo-location');
+
+    try {
+      LocationModule = await import('expo-location');
+    } catch (importError) {
+      console.warn('Headless GPS skipped: expo-location unavailable in headless runtime', importError);
+      return cachedPayload;
+    }
+
+    const Location = LocationModule;
     const backgroundPermission = await Location.getBackgroundPermissionsAsync();
     const foregroundPermission = await Location.getForegroundPermissionsAsync();
 
@@ -293,7 +302,7 @@ export default async function HeadlessVoiceTask(taskData: any) {
     console.log('Restoring Audio Focus and Resuming Vosk listener...');
     try {
       if (WakeWord.updateNotification) {
-        await WakeWord.updateNotification("Listening for 'Hey Bovi / Ok Bovi'");
+        await WakeWord.updateNotification("Listening for 'Hey Bessie / Ok Bessie'");
       }
       await WakeWord.releaseAudio();
       await WakeWord.resumeVosk();
