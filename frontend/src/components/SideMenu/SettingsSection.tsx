@@ -1,6 +1,8 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, Switch } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, Switch, NativeModules } from 'react-native';
 import styles from '../../styles/AppStyles';
+
+const { WakeWord } = NativeModules;
 
 const SettingsSection = ({
   user,
@@ -18,6 +20,28 @@ const SettingsSection = ({
   toggleMenu,
   handleSignOut
 }) => {
+  const [backgroundEnabled, setBackgroundEnabled] = useState(false);
+
+  useEffect(() => {
+    if (WakeWord) {
+      WakeWord.getWakeWordStatus().then((status: any) => {
+         setBackgroundEnabled(status.enabled);
+      }).catch(console.error);
+    }
+  }, []);
+
+  const toggleBackgroundEnabled = async (val: boolean) => {
+    setBackgroundEnabled(val);
+    if (WakeWord) {
+      await WakeWord.setWakeWordEnabled(val);
+      if (val) {
+        await WakeWord.startListening();
+      } else {
+        await WakeWord.stopListening();
+      }
+    }
+  };
+
   return (
     <View>
       {user && (
@@ -55,6 +79,20 @@ const SettingsSection = ({
         <TouchableOpacity style={styles.voiceButton} onPress={() => setIsModalVisible(true)}>
           <Text style={styles.voiceButtonText}>🗣️ Speaker Profile</Text>
         </TouchableOpacity>
+      </View>
+
+      <View style={styles.drawerItem}>
+        <Text style={styles.settingLabel}>Background Listener</Text>
+        <Text style={{ color: '#9ca3af', fontSize: 13, marginBottom: 10 }}>Keep Assistant listening when app is closed</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={{ color: '#9ca3af', fontSize: 13 }}>{backgroundEnabled ? 'Enabled' : 'Disabled'}</Text>
+          <Switch
+            value={backgroundEnabled}
+            onValueChange={toggleBackgroundEnabled}
+            thumbColor={backgroundEnabled ? '#2ecc71' : '#f4f3f4'}
+            trackColor={{ false: '#3e3e3e', true: '#10b981' }}
+          />
+        </View>
       </View>
 
       <View style={styles.drawerItem}>

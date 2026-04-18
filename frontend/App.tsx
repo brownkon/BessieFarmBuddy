@@ -6,6 +6,8 @@ import {
   View,
   TouchableOpacity,
   Platform,
+  PermissionsAndroid,
+  Linking,
   LogBox,
   ScrollView,
   Alert,
@@ -14,8 +16,17 @@ import {
   Keyboard,
   SafeAreaView,
   Dimensions,
-  PanResponder
+  PanResponder,
+  AppRegistry,
+  NativeModules,
+  AppState,
+  DeviceEventEmitter
 } from 'react-native';
+
+const { WakeWord } = NativeModules;
+
+// Lazy-load headless task to avoid startup crashes if optional native modules are unavailable.
+AppRegistry.registerHeadlessTask('DairyVoiceBackgroundLoop', () => require('./src/HeadlessVoiceTask').default);
 import { registerRootComponent } from 'expo';
 import { StatusBar } from 'expo-status-bar';
 import * as Speech from 'expo-speech';
@@ -273,7 +284,6 @@ function AppMain() {
     recordingRef
   } = useAudioRecording(onSilence, undefined);
 
-  // --- ACTIONS ---
   const startWakeWordListening = useCallback(async (force = false) => {
     if (!isListeningActiveRef.current) {
       setStatus('Listening Disabled');
@@ -307,13 +317,16 @@ function AppMain() {
 
       await new Promise(resolve => setTimeout(resolve, 300));
 
-      setStatus('Say "Hey Dairy" to start...');
+      setStatus('Say "Hey Bessie" to start...');
       setVoiceTranscript('');
       transcriptRef.current = '';
       setNativeRecognizing(true);
 
-      // Pass wake=true + full vocabulary so the hook auto-restarts and biases toward farm terms
-      await startListening([...WAKE_PHRASES, ...EXIT_PHRASES], 'en-US', true);
+      // Let WakeWordService resume listening natively
+      if (WakeWord?.resumeVosk) {
+        await WakeWord.resumeVosk();
+      }
+
       console.log('[App] Wake word listening active.');
     } catch (err) {
       console.error('[App] Error in startWakeWordListening:', err);
@@ -322,10 +335,19 @@ function AppMain() {
     } finally {
       isStartingRef.current = false;
     }
-  }, [startListening, stopListening, recordingRef, silentSoundRef]);
+  }, [stopListening, recordingRef, silentSoundRef]);
 
   const triggerCommandPrompt = useCallback(async () => {
     console.log('[App] Interrupted by wake word, resetting state...');
+
+    // Pause native wake-word recognizer while foreground command capture is active.
+    try {
+      if (WakeWord?.pauseListening) {
+        await WakeWord.pauseListening();
+      }
+    } catch (e) {
+      console.warn('[App] Failed to pause native wake word listener:', e);
+    }
 
     // Cancel any pending termination restart
     clearTimeout(terminationRestartTimerRef.current);
@@ -799,6 +821,103 @@ function AppMain() {
       }
     }
   }, [user?.id, isReady, activeSessionId, createNewChatSession]);
+
+  // Native WakeWord Integration
+  useEffect(() => {
+    const ensureAndroidWakePermissions = async () => {
+      if (Platform.OS !== 'android') {
+        return { granted: true, blocked: false, missing: [] as string[] };
+      }
+
+      const missing: string[] = [];
+      let blocked = false;
+
+      const hasAudio = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.RECORD_AUDIO);
+      if (!hasAudio) {
+        const audioGranted = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.RECORD_AUDIO);
+        if (audioGranted !== PermissionsAndroid.RESULTS.GRANTED) {
+          missing.push('microphone');
+          blocked = blocked || audioGranted === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN;
+        }
+      }
+
+      if (Platform.Version >= 33) {
+        const hasNotifications = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
+        if (!hasNotifications) {
+          const notificationsGranted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
+          );
+          if (notificationsGranted !== PermissionsAndroid.RESULTS.GRANTED) {
+            missing.push('notifications');
+            blocked = blocked || notificationsGranted === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN;
+          }
+        }
+      }
+
+      return {
+        granted: missing.length === 0,
+        blocked,
+        missing,
+      };
+    };
+
+    const checkWakeWord = async () => {
+       if (!WakeWord) return;
+       try {
+         const status = await WakeWord.getWakeWordStatus();
+         if (!status.enabled) return;
+
+         const permissionResult = await ensureAndroidWakePermissions();
+         if (!permissionResult.granted) {
+            if (WakeWord?.setWakeWordEnabled) {
+              await WakeWord.setWakeWordEnabled(false);
+            }
+
+            const missingLabels = permissionResult.missing.join(' and ');
+            if (permissionResult.blocked) {
+              Alert.alert(
+                'Permissions required',
+                `Enable ${missingLabels} in Android settings to keep wake word listening active.`,
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Open Settings', onPress: () => void Linking.openSettings() }
+                ]
+              );
+            } else {
+              Alert.alert('Permissions required', 'Microphone and notifications are required for wake word listening.');
+            }
+            return;
+         }
+
+         if (!status.running) {
+            await WakeWord.startListening();
+         }
+       } catch (e) {
+         console.warn("Failed to init wake word", e);
+       }
+    };
+    checkWakeWord();
+
+    const handleAppStateChange = (nextAppState: any) => {
+      const isForeground = nextAppState === 'active';
+      if (WakeWord?.setForegroundVoiceTabActive) {
+        WakeWord.setForegroundVoiceTabActive(isForeground);
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    handleAppStateChange(AppState.currentState);
+
+    const wakeWordSubscription = DeviceEventEmitter.addListener('onWakeWordDetected', (event) => {
+      console.log('[App] Native wake word detected event:', event);
+      triggerCommandPrompt();
+    });
+
+    return () => {
+      subscription.remove();
+      wakeWordSubscription.remove();
+    };
+  }, [triggerCommandPrompt]);
 
   if (!user) return <AuthScreen />;
 
