@@ -1,113 +1,128 @@
--- Drop the table if it already exists (useful for development/resets)
+-- Cow Data Table (Linked to Organizations)
+-- This table is the "Single Source of Truth" for all animal data consolidated from multiple reports.
+
+DROP TABLE IF EXISTS public.farmer_notes CASCADE;
 DROP TABLE IF EXISTS public.cow_data CASCADE;
 
--- Cow Data Table (Linked to Organizations)
 CREATE TABLE public.cow_data (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id uuid REFERENCES public.organizations(id) ON DELETE CASCADE,
-  animal_number text NOT NULL,
+  
+  -- Identifiers
+  animal_number int NOT NULL,
+  animal_tag_id text,
+  animal_name text,
+  
+  -- Location & Grouping
   cow_group text,
   location text,
   robot text,
-  animal_tag_id text,
-  animal_life_no text,
+  
+  -- Cow Stats
+  age float, -- Years.months format (e.g., 4.07)
   lactation_no int,
   lactation_days int,
+  lactation_day_category int, -- 1-5 (converted from Roman)
+  
+  -- Reproduction
+  days_pregnant int,
+  reproduction_status text,
+  days_since_heat int,
+  last_heat text,
+  last_insemination text,
+  insemination_no int,
+  days_since_insemination int,
+  heat_probability_max int,
+  optimum_insemination_moment float, -- nCurrent/1080
+  on_set_of_heat text,
+  hours_since_heat int,
+  sire text,
+  expected_calving_date text,
+  pregnancy_remark text,
+  calving_remark text,
+  health_remark text,
+  insemination_moment text,
+  remarks text,
+  
+  -- Production
   day_production float,
   day_production_deviation float,
-  reproduction_status text,
-  last_insemination text,
-  days_pregnant int,
-  days_to_dry_off int,
-  expected_calving_date text,
-  production_status text,
-  gender text,
-  
-  -- Additional fields from Actual 1 & 2 reports
-  rest_feed float,
+  milk_yield_expected float,
+  milk_frequency float,
+  milkings int,
   failures int,
-  failed_milking int,
-  milkings_lactation float,
-  milkings_milk float,
-  fat_protein_ratio float,
-  nr_of_refusal int,
-  color_code text,
-  end_milk_till text,
-  milk_separation text,
-  body_score float,
-  intake_total float,
-  rest_feed_total float,
-  scc_indication int,
-  last_fertility_diagnose text,
-  last_fertility_remarks text,
-  last_fertility text,
-  days_since_heat int,
-  insemination_no int,
-  pregnancy_check_date text,
-  lf float,
-  lr float,
-  rr float,
-  rf float,
-  milk_temperature float,
-  rumination_herd int,
-  rumination_att_count int,
-  inversion_ketosis text,
-  activity_deviation int,
-  rumination_minutes int,
-  sire text,
-  inseminate text,
-  too_late_for_milking text,
-  milk_visit_yield float,
-  last_milk text,
-  train_cow text,
-  calving_date text,
-  sick_chance int,
-  sick_change_status text,
-
-  sensors jsonb, -- Stores cleaned sensor data: { "SensorName": "Value", ... }
-  severeness jsonb, -- Stores parsed severeness levels: { "SensorName": 87, ... }
+  interval_exceeded int,
+  time_away text,
+  too_late_for_milking boolean,
+  
+  -- Health Status
+  activity boolean,
+  sick_chance boolean,
+  disease_name text,
+  
+  -- Milk Separation
+  milk_separation_status text,
+  milk_separation_type text,
+  milk_separation_tank text,
+  milk_separation_start_date text,
+  milk_separation_end_date text,
+  milk_separation_remaining_days int,
+  hot_rinse_activated boolean,
+  
+  -- Treatment Details
+  medicine_name text,
+  medicine_dosage float,
+  dosage_unit text,
+  treatment_plan_name text,
+  treatment_description text,
+  expected_application_date text,
+  route_of_administration text,
+  claw_teat text,
+  last_routing_visit_direction text,
+  mus_id int,
+  
+  -- Raw & Complex Data
+  sensors jsonb, -- { "SensorName": "Value", ... }
+  severeness jsonb, -- { "SensorName": 87, ... }
+  
   updated_at timestamptz DEFAULT now(),
+  
   UNIQUE(organization_id, animal_number)
 );
 
--- Enable RLS
-ALTER TABLE public.cow_data ENABLE ROW LEVEL SECURITY;
-
--- RLS Policy: Members can read their organization's cow data
-CREATE POLICY "Members can read their cow data" ON public.cow_data
-  FOR SELECT USING (
-    organization_id = public.get_auth_user_org_id()
-  );
-
--- RLS Policy: Leaders can manage cow data
-CREATE POLICY "Leaders can manage cow data" ON public.cow_data
-  FOR ALL USING (
-    organization_id = public.get_auth_user_org_id() AND public.get_auth_user_role() = 'boss'
-  );
-
 -- Farmer Notes Table
-DROP TABLE IF EXISTS public.farmer_notes CASCADE;
 CREATE TABLE public.farmer_notes (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
   organization_id uuid REFERENCES public.organizations(id) ON DELETE CASCADE,
   content text NOT NULL,
-  animal_number text,
+  animal_number int,
   created_at timestamptz DEFAULT now()
 );
 
--- Enable RLS
+-- Indexes for performance
+CREATE INDEX idx_cow_data_org_id ON public.cow_data(organization_id);
+CREATE INDEX idx_cow_data_animal_number ON public.cow_data(animal_number);
+CREATE INDEX idx_cow_data_activity ON public.cow_data(activity);
+CREATE INDEX idx_cow_data_sick_chance ON public.cow_data(sick_chance);
+CREATE INDEX idx_farmer_notes_animal_number ON public.farmer_notes(animal_number);
+
+-- RLS
+ALTER TABLE public.cow_data ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.farmer_notes ENABLE ROW LEVEL SECURITY;
 
--- RLS Policy: Users can view notes for their organization
-CREATE POLICY "Users can read their organization's notes" ON public.farmer_notes
+CREATE POLICY "Members can read their cow data" ON public.cow_data
   FOR SELECT USING (
-    organization_id = public.get_auth_user_org_id()
+    organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid())
   );
 
--- RLS Policy: Users can insert their own notes
-CREATE POLICY "Users can insert their own notes" ON public.farmer_notes
-  FOR INSERT WITH CHECK (
-    user_id = auth.uid() AND
-    organization_id = public.get_auth_user_org_id()
+CREATE POLICY "Leaders can manage cow data" ON public.cow_data
+  FOR ALL USING (
+    (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'boss' AND
+    organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid())
+  );
+
+CREATE POLICY "Users can manage own organization notes" ON public.farmer_notes
+  FOR ALL USING (
+    organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid())
   );

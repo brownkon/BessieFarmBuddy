@@ -2,221 +2,239 @@ import fs from 'fs-extra';
 import path from 'path';
 import { parse } from 'csv-parse/sync';
 import supabase from '../supabase';
-import { cleanNumber, mapSensorData, formatDate } from './cleaner';
+import {
+  cleanNumber,
+  mapSensorData,
+  formatDate,
+  parseBoolean,
+  parseRomanToNumber,
+  extractOptimumMoment,
+  stripHtml
+} from './cleaner';
 
 const DATA_DIR = path.join(__dirname, '../../../data/CSV');
 
 /**
- * Main service to process cow reports and sync them to Supabase.
+ * Normalizes field names and types for internal processing.
  */
+interface CowRecord {
+  organization_id: string;
+  animal_number: number;
+  animal_tag_id?: string | null;
+  animal_name?: string | null;
+  cow_group?: string | null;
+  location?: string | null;
+  robot?: string | null;
+  age?: number | null;
+  lactation_no?: number | null;
+  lactation_days?: number | null;
+  lactation_day_category?: number | null;
+  days_pregnant?: number | null;
+  reproduction_status?: string | null;
+  days_since_heat?: number | null;
+  last_heat?: string | null;
+  last_insemination?: string | null;
+  insemination_no?: number | null;
+  days_since_insemination?: number | null;
+  heat_probability_max?: number | null;
+  optimum_insemination_moment?: number | null;
+  on_set_of_heat?: string | null;
+  hours_since_heat?: number | null;
+  sire?: string | null;
+  expected_calving_date?: string | null;
+  pregnancy_remark?: string | null;
+  calving_remark?: string | null;
+  health_remark?: string | null;
+  insemination_moment?: string | null;
+  remarks?: string | null;
+  day_production?: number | null;
+  day_production_deviation?: number | null;
+  milk_yield_expected?: number | null;
+  milk_frequency?: number | null;
+  milkings?: number | null;
+  failures?: number | null;
+  interval_exceeded?: number | null;
+  time_away?: string | null;
+  too_late_for_milking?: boolean;
+  activity?: boolean;
+  sick_chance?: boolean;
+  disease_name?: string | null;
+  milk_separation_status?: string | null;
+  milk_separation_type?: string | null;
+  milk_separation_tank?: string | null;
+  milk_separation_start_date?: string | null;
+  milk_separation_end_date?: string | null;
+  milk_separation_remaining_days?: number | null;
+  hot_rinse_activated?: boolean;
+  medicine_name?: string | null;
+  medicine_dosage?: number | null;
+  dosage_unit?: string | null;
+  treatment_plan_name?: string | null;
+  treatment_description?: string | null;
+  expected_application_date?: string | null;
+  route_of_administration?: string | null;
+  claw_teat?: string | null;
+  last_routing_visit_direction?: string | null;
+  mus_id?: number | null;
+  sensors?: any;
+  severeness?: any;
+}
+
 export class DataProcessor {
-  /**
-   * Fetches the first organization ID to use as a default for the "one farmer" setup.
-   */
   async getDefaultOrganizationId(): Promise<string | null> {
     if (!supabase) return null;
     const { data, error } = await (supabase as any).from('organizations').select('id').limit(1);
-    if (error) {
-      console.error('[DataProcessor] Error fetching organization:', error.message);
-      return null;
-    }
+    if (error) return null;
     return data && data.length > 0 ? data[0].id : null;
   }
 
-  /**
-   * Parses a single CSV file and returns records as a Map.
-   */
-  async parseFile(filePath: string, orgId: string): Promise<Map<string, any>> {
-    console.log(`[DataProcessor] Parsing file: ${path.basename(filePath)}`);
+  async parseFile(filePath: string, orgId: string): Promise<Map<number, CowRecord>> {
+    const fileName = path.basename(filePath);
+    console.log(`[DataProcessor] Parsing: ${fileName}`);
     const content = await fs.readFile(filePath, 'utf-8');
-    
-    // Find the real header line (some files have a garbage first line)
+
+    // Find header line
     const lines = content.split(/\r?\n/);
-    let headerLineIndex = -1;
-    for (let i = 0; i < Math.min(lines.length, 10); i++) {
-      if (lines[i].includes('Animal Number') || lines[i].includes('Animal Tag Id') || lines[i].includes('Animal Life No')) {
-        headerLineIndex = i;
-        break;
-      }
-    }
+    let headerLineIndex = lines.findIndex(l => l.includes('Animal Number') || l.includes('Animal Tag Id'));
+    if (headerLineIndex === -1) headerLineIndex = 0;
 
-    const startLine = headerLineIndex !== -1 ? headerLineIndex + 1 : 1;
-
-    // Parse CSV with duplicate column handling
     const records = parse(content, {
-      columns: (header: string[]) => {
-        const counts: Record<string, number> = {};
-        return header.map(col => {
-          const name = col.trim();
-          counts[name] = (counts[name] || 0) + 1;
-          return counts[name] > 1 ? `${name}_${counts[name]}` : name;
-        });
-      },
+      columns: true,
       skip_empty_lines: true,
       relax_column_count: true,
-      from_line: startLine,
-      bom: true
+      from_line: headerLineIndex + 1,
+      bom: true,
+      trim: true
     });
 
-    const cowMap = new Map<string, any>();
+    const cowMap = new Map<number, CowRecord>();
 
-    records.forEach((record: any) => {
-      const animalNumber = (record['Animal Number'] || record['Animal Tag Id'] || '').trim();
-      
-      // Skip sum/avg lines and internal markers
-      if (!animalNumber || isNaN(animalNumber as any) || animalNumber === '0' || animalNumber === 'SUM' || animalNumber === 'AVG') {
-        return;
-      }
+    records.forEach((r: any) => {
+      const rawAnimalNumber = (r['Animal Number'] || r['Animal Tag Id'] || '').trim();
+      if (!rawAnimalNumber || rawAnimalNumber === '0' || isNaN(rawAnimalNumber as any)) return;
 
-      const cleanedSensors = mapSensorData(
-        record['Sensor'] || '',
-        record['Value'] || '',
-        record['Severeness'] || ''
-      );
+      const animalNumber = parseInt(rawAnimalNumber, 10);
+      const cleanedSensors = mapSensorData(r['Sensor'] || '', r['Value'] || '', r['Severeness'] || '');
 
-      const cowData = {
+      const data: CowRecord = {
         organization_id: orgId,
         animal_number: animalNumber,
-        cow_group: record['Group'] || record['Group Number'] || null,
-        location: record['Location'] || null,
-        robot: record['Robot'] || null,
-        animal_tag_id: record['Animal Tag Id'] || null,
-        animal_life_no: record['Animal Life No. '] || record['Animal Life No.'] || null,
-        lactation_no: cleanNumber(record['Lactation No.']),
-        lactation_days: cleanNumber(record['Lactation days']),
-        day_production: cleanNumber(record['Day Production (24h)']) || cleanNumber(record['Day Production']),
-        day_production_deviation: cleanNumber(record['Day Production (24h) Deviation']),
-        reproduction_status: record['Reproduction Status'] || record['Pregnancy Status'] || null,
-        last_insemination: formatDate(record['Last Insemination']),
-        days_pregnant: cleanNumber(record['Days Pregnant']),
-        days_to_dry_off: cleanNumber(record['Days to Dry Off']),
-        expected_calving_date: formatDate(record['Expected Calving Date'] || record['Expected Calving']),
-        production_status: record['Production Status'] || null,
-        gender: record['Gender'] || null,
-        
-        // Extended Fields
-        rest_feed: cleanNumber(record['Rest Feed']),
-        failures: cleanNumber(record['Failures']),
-        failed_milking: cleanNumber(record['Failed Milking']),
-        milkings_lactation: cleanNumber(record['Milkings']),
-        milkings_milk: cleanNumber(record['Milkings_2']),
-        fat_protein_ratio: cleanNumber(record['Fat/Protein Ratio']),
-        nr_of_refusal: cleanNumber(record['Nr of Refusal']),
-        color_code: record['Color Code LF-LR-RF-RR'] || null,
-        end_milk_till: formatDate(record['End Milk Till']),
-        milk_separation: record['Milk Separation'] || null,
-        body_score: cleanNumber(record['Body Score']),
-        intake_total: cleanNumber(record['Intake Total']),
-        rest_feed_total: cleanNumber(record['Rest Feed Total']),
-        scc_indication: cleanNumber(record['SCC Indication']),
-        last_fertility_diagnose: formatDate(record['Last Fertility Diagnose']),
-        last_fertility_remarks: record['Last Fertility Remarks'] || null,
-        last_fertility: formatDate(record['Last Fertility']),
-        days_since_heat: cleanNumber(record['Days Since Heat']),
-        insemination_no: cleanNumber(record['Insemination No.']),
-        pregnancy_check_date: formatDate(record['Pregnancy Check Date']),
-        lf: cleanNumber(record['LF']),
-        lr: cleanNumber(record['LR']),
-        rr: cleanNumber(record['RR']),
-        rf: cleanNumber(record['RF']),
-        milk_temperature: cleanNumber(record['Milk Temperature']),
-        rumination_herd: cleanNumber(record['Rumination Herd']),
-        rumination_att_count: cleanNumber(record['Rumination Att. Count']),
-        inversion_ketosis: record['Inversion/Ketosis'] || null,
-        activity_deviation: cleanNumber(record['Activity Deviation']),
-        rumination_minutes: cleanNumber(record['Rumination Minutes']),
-        sire: record['Sire'] || null,
-        inseminate: record['Inseminate'] || null,
-        too_late_for_milking: record['Too Late for Milking'] || null,
-        milk_visit_yield: cleanNumber(record['Milk Visit Yield']),
-        last_milk: formatDate(record['Last Milk']),
-        train_cow: record['Train Cow'] || null,
-        calving_date: formatDate(record['Calving Date']),
-        sick_chance: cleanNumber(record['Sick Chance']),
-        sick_change_status: record['Sick Change Status'] || null,
+        animal_tag_id: r['Animal Tag Id'] || null,
+        animal_name: r['Animal Name'] || null,
+        cow_group: r['Group'] || r['Group Number'] || null,
+        location: r['Location'] || null,
+        robot: r['Robot'] || null,
+        age: cleanNumber(r['Age']),
+        lactation_no: cleanNumber(r['Lactation No.']) || cleanNumber(r['Lactation Number']) || cleanNumber(r['Lactation No']),
+        lactation_days: cleanNumber(r['Lactation days']) || cleanNumber(r['Lactation Days']),
+        lactation_day_category: parseRomanToNumber(r['Lactation day category']),
+        days_pregnant: cleanNumber(r['Days Pregnant']),
+        reproduction_status: r['Reproduction Status'] || r['Status'] || null,
+        days_since_heat: cleanNumber(r['Days Since Heat']) || cleanNumber(r['Days since heat']),
+        last_heat: formatDate(r['Last Heat']),
+        last_insemination: formatDate(r['Last Insemination']),
+        insemination_no: cleanNumber(r['Insemination No.']) || cleanNumber(r['Insemination number']),
+        days_since_insemination: cleanNumber(r['Since Insemination']),
+        heat_probability_max: cleanNumber(r['Heat Probability Max.']) || cleanNumber(r['heat prob max']) || cleanNumber(r['Heat prob max']),
+        optimum_insemination_moment: extractOptimumMoment(r['Optimum Insemination Moment']) || extractOptimumMoment(r['optimum insemination moment']),
+        on_set_of_heat: r['On set of heat'] || null,
+        hours_since_heat: cleanNumber(r['Hours since heat']),
+        sire: r['Sire'] || null,
+        expected_calving_date: formatDate(r['Expected Calving Date'] || r['Date']),
+        pregnancy_remark: r['Pregnancy Remark'] || null,
+        calving_remark: r['Calving Remark'] || null,
+        health_remark: r['Health remark'] || null,
+        insemination_moment: r['Insemination moment'] || null,
+        remarks: r['Remarks'] || null,
+        day_production: cleanNumber(r['Day Production']) || cleanNumber(r['day production']),
+        day_production_deviation: cleanNumber(r['day production deviation']),
+        milk_yield_expected: cleanNumber(r['Milk yield expected']),
+        milk_frequency: cleanNumber(r['Milk frequency']),
+        milkings: cleanNumber(r['milkings']),
+        failures: cleanNumber(r['failures']),
+        interval_exceeded: cleanNumber(r['Interval exceeded']),
+        time_away: r['Time away'] || r['away'] || null,
+        too_late_for_milking: parseBoolean(r['too_late_for_milking']),
+        activity: parseBoolean(r['Activity']),
+        sick_chance: parseBoolean(r['Sick Chance']),
+        disease_name: r['Disease Name'] || r['Disease Name (With Milk Separation)'] || r['Disease Name (Health Report)'] || null,
+        milk_separation_status: r['Milk Separation Status'] || null,
+        milk_separation_type: r['Milk Separation Type'] || null,
+        milk_separation_tank: r['Milk Separation Tank'] || null,
+        milk_separation_start_date: formatDate(r['Milk Separation Start Date']),
+        milk_separation_end_date: formatDate(r['Milk Separation End Date']),
+        milk_separation_remaining_days: cleanNumber(r['Milk Separation Remaining Days']),
+        hot_rinse_activated: parseBoolean(r['Hot Rinse Activated']),
+        medicine_name: r['Medicine Name'] || null,
+        medicine_dosage: cleanNumber(r['Medicine Dosage']),
+        dosage_unit: r['Dosage Unit'] || null,
+        treatment_plan_name: r['Treatment Plan Name'] || null,
+        treatment_description: r['Description'] || null,
+        expected_application_date: formatDate(r['Expected application done date time']),
+        route_of_administration: r['Route of Administration'] || null,
+        claw_teat: r['Claw/Teat'] || null,
+        last_routing_visit_direction: r['Last Routing Visit Direction'] || null,
+        mus_id: cleanNumber(r['MusId']),
 
         sensors: Object.keys(cleanedSensors.sensors).length > 0 ? cleanedSensors.sensors : null,
         severeness: Object.keys(cleanedSensors.severeness).length > 0 ? cleanedSensors.severeness : null,
-        updated_at: new Date().toISOString()
       };
 
-      cowMap.set(animalNumber, cowData);
+      cowMap.set(animalNumber, data);
     });
 
     return cowMap;
   }
 
-  /**
-   * Merges two cow data objects, keeping the most informative values.
-   */
-  mergeCowData(existing: any, incoming: any): any {
+  mergeCowData(existing: CowRecord, incoming: CowRecord): CowRecord {
     const merged = { ...existing };
     for (const [key, value] of Object.entries(incoming)) {
-      if (value !== null && value !== undefined) {
-        if ((key === 'sensors' || key === 'severeness') && merged[key] && typeof value === 'object') {
-          merged[key] = { ...merged[key], ...value as object };
+      if (value !== null && value !== undefined && value !== '') {
+        const existingValue = (merged as any)[key];
+
+        // Special handling for booleans: keep true if either is true
+        if (typeof value === 'boolean' && typeof existingValue === 'boolean') {
+          (merged as any)[key] = existingValue || value;
+        } else if ((key === 'sensors' || key === 'severeness') && existingValue && typeof existingValue === 'object') {
+          (merged as any)[key] = { ...existingValue, ...(value as object) };
         } else {
-          merged[key] = value;
+          (merged as any)[key] = value;
         }
       }
     }
     return merged;
   }
 
-  /**
-   * Scans the data directory and processes all CSV files, merging them before sync.
-   */
   async syncAll(): Promise<void> {
-    if (!supabase) {
-      console.error('[DataProcessor] Supabase client not initialized.');
-      return;
-    }
-
     const orgId = await this.getDefaultOrganizationId();
-    if (!orgId) {
-      console.error('[DataProcessor] No organization found. Cannot sync data.');
-      return;
-    }
+    if (!orgId) return;
 
     try {
       const files = await fs.readdir(DATA_DIR);
-      const csvFiles = files.filter(f => 
-        f.endsWith('.csv') && !f.toLowerCase().includes('historical')
-      );
+      const csvFiles = files.filter(f => f.endsWith('.csv'));
 
-      const masterCowMap = new Map<string, any>();
+      const masterMap = new Map<number, CowRecord>();
 
       for (const file of csvFiles) {
-        const filePath = path.join(DATA_DIR, file);
-        const fileCowMap = await this.parseFile(filePath, orgId);
-        
-        for (const [animalNumber, data] of fileCowMap) {
-          if (masterCowMap.has(animalNumber)) {
-            masterCowMap.set(animalNumber, this.mergeCowData(masterCowMap.get(animalNumber), data));
+        const fileMap = await this.parseFile(path.join(DATA_DIR, file), orgId);
+        for (const [id, data] of fileMap) {
+          if (masterMap.has(id)) {
+            masterMap.set(id, this.mergeCowData(masterMap.get(id)!, data));
           } else {
-            masterCowMap.set(animalNumber, data);
+            masterMap.set(id, data);
           }
         }
       }
 
-      const allCows = Array.from(masterCowMap.values());
-      if (allCows.length === 0) {
-        console.log('[DataProcessor] No records to sync.');
-        return;
-      }
+      const allCows = Array.from(masterMap.values());
+      console.log(`[DataProcessor] Syncing ${allCows.length} cows...`);
 
-      console.log(`[DataProcessor] Syncing ${allCows.length} unique cows to Supabase...`);
-
-      // Supabase Upsert
       const { error } = await (supabase as any)
         .from('cow_data')
         .upsert(allCows, { onConflict: 'organization_id, animal_number' });
 
-      if (error) {
-        console.error('[DataProcessor] Error upserting to Supabase:', error.message);
-      } else {
-        console.log(`[DataProcessor] Sync complete. Successfully upserted ${allCows.length} records.`);
-      }
+      if (error) throw error;
+      console.log('[DataProcessor] Sync successful.');
     } catch (err: any) {
       console.error('[DataProcessor] Sync failed:', err.message);
     }

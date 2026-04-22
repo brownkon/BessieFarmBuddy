@@ -2,176 +2,148 @@
 
 Bessie is a voice-controlled AI assistant designed specifically for farmers. It provides hands-free support in the field, allowing farmers to ask questions, track tasks, and get information without needing to look at their phones.
 
-The app uses a hybrid architecture:
-- **Offline Wake Word Detection**: Powered by [Vosk](https://alphacephei.com/vosk/) to listen for "Hey Dairy" or "Hey Bessie" without needing an internet connection.
+The project is built with a modern, modular TypeScript architecture, leveraging high-performance tools for both real-time voice processing and complex data orchestration.
+
+## 🌟 Key Features
+
+- **Instant Wake Word Detection**: Uses native device speech recognition with custom vocabulary biasing for near-instant wake phrases (e.g., "Hey Dairy" or "Hey Bessie").
 - **High-Accuracy Transcription**: Uses **Groq (Whisper-Large-V3)** for near-instant speech-to-text.
-- **Cost-Efficient Orchestration**: Uses a smart router (**gpt-5-nano**) to classify requests and only call tools when strictly necessary, followed by **gpt-5-mini** for concise responses.
-- **Real-Time Farm Data**: Integrated with Supabase via specialized tools for cow health, groups, and production stats.
-- **Data Pipeline**: Automated CSV cleaning and sinking from farm reports.
+- **Intelligent Routing**: Uses a multi-model approach (**GPT-4o/o1/Turbo**) for complex reasoning and tool execution.
+- **Specialized Farm Tools**:
+    - **Cow Health**: Query health events, protocols, and individual cow history.
+    - **Production Metrics**: Check milk production, dim, and group stats.
+    - **Reproduction**: Track breeding dates, due dates, and preg checks.
+    - **Voice Notes**: Create and manage field notes hands-free.
+- **Automated Data Pipeline**: Robust CSV cleaning and syncing from farm reports (like DC305) into Supabase.
+- **Multi-Channel Alerts**: Integration with **Resend** (Email) and **Twilio** (SMS) for critical alerts.
 
 ---
 
-## Prerequisites
+## 🏗 Project Structure
 
-- **Node.js**: v18 or higher recommended.
+```text
+├── backend/            # Fastify + TypeScript API
+│   ├── services/       # Core logic (OpenAI, Data-Prep, Cache, Report)
+│   ├── tools/          # AI Function Definitions
+│   ├── routes/         # API Endpoints
+│   └── tests/          # Native Node.js Test Suite
+├── frontend/           # React Native (Expo) Mobile App
+│   ├── src/            # Application Logic & Components
+│   └── assets/         # Static Assets
+└── data/               # Raw Data Storage (CSV/Excel)
+```
+
+---
+
+## 🛠 Prerequisites
+
+- **Node.js**: v20 or higher recommended.
 - **Expo CLI**: `npm install -g expo-cli`
 - **Android Studio / Xcode**: For running the native mobile application.
-- **OpenAI API Key**: Required for transcription and AI logic.
+- **API Keys**: OpenAI, Groq, Supabase, Resend, and Twilio.
 
 ---
 
-## Getting Started
+## 🚀 Getting Started
 
 ### 1. Backend Setup
 
-The backend handles requests to OpenAI and manages audio processing.
+The backend handles AI orchestration, tools, and data processing.
 
-1. Navigate to the backend directory:
-   ```bash
-   cd backend
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Create a `.env` file based on `.env.example`:
-   ```bash
-   cp .env.example .env
-   ```
-4. Add your `OPENAI_API_KEY` to the `.env` file.
-5. Start the backend:
-   ```bash
-   npm run dev
-   ```
+1.  **Navigate & Install**:
+    ```bash
+    cd backend
+    npm install
+    ```
+2.  **Environment Configuration**:
+    Create a `.env` file based on `.env.example`:
+    ```bash
+    cp .env.example .env
+    ```
+    *Fill in your keys for OpenAI, Groq, Supabase, etc.*
+3.  **Start Development Server**:
+    ```bash
+    npm run dev
+    ```
+    *Uses `tsx watch` for instant reloads.*
 
 ### 2. Frontend Setup
 
-The frontend is a React Native app built with Expo.
+The frontend is a React Native app built with Expo SDK 51.
 
-1. Navigate to the frontend directory:
-   ```bash
-   cd frontend
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. **Download the Vosk Model**:
-   The speech recognition model is large and not stored in Git. Run the setup script to download and install it into the appropriate native directories:
-   ```bash
-   chmod +x setup-vosk-model.sh
-   ./setup-vosk-model.sh
-   ```
-   *Note: This script downloads a ~130MB model file and extracts it to the Android and iOS asset folders.*
-
-4. Configure environment:
-   Create a `.env` file in the `frontend` directory and set your backend URL:
-   ```env
-   EXPO_PUBLIC_BACKEND_URL=http://<your-local-ip>:3000
-   ```
-
-5. Start the app:
-   ```bash
-   npx expo start
-   ```
-
----
-
-## 🗣 Commands
-
-- **Wake Word**: "Hey Dairy" or "Hey Bessie"
-- **Exit Phrases**: "Stop", "Thank you", "Goodbye", "Done"
-
-Once Bessie is listening, simply speak your question or command naturally.
+1.  **Navigate & Install**:
+    ```bash
+    cd frontend
+    npm install
+    ```
+2.  **Configure Environment**:
+    Create a `.env` file in `frontend/` and set your backend URL:
+    ```env
+    EXPO_PUBLIC_BACKEND_URL=http://<your-local-ip>:3000
+    ```
+4.  **Start the Mobile App**:
+    ```bash
+    npx expo start
+    ```
 
 ---
 
 ## 📊 Data Pipeline (Farmer Reports)
 
-Bessie handles the heavy lifting of cleaning and syncing raw farm reports into structured data.
+Bessie automates the processing of raw cow records into a structured database.
 
 ### 1. Database Initialization
-Before syncing, ensure your database is ready by executing the initialization script in your **Supabase SQL Editor**:
-- Run the code from: **[`backend/schemas/ReportsInitialization.sql`](file:///Users/konnerbrown/Desktop/Sandbox/Bessie-main/backend/schemas/ReportsInitialization.sql)**
+Run the initialization SQL in your **Supabase SQL Editor**:
+- File: [`backend/schemas/ReportsInitialization.sql`](backend/schemas/ReportsInitialization.sql)
 
 ### 2. Prepare Data
-- Export your cow health and production reports to **CSV**.
-- Place the files in: `data/CSV/`
-- *Note: The system automatically ignores files with "Historical" in the name to focus on current data.*
+Export your cow health and production reports to **CSV** and place them in:
+- `data/CSV/`
 
 ### 3. Sync Data
-- **Auto-Sync**: The backend runs a background sync every **1 hour**.
-- **Manual Sync**: To force an immediate update of all records:
-   ```bash
-   cd backend
-   node test-sync.js
-   ```
+- **Auto-Sync**: The backend runs an automated background sync every **1 hour**.
+- **Manual Sync**: Force an immediate update:
+  ```bash
+  cd backend
+  npx tsx scripts/sync-data.ts
+  ```
+
+---
 
 ## 🧪 Testing
 
-The backend includes a comprehensive modular and integrated test suite.
+The project uses the native Node.js test runner for fast, dependency-free testing.
 
-### Run All Tests
-To verify all services (Cache, Data-Prep, Groq, OpenAI) at once:
 ```bash
 cd backend
-node --test test-all.js
+npm test
 ```
 
-### Modular Tests
-Tests are localized within each service bundle for isolated verification:
+To run specific tests:
 ```bash
-node --test services/openai/tests/index.test.js
-node --test services/cache/tests/index.test.js
+npx tsx --test tests/sync.test.ts
 ```
 
-## 🏗 Modular Architecture
+---
 
-The backend is organized into specialized service bundles:
-- `services/openai/`: Handles routing, reasoning, and tool execution loops.
-- `services/data-prep/`: Handles HTML cleaning and CSV parsing.
-- `services/cache/`: Global LRU caching to minimize API and database costs.
-- `tools/`: Modular definitions for AI function calling.
+## 🗣 Commands
+
+- **Wake Words**: "Hey Dairy", "Hey Bessie"
+- **Exit Phrases**: "Stop", "Thank you", "Goodbye", "Done"
+
+Once Bessie is listening (indicated by a "Moooo" sound), speak naturally. Examples:
+- *"What's the treatment protocol for cow 123?"*
+- *"Check the milk production for group 4."*
+- *"Make a note that cow 456 has a swollen hock."*
 
 ---
 
----
+## 🌍 Deployment
 
-## 🚀 Environments & Workflow
+- **Backend**: Deploys to **Fly.io** using `npm run deploy:prod`.
+- **Frontend**: Built via **EAS** for Android/iOS. Use `npm run build:prod` for local AAB generation.
 
-We support two environments: **Development** and **Production**.
-
-### 🏗️ Environment Comparison
-
-| Feature | Development | Production |
-| :--- | :--- | :--- |
-| **Backend** | Local Laptop (`npm run dev`) | Fly.io (`npm run deploy:prod`) |
-| **AI Provider** | **Groq** (Free/Fast) | **OpenAI** (High Precision) |
-| **Database** | Cloud Supabase Dev Project | Cloud Supabase Live Project |
-| **Testing** | Active Development | Live Users |
-
-### 🛠️ Key Commands
-
-- **Local Backend (Dev)**: `cd backend && npm run dev`
-- **Frontend IP Update**: `node frontend/scripts/update-ip.js` (Updates `eas.json` with your current local IP for mobile testing)
-- **Frontend Build (Prod)**: `cd frontend && npm run build:prod` (Generates local AAB for Google Play)
-
----
-
-### 🔄 Progressive Workflow (Dev → Prod)
-
-Follow these steps to safely move a feature to production:
-
-#### 1. Develop Locally (Dev)
-- Run `npm run dev` in the backend. 
-- All LLM calls will use **Groq** (save credits).
-- Use the **Dev Supabase** project for testing new schemas.
-
-#### 2. Synchronize Database (Prod)
-- If your feature added new tables or columns, run the same SQL scripts in your **Production Supabase Project**'s SQL Editor.
-- Ensure any new environment variables are set in Fly.io using `fly secrets set`.
-
-#### 3. Go Live (Production)
-- **Deploy Backend**: `npm run deploy:prod` (Deploys to Fly.io).
-- **Deploy Frontend**: `npm run build:prod` (Generates local AAB using your Android SDK).
-- *Note: Production always uses **OpenAI** for maximum reasoning accuracy.*
+| Environment | Provider | Database | AI Precision |
+| :--- | :--- | :--- | :--- |
+| **Development** | Local / `tsx` | Supabase Dev | Groq (Fast/Free) |
+| **Production** | Fly.io | Supabase Prod | OpenAI (Max Reasoning) |
