@@ -14,7 +14,7 @@ CREATE TABLE public.cow_data (
   animal_name text,
   
   -- Location & Grouping
-  cow_group text,
+  group_number text,
   location text,
   robot text,
   
@@ -31,7 +31,7 @@ CREATE TABLE public.cow_data (
   last_heat text,
   last_insemination text,
   insemination_no int,
-  days_since_insemination int,
+
   heat_probability_max int,
   optimum_insemination_moment float, -- nCurrent/1080
   on_set_of_heat text,
@@ -41,16 +41,15 @@ CREATE TABLE public.cow_data (
   pregnancy_remark text,
   calving_remark text,
   health_remark text,
-  insemination_moment text,
-  remarks text,
+  insemination_remarks text,
   
   -- Production
   day_production float,
   day_production_deviation float,
   milk_yield_expected float,
   milk_frequency float,
-  milkings int,
-  failures int,
+  milkings float,
+  failures float,
   failed_milking boolean,
   interval_exceeded int,
   time_away text,

@@ -54,7 +54,7 @@ export const get_group_status = {
     const { data, error } = await (supabase as any)
       .from('cow_data')
       .select('animal_number, sick_chance, day_production')
-      .ilike('cow_group', `%${groupName}%`);
+      .ilike('group_number', `%${groupName}%`);
 
     if (error) return `Error fetching group status: ${error.message}`;
     if (data.length === 0) return `No cows found in group "${groupName}".`;

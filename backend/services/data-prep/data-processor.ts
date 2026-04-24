@@ -22,7 +22,7 @@ interface CowRecord {
   animal_number: number;
   animal_tag_id?: string | null;
   animal_name?: string | null;
-  cow_group?: string | null;
+  group_number?: string | null;
   location?: string | null;
   robot?: string | null;
   age?: number | null;
@@ -35,7 +35,7 @@ interface CowRecord {
   last_heat?: string | null;
   last_insemination?: string | null;
   insemination_no?: number | null;
-  days_since_insemination?: number | null;
+
   heat_probability_max?: number | null;
   optimum_insemination_moment?: number | null;
   on_set_of_heat?: string | null;
@@ -45,8 +45,7 @@ interface CowRecord {
   pregnancy_remark?: string | null;
   calving_remark?: string | null;
   health_remark?: string | null;
-  insemination_moment?: string | null;
-  remarks?: string | null;
+  insemination_remarks?: string | null;
   day_production?: number | null;
   day_production_deviation?: number | null;
   milk_yield_expected?: number | null;
@@ -134,7 +133,7 @@ export class DataProcessor {
         animal_number: animalNumber,
         animal_tag_id: r['Animal Tag Id'],
         animal_name: r['Animal Name'],
-        cow_group: r['Group'],
+        group_number: r['Group Number'],
         location: r['Location'],
         robot: r['Robot'],
         age: cleanNumber(r['Age']),
@@ -143,28 +142,27 @@ export class DataProcessor {
         lactation_day_category: parseRomanToNumber(r['Lactation day category']),
         days_pregnant: daysPregnant,
         reproduction_status: r['Reproduction Status'] || r['Status'],
-        days_since_heat: cleanNumber(r['Days since heat']),
+        days_since_heat: cleanNumber(r['Days Since Heat']),
         last_heat: formatDate(r['Last Heat']),
         last_insemination: formatDate(r['Last Insemination']),
         insemination_no: cleanNumber(r['Insemination Number']) || cleanNumber(r['Insemination number']),
-        days_since_insemination: cleanNumber(r['Since Insemination']),
+
         heat_probability_max: cleanNumber(r['Heat Probability Max.']),
         optimum_insemination_moment: extractOptimumMoment(r['Optimum Insemination Moment']),
         on_set_of_heat: r['On set of heat'] || null,
-        hours_since_heat: cleanNumber(r['Hours since heat']),
+        hours_since_heat: cleanNumber(r['Hours Since Heat']),
         sire: r['Sire'],
         expected_calving_date: formatDate(r['Expected Calving Date']) || formatDate(r['Date']),
         pregnancy_remark: r['Pregnancy Remark'],
         calving_remark: r['Calving Remark'],
-        health_remark: r['Health remark'],
-        insemination_moment: r['Insemination moment'],
-        remarks: r['Remarks'],
+        health_remark: r['Health Remarks'],
+        insemination_remarks: r['Insemination Remarks'],
         day_production: cleanNumber(r['Day Production']) || cleanNumber(r['day production']),
-        day_production_deviation: cleanNumber(r['day production deviation']),
+        day_production_deviation: cleanNumber(r['Day production Deviation']),
         milk_yield_expected: cleanNumber(r['Milk Yield Expected']),
-        milk_frequency: cleanNumber(r['Milk frequency']),
-        milkings: cleanNumber(r['milkings']),
-        failures: cleanNumber(r['failures']),
+        milk_frequency: cleanNumber(r['Milk Frequency']),
+        milkings: cleanNumber(r['Milkings']),
+        failures: cleanNumber(r['Failures']),
         failed_milking: parseBoolean(r['Failed Milking']),
         interval_exceeded: cleanNumber(r['Interval Exceed']),
         time_away: r['Away'],
