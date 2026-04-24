@@ -11,38 +11,28 @@ import android.media.AudioManager
 import android.media.ToneGenerator
 import android.os.Build
 import android.os.IBinder
-import android.os.Bundle
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.ReactApplication
 import com.facebook.react.modules.core.DeviceEventManagerModule
-import android.speech.RecognitionListener
-import android.speech.RecognizerIntent
-import android.speech.SpeechRecognizer
-import android.os.Handler
-import android.os.Looper
+import org.vosk.Model
+import org.vosk.Recognizer
+import org.vosk.android.RecognitionListener
+import org.vosk.android.SpeechService
+import org.vosk.android.StorageService
+import java.io.IOException
 
 class WakeWordService : Service(), RecognitionListener {
 
-    private var speechRecognizer: SpeechRecognizer? = null
-    private var recognizerIntent: Intent? = null
+    private var model: Model? = null
+    private var speechService: SpeechService? = null
     private val TAG = "WakeWordService"
     private val CHANNEL_ID = "WakeWordServiceChannel"
-    private val WAKE_WORDS = listOf("hey bovi", "ok bovi", "okay bovi", "hey bovey", "okay bovey" , "ok bovey", "okay bovay", "hey bovay", "hey bessie", "ok bessie")
-    private val WAKE_WORD_DISPLAY = "Hey Bessie / Ok Bessie"
+    private val WAKE_WORDS = listOf("hey bovi", "ok bovi", "okay bovi", "hey bovey", "okay bovey" , "ok bovey", "okay bovay", "hey bovay")
+    private val WAKE_WORD_DISPLAY = "Hey Bovi / Ok Bovi"
     private var wakeToneGenerator: ToneGenerator? = null
-    private val handler = Handler(Looper.getMainLooper())
-    private val RESTART_DELAY_MS = 900L
-    private val START_THROTTLE_MS = 700L
-    private var isListening = false
-    private var lastStartAttemptMs = 0L
-    private val restartRunnable = Runnable {
-        if (isServiceRunning && !isListening && !isProcessingWakeWord && !isRecognitionPaused) {
-            startRecognition()
-        }
-    }
 
     private fun hasLocationPermission(): Boolean {
         val hasFine = ContextCompat.checkSelfPermission(
@@ -81,7 +71,6 @@ class WakeWordService : Service(), RecognitionListener {
         }
 
         isServiceRunning = true
-        isRecognitionPaused = false
         createNotificationChannel()
         wakeToneGenerator = try {
             ToneGenerator(AudioManager.STREAM_MUSIC, 100)
@@ -121,70 +110,70 @@ class WakeWordService : Service(), RecognitionListener {
             }
         }
         
-        handler.post { initSpeechRecognizer() }
+        initModel()
     }
 
-    private fun initSpeechRecognizer() {
-        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
-            Log.e(TAG, "SpeechRecognizer is not available on this device.")
-            updateNotification("No Speech Recognition available")
+    private fun initModel() {
+        try {
+            val fileList = this.assets.list("model")
+            if (fileList.isNullOrEmpty()) {
+                Log.e(TAG, "Assets 'model' folder is EMPTY or null!")
+                updateNotification("Err: model missing from APK. Clean build needed.")
+                setWakeWordEnabled(this, false)
+                isServiceRunning = false
+                stopSelf()
+                return
+            }
+            Log.d(TAG, "Found ${fileList.size} items in assets/model")
+
+            if (!fileList.contains("uuid")) {
+                Log.e(TAG, "assets/model/uuid is missing; cannot unpack Vosk model")
+                updateNotification("Err: model missing uuid file")
+                setWakeWordEnabled(this, false)
+                isServiceRunning = false
+                stopSelf()
+                return
+            }
+        } catch (e: Exception) {
+            updateNotification("Err finding assets: ${e.message}")
             setWakeWordEnabled(this, false)
             isServiceRunning = false
             stopSelf()
             return
         }
 
-        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
-        speechRecognizer?.setRecognitionListener(this)
-
-        recognizerIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, packageName)
-            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-            putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
-            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 6000L)
-            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 2000L)
-            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2000L)
-        }
-
-        startRecognition()
+        StorageService.unpack(this, "model", "model-en-us", // Use new targeted cache name to bypass corrupted cache!
+            { model ->
+                this.model = model
+                startRecognition()
+            },
+            { exception ->
+                val emsg = exception.message ?: exception.toString()
+                Log.e(TAG, "Failed to unpack the model. Reason: $emsg")
+                updateNotification("Load Err: $emsg") // This will show EXACTLY why it crashes!
+                setWakeWordEnabled(this, false)
+                isServiceRunning = false
+                stopSelf() // Stop the service appropriately so it frees up everything
+            })
     }
 
     private fun startRecognition() {
-        if (speechRecognizer == null || isProcessingWakeWord || isRecognitionPaused) return
-        val now = System.currentTimeMillis()
-        if (now - lastStartAttemptMs < START_THROTTLE_MS) return
-        lastStartAttemptMs = now
-
+        if (model == null) return
         try {
-            speechRecognizer?.startListening(recognizerIntent)
-            isListening = true
+            // Include unknown words bracket so it doesn't force gibberish into "hey" or "dairy"
+            val rec = Recognizer(model!!, 16000.0f)
+            speechService = SpeechService(rec, 16000.0f)
+            speechService?.startListening(this)
             updateNotification("Listening for '$WAKE_WORD_DISPLAY'")
-        } catch (e: Exception) {
+        } catch (e: IOException) {
             Log.e(TAG, "Error starting recognition " + e.message)
-            restartListeningDelayed()
         }
-    }
-
-    private fun stopRecognition() {
-        isListening = false
-        try {
-            speechRecognizer?.stopListening()
-            speechRecognizer?.cancel()
-        } catch (e: Exception) {}
-    }
-
-    private fun restartListeningDelayed() {
-        if (!isServiceRunning || isProcessingWakeWord || isRecognitionPaused) return
-        handler.removeCallbacks(restartRunnable)
-        handler.postDelayed(restartRunnable, RESTART_DELAY_MS)
     }
 
     companion object {
         const val ACTION_STOP_SERVICE = "ACTION_STOP_SERVICE"
         const val ACTION_RESUME_VOSK = "ACTION_RESUME_VOSK"
-        const val ACTION_PAUSE_LISTENING = "ACTION_PAUSE_LISTENING"
+        const val ACTION_PAUSE_VOSK = "ACTION_PAUSE_VOSK"
         const val ACTION_UPDATE_NOTIFICATION = "ACTION_UPDATE_NOTIFICATION"
         private const val PREFS_NAME = "wake_word_prefs"
         private const val KEY_WAKEWORD_ENABLED = "wakeword_enabled"
@@ -197,9 +186,6 @@ class WakeWordService : Service(), RecognitionListener {
 
         @Volatile
         var isVoiceTabActiveInForeground: Boolean = false
-
-        @Volatile
-        var isRecognitionPaused: Boolean = false
 
         fun isWakeWordEnabled(context: Context): Boolean {
             val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -225,16 +211,20 @@ class WakeWordService : Service(), RecognitionListener {
             stopSelf()
             return START_NOT_STICKY
         } else if (intent?.action == ACTION_RESUME_VOSK) {
-            Log.d(TAG, "Resume Action Received.")
-            isRecognitionPaused = false
-            if (!isListening) {
-                handler.post { startRecognition() }
+            Log.d(TAG, "Resume Vosk Action Received.")
+            if (speechService == null && model != null) {
+                startRecognition()
             }
-        } else if (intent?.action == ACTION_PAUSE_LISTENING) {
-            Log.d(TAG, "Pause Action Received.")
-            isRecognitionPaused = true
-            stopRecognition()
-            updateNotification("Assistant in use...")
+        } else if (intent?.action == ACTION_PAUSE_VOSK) {
+            Log.d(TAG, "Pause Vosk Action Received.")
+            try {
+                speechService?.stop()
+                speechService = null
+                Log.d(TAG, "Vosk microphone released for sleep.")
+                updateNotification("Sleeping (App Open)")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to pause Vosk: ${e.message}")
+            }
         } else if (intent?.action == ACTION_UPDATE_NOTIFICATION) {
             val text = intent.getStringExtra("text")
             if (text != null) {
@@ -242,30 +232,32 @@ class WakeWordService : Service(), RecognitionListener {
             }
         }
         
-        if (isListening && intent?.action != ACTION_UPDATE_NOTIFICATION) {
+        if (speechService != null && intent?.action != ACTION_UPDATE_NOTIFICATION && intent?.action != ACTION_PAUSE_VOSK) {
             updateNotification("Listening for '$WAKE_WORD_DISPLAY'")
         }
+        // Use START_STICKY so it doesn't automatically restart if the system kills it,
+        // Wait, the user wants the notification to stay on when app is closed like Spotify.
+        // START_STICKY will restart it if system kills it. Let's use START_STICKY.
         return START_STICKY
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
         Log.d(TAG, "App task removed, but keeping foreground service alive")
+        // Stop calling stopSelf() here so it stays alive when swiped away
     }
 
     override fun onDestroy() {
         super.onDestroy()
         Log.d(TAG, "Service Destroyed")
         isServiceRunning = false
-        isRecognitionPaused = false
-        handler.removeCallbacksAndMessages(null)
-        try {
-            speechRecognizer?.destroy()
-        } catch (_: Exception) {}
-        speechRecognizer = null
+        speechService?.stop()
+        speechService?.shutdown()
+        model?.close()
         try {
             wakeToneGenerator?.release()
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+        }
         wakeToneGenerator = null
     }
 
@@ -274,50 +266,27 @@ class WakeWordService : Service(), RecognitionListener {
     }
 
     // RecognitionListener Methods
-    override fun onReadyForSpeech(params: Bundle?) {
-        Log.d(TAG, "Ready for speech")
+    override fun onResult(hypothesis: String?) {
+        Log.d(TAG, "onResult: $hypothesis")
+        processHypothesis(hypothesis)
     }
 
-    override fun onBeginningOfSpeech() {
+    override fun onPartialResult(hypothesis: String?) {
+        // We evaluate partial results quickly so it registers instantly
+        processHypothesis(hypothesis)
     }
 
-    override fun onRmsChanged(rmsdB: Float) {
+    override fun onFinalResult(hypothesis: String?) {
+        Log.d(TAG, "onFinalResult: $hypothesis")
+        processHypothesis(hypothesis)
     }
 
-    override fun onBufferReceived(buffer: ByteArray?) {
+    override fun onError(e: Exception?) {
+        Log.e(TAG, "Vosk Error: ${e?.message}")
     }
 
-    override fun onEndOfSpeech() {
-        Log.d(TAG, "End of speech")
-        isListening = false
-    }
-
-    override fun onError(error: Int) {
-        Log.e(TAG, "Speech Recognizer Error: $error")
-        isListening = false
-        // Error codes: SpeechRecognizer.ERROR_NO_MATCH (7), ERROR_SPEECH_TIMEOUT (6)
-        // Only restart if not matching wake word
-        restartListeningDelayed()
-    }
-
-    override fun onResults(results: Bundle?) {
-        isListening = false
-        val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-        Log.d(TAG, "onResults: $matches")
-        if (!matches.isNullOrEmpty()) {
-            processHypothesis(matches[0])
-        }
-        restartListeningDelayed()
-    }
-
-    override fun onPartialResults(partialResults: Bundle?) {
-        val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-        if (!matches.isNullOrEmpty()) {
-            processHypothesis(matches[0])
-        }
-    }
-
-    override fun onEvent(eventType: Int, params: Bundle?) {
+    override fun onTimeout() {
+        Log.d(TAG, "Vosk Timeout")
     }
 
     private fun playWakeTone() {
@@ -331,7 +300,17 @@ class WakeWordService : Service(), RecognitionListener {
 
     private fun processHypothesis(hypothesis: String?) {
         if (hypothesis != null) {
-            val spokenText = hypothesis
+            // Log out what Vosk is actually recognizing to help us debug
+            Log.d(TAG, "Checking hypothesis for wake word: $hypothesis")
+            
+            // Let's extract the text and show it in the notification so you can see what it hears
+            val match = Regex("\"(?:partial|text)\"\\s*:\\s*\"([^\"]*)\"").find(hypothesis)
+            val spokenText = match?.groupValues?.get(1) ?: ""
+            
+            if (spokenText.isNotEmpty()) {
+                updateNotification("Hearing: '$spokenText'")
+            }
+
             val normalizedSpokenText = spokenText
                 .lowercase()
                 .replace(Regex("[^a-z\\s]"), " ")
@@ -347,23 +326,16 @@ class WakeWordService : Service(), RecognitionListener {
                     normalizedSpokenText.contains("okay") ||
                     lowerHypo.contains("hey") ||
                     lowerHypo.contains("ok") ||
-                    lowerHypo.contains("okay")) ||
-                (normalizedSpokenText.contains("bessie") || lowerHypo.contains("bessie")) &&
-                (normalizedSpokenText.contains("hey") ||
-                    normalizedSpokenText.contains("ok") ||
-                    normalizedSpokenText.contains("okay") ||
-                    lowerHypo.contains("hey") ||
-                    lowerHypo.contains("ok") ||
                     lowerHypo.contains("okay"))
 
+            // Allow explicit phrase match plus a fallback split-word match for partial hypotheses.
             if (hasDirectWakePhrase || hasFallbackWakeSignal) {
                 if (isProcessingWakeWord) {
                     return
                 }
                 
                 isProcessingWakeWord = true
-                isRecognitionPaused = true
-                handler.postDelayed({
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                     isProcessingWakeWord = false
                 }, 5000)
 
@@ -371,47 +343,35 @@ class WakeWordService : Service(), RecognitionListener {
                 updateNotification("Processing Wake Word...")
                 playWakeTone()
                 
+                // Immediately stop Vosk from holding the microphone so Expo can take over!
                 try {
-                    stopRecognition()
-                    Log.d(TAG, "Native microphone released successfully.")
+                    speechService?.stop()
+                    speechService = null
+                    Log.d(TAG, "Vosk microphone released successfully.")
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to release mic: ${e.message}")
                 }
 
-                val reactContext = WakeWordModule.reactContextInstance
-                val isForeground = reactContext?.lifecycleState == com.facebook.react.common.LifecycleState.RESUMED
-                val shouldDelegateToVoiceTab = isForeground && isVoiceTabActiveInForeground
-                val wakeEventPayload = Arguments.createMap().apply {
-                    putBoolean("nativeWakeTonePlayed", true)
-                }
-
-                if (shouldDelegateToVoiceTab) {
-                    Log.d(TAG, "App is in FOREGROUND, delegating to React Native UI!")
-                    sendEventToReactNative("onWakeWordDetected", wakeEventPayload)
+                // We no longer delegate to React Native because React Native runs its own 
+                // native speech listener when the app is in the foreground. This background 
+                // service should strictly handle the background flow.
+                Log.d(TAG, "Launching overlay/headless wake flow")
+                if (android.provider.Settings.canDrawOverlays(this)) {
+                    VoiceOverlayController.showOverlay(this, "Listening...")
                 } else {
-                    Log.d(TAG, "Voice tab not active, launching overlay/headless wake flow")
-                    if (android.provider.Settings.canDrawOverlays(this)) {
-                        VoiceOverlayController.showOverlay(this, "Listening...")
-                    } else {
-                        Log.w(TAG, "Overlay permission missing; cannot show assistant overlay")
-                        updateNotification("Overlay hidden (grant Display over other apps)")
+                    Log.w(TAG, "Overlay permission missing; cannot show assistant overlay")
+                    updateNotification("Overlay hidden (grant Display over other apps)")
+                }
+                try {
+                    val serviceIntent = Intent(this, VoiceHeadlessJsTaskService::class.java).apply {
+                        putExtra("wakeWord", spokenText.ifEmpty { "hey bovi" })
+                        putExtra("nativeWakeTonePlayed", true)
                     }
-                    try {
-                        val serviceIntent = Intent(this, VoiceHeadlessJsTaskService::class.java).apply {
-                            putExtra("wakeWord", spokenText.ifEmpty { "hey bovi" })
-                            putExtra("nativeWakeTonePlayed", true)
-                        }
-                        try {
-                            com.facebook.react.HeadlessJsTaskService.acquireWakeLockNow(this)
-                        } catch (wakeLockError: Exception) {
-                            Log.w(TAG, "Failed to acquire wakelock for headless task, continuing startup: ${wakeLockError.message}")
-                        }
-
-                        startService(serviceIntent)
-                        Log.d(TAG, "Headless task service start requested")
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Failed to launch Headless Task: ${e.message}")
-                    }
+                    
+                    com.facebook.react.HeadlessJsTaskService.acquireWakeLockNow(this)
+                    startService(serviceIntent)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to launch Headless Task: ${e.message}")
                 }
             }
         }
@@ -426,11 +386,15 @@ class WakeWordService : Service(), RecognitionListener {
                 reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
                     ?.emit(eventName, params)
             } else {
+                Log.e(TAG, "ReactContext is NULL or not active! We brought the app to foreground, so it should initialize shortly.")
+                
+                // Fallback: try to add a listener if the instance manager exists
                 val reactApplication = application as? ReactApplication
                 val reactInstanceManager = reactApplication?.reactNativeHost?.reactInstanceManager
                 
                 reactInstanceManager?.addReactInstanceEventListener(object : com.facebook.react.ReactInstanceEventListener {
                     override fun onReactContextInitialized(context: com.facebook.react.bridge.ReactContext) {
+                        Log.d(TAG, "ReactContext became available! Emitting $eventName now.")
                         context.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
                             ?.emit(eventName, params)
                         reactInstanceManager.removeReactInstanceEventListener(this)

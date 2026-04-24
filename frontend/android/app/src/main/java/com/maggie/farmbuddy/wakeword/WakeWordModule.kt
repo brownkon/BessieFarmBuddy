@@ -30,6 +30,7 @@ class WakeWordModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
     }
 
     private var pendingAssistantRolePromise: Promise? = null
+    private var audioFocusChangeListener: android.media.AudioManager.OnAudioFocusChangeListener? = null
 
     private val activityEventListener: ActivityEventListener = object : BaseActivityEventListener() {
         override fun onActivityResult(activity: Activity, requestCode: Int, resultCode: Int, data: Intent?) {
@@ -76,8 +77,34 @@ class WakeWordModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
         }
     }
 
-    // Removed hasRequiredModelAssets since we use SpeechRecognizer now
+    private fun hasRequiredModelAssets(): Boolean {
+        return try {
+            val modelRootEntries = reactApplicationContext.assets.list("model")?.toSet() ?: emptySet()
+            if (modelRootEntries.isEmpty()) {
+                Log.e(TAG, "assets/model is missing or empty")
+                return false
+            }
 
+            if (!modelRootEntries.contains("uuid")) {
+                Log.e(TAG, "assets/model/uuid missing; model package is not valid for Vosk StorageService")
+                return false
+            }
+
+            val requiredPaths = listOf(
+                "model/conf/mfcc.conf",
+                "model/am/final.mdl",
+                "model/graph/HCLr.fst",
+            )
+
+            requiredPaths.all { path ->
+                reactApplicationContext.assets.open(path).use { }
+                true
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Model validation failed", e)
+            false
+        }
+    }
     @ReactMethod
     fun startListening(promise: Promise) {
         val context = reactApplicationContext
@@ -94,8 +121,11 @@ class WakeWordModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
                 return
             }
 
-            // Vosk model check removed
-
+            if (!hasRequiredModelAssets()) {
+                WakeWordService.setWakeWordEnabled(context, false)
+                promise.resolve(false)
+                return
+            }
             WakeWordService.setWakeWordEnabled(context, true)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(serviceIntent)
@@ -199,31 +229,34 @@ class WakeWordModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
     }
 
     @ReactMethod
-    fun pauseListening(promise: Promise) {
+    fun pauseVosk(promise: Promise) {
         try {
             val context = reactApplicationContext
-
-            if (!WakeWordService.isWakeWordEnabled(context) || !WakeWordService.isServiceRunning) {
-                promise.resolve(false)
-                return
-            }
-
             val serviceIntent = Intent(context, WakeWordService::class.java).apply {
-                action = WakeWordService.ACTION_PAUSE_LISTENING
+                action = WakeWordService.ACTION_PAUSE_VOSK
             }
-            context.startService(serviceIntent)
+
+            if (WakeWordService.isServiceRunning) {
+                context.startService(serviceIntent)
+            }
             promise.resolve(true)
         } catch (e: Exception) {
-            promise.reject("PAUSE_LISTENING_ERROR", "Failed to pause wake-word listening", e)
+            promise.reject("PAUSE_VOSK_ERROR", "Failed to pause Vosk", e)
         }
     }
+
 
     @ReactMethod
     fun duckAudio(promise: Promise) {
         try {
             val audioManager = reactApplicationContext.getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager
+            
+            if (audioFocusChangeListener == null) {
+                audioFocusChangeListener = android.media.AudioManager.OnAudioFocusChangeListener { }
+            }
+            
             val res = audioManager.requestAudioFocus(
-                null,
+                audioFocusChangeListener,
                 android.media.AudioManager.STREAM_MUSIC,
                 android.media.AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK
             )
@@ -237,7 +270,10 @@ class WakeWordModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
     fun releaseAudio(promise: Promise) {
         try {
             val audioManager = reactApplicationContext.getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager
-            audioManager.abandonAudioFocus(null)
+            if (audioFocusChangeListener != null) {
+                audioManager.abandonAudioFocus(audioFocusChangeListener)
+                audioFocusChangeListener = null
+            }
             promise.resolve(true)
         } catch (e: Exception) {
             promise.reject("AUDIO_RELEASE_ERROR", "Failed to release audio focus", e)

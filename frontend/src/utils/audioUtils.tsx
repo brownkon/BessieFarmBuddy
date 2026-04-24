@@ -8,8 +8,9 @@ export const startDucking = async (silentSoundRef) => {
         playsInSilentModeIOS: true,
         shouldDuckAndroid: true,
         staysActiveInBackground: true,
-        interruptionModeIOS: 2, // DuckOthers
-        interruptionModeAndroid: 2, // DuckOthers
+        playThroughEarpieceAndroid: false,
+        interruptionModeIOS: 1, // MixWithOthers
+        interruptionModeAndroid: 1, // DoNotMix (prevents ducking Android TTS)
       });
       await silentSoundRef.current.setVolumeAsync(0.9);
       await silentSoundRef.current.playAsync();
@@ -38,20 +39,11 @@ export const stopDucking = async (silentSoundRef) => {
       playsInSilentModeIOS: true,
       shouldDuckAndroid: false,
       staysActiveInBackground: true,
+      playThroughEarpieceAndroid: false,
       interruptionModeIOS: 1, // MixWithOthers
       interruptionModeAndroid: 1, // DoNotMix
     });
 
-    await new Promise(resolve => setTimeout(resolve, 200));
-
-    await setMode({
-      allowsRecordingIOS: true,
-      playsInSilentModeIOS: true,
-      shouldDuckAndroid: false,
-      staysActiveInBackground: true,
-      interruptionModeIOS: 2,
-      interruptionModeAndroid: 2,
-    });
     console.log('[Audio] Ducking released and volume restoration triggered.');
   } catch (err) { console.log('[Audio] Stop ducking failed:', err.message); }
 };
@@ -60,7 +52,7 @@ export const stopDucking = async (silentSoundRef) => {
  * @param {object} options
  * @param {Function|null} options.stopRecognition  - optional async fn to stop native speech
  */
-export const cleanupAudio = async (recordingRef, setRecording, options = {}) => {
+export const cleanupAudio = async (recordingRef: any, setRecording: any, options: any = {}) => {
   console.log('[Cleanup] Starting cleanup flow...');
   try {
     if (options.stopRecognition) {

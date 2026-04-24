@@ -354,28 +354,12 @@ function AppMain() {
       transcriptRef.current = '';
       setNativeRecognizing(false);
 
-      // Always keep foreground wake listening active for the main chat page,
-      // even when background wake service is turned off.
-      let backgroundWakeRunning = false;
-      try {
-        if (WakeWord?.getWakeWordStatus) {
-          const wakeStatus = await WakeWord.getWakeWordStatus();
-          backgroundWakeRunning = Boolean(wakeStatus?.running);
-        }
-      } catch (statusError) {
-        console.warn('[App] Failed to read wake service status, defaulting to foreground mic listener.', statusError);
-      }
-
-      if (!backgroundWakeRunning) {
-        await startListening([...WAKE_PHRASES, ...EXIT_PHRASES], 'en-US', true);
-      }
+      // Always keep foreground wake listening active for the main chat page.
+      // Since Vosk is strictly paused while the app is in the foreground, 
+      // the frontend listener MUST be active here to hear "Hey Bessie".
+      await startListening([...WAKE_PHRASES, ...EXIT_PHRASES], 'en-US', true);
 
       setNativeRecognizing(true);
-
-      // Let WakeWordService resume listening natively
-      if (WakeWord?.resumeVosk) {
-        await WakeWord.resumeVosk();
-      }
 
       console.log('[App] Wake word listening active.');
     } catch (err) {
@@ -387,11 +371,15 @@ function AppMain() {
     }
   }, [stopListening, recordingRef, silentSoundRef, startListening]);
 
-  const triggerCommandPrompt = useCallback(async () => {
+  const triggerCommandPrompt = useCallback(async (nativeWakeTonePlayed = false) => {
     console.log('[App] Interrupted by wake word, resetting state...');
 
     // Fire wake cue without blocking fast command capture startup.
-    void playOneShotEffect(WAKE_CUE_SOUND, 'wake');
+    if (!nativeWakeTonePlayed) {
+      void playOneShotEffect(WAKE_CUE_SOUND, 'wake');
+    } else {
+      console.log('[App] Native wake tone already played; skipping JS wake sound.');
+    }
 
     // Pause native wake-word recognizer while foreground command capture is active.
     try {
@@ -449,8 +437,8 @@ function AppMain() {
     commandStartTimeRef.current = Date.now();
   }, [startListening, stopListening, startRecording, recordingRef]);
 
-  const speakNextSentence = useCallback(() => {
-    if (isSpeaking || speechQueueRef.current.length === 0) return;
+  const speakNextSentence = useCallback(async () => {
+    if (isSpeakingRef.current || speechQueueRef.current.length === 0) return;
 
     const sentence = speechQueueRef.current.shift();
     if (!sentence || sentence.trim().length === 0) {
@@ -483,17 +471,28 @@ function AppMain() {
       finishSentence();
     }, 12000);
 
-    const bestVoiceMatch = availableVoices.find(v => v.language.startsWith(selectedLanguage.voicePrefix));
-    const voiceId = bestVoiceMatch ? bestVoiceMatch.identifier : preferredVoiceRef.current;
+    try {
+      if (WakeWord && WakeWord.speakText) {
+        await WakeWord.speakText(sentence);
+      } else {
+        const bestVoiceMatch = availableVoices.find(v => v.language.startsWith(selectedLanguage.voicePrefix));
+        const voiceId = bestVoiceMatch ? bestVoiceMatch.identifier : preferredVoiceRef.current;
+        await new Promise((resolve) => {
+          Speech.speak(sentence, {
+            rate: ttsRate,
+            volume: ttsVolume,
+            voice: voiceId,
+            onDone: () => resolve(null),
+            onError: () => resolve(null),
+          });
+        });
+      }
+    } catch (e) {
+      console.warn('[TTS] Error playing text:', e);
+    }
 
-    Speech.speak(sentence, {
-      rate: ttsRate,
-      volume: ttsVolume,
-      voice: voiceId,
-      onDone: finishSentence,
-      onError: finishSentence,
-    });
-  }, [isSpeaking, availableVoices, selectedLanguage.voicePrefix, preferredVoiceRef, ttsRate, ttsVolume]);
+    finishSentence();
+  }, [availableVoices, selectedLanguage.voicePrefix, preferredVoiceRef, ttsRate, ttsVolume]);
 
   const stopAndSendRecording = useCallback(async (reason = 'unknown') => {
     if (isProcessingRef.current) return;
@@ -514,7 +513,7 @@ function AppMain() {
 
       // Keep submit cue from overlapping with first spoken AI chunk.
       await playOneShotEffect(SUBMIT_CUE_SOUND, 'submit');
-      void startDucking(silentSoundRef);
+      // Removed startDucking to prevent Android TTS muting
       modeRef.current = 'thinking';
       setStatus('Reading...');
       shouldTerminateRef.current = false;
@@ -583,10 +582,10 @@ function AppMain() {
         const queueEmpty = speechQueueRef.current.length === 0;
         if (!isSpeakingRef.current && queueEmpty) {
           setTimeout(async () => {
-            const reallyDone = !isSpeakingRef.current && speechQueueRef.current.length === 0 && !(await Speech.isSpeakingAsync());
+            const reallyDone = !isSpeakingRef.current && speechQueueRef.current.length === 0;
             if (reallyDone) {
               clearInterval(checkDoneIntervalRef.current);
-              void stopDucking(silentSoundRef);
+              // Removed stopDucking
               if (!shouldTerminateRef.current) {
                 speakTimeoutRef.current = setTimeout(() => startCommandListening(true), 100);
               } else {
@@ -599,7 +598,6 @@ function AppMain() {
 
     } catch (error) {
       void playOneShotEffect(ERROR_CUE_SOUND, 'error');
-      void stopDucking(silentSoundRef);
       Alert.alert('Voice API failed', error.message);
       startWakeWordListening();
     } finally {
@@ -622,10 +620,8 @@ function AppMain() {
       setMessages(prev => [...prev, userMsg]);
 
       await cleanupAudio(recordingRef, null, { stopRecognition: stopListening });
-      if (isChatTtsEnabled) {
-        await startDucking(silentSoundRef);
-      }
-
+      // Removed startDucking to prevent Android TTS muting
+      
       // Ensure native speech is still listening for "Hey Bessie" during text-based conversations
       await startListening([...WAKE_PHRASES, ...EXIT_PHRASES], 'en-US', true);
 
@@ -680,10 +676,10 @@ function AppMain() {
         const queueEmpty = speechQueueRef.current.length === 0;
         if (!isChatTtsEnabled || (!isSpeakingRef.current && queueEmpty)) {
           setTimeout(async () => {
-            const reallyDone = !isChatTtsEnabled || (!isSpeakingRef.current && speechQueueRef.current.length === 0 && !(await Speech.isSpeakingAsync()));
+            const reallyDone = !isChatTtsEnabled || (!isSpeakingRef.current && speechQueueRef.current.length === 0);
             if (reallyDone) {
               clearInterval(checkDoneIntervalRef.current);
-              void stopDucking(silentSoundRef);
+              // Removed stopDucking
               if (!shouldTerminateRef.current) {
                 startWakeWordListening();
               } else {
@@ -695,7 +691,6 @@ function AppMain() {
       }, 1000);
     } catch (error) {
       void playOneShotEffect(ERROR_CUE_SOUND, 'error');
-      void stopDucking(silentSoundRef);
       Alert.alert('Text API failed', error.message);
       startWakeWordListening();
     } finally {
@@ -713,7 +708,7 @@ function AppMain() {
     if (recording) {
       stopAndSendRecording('Manual Stop');
     } else {
-      triggerCommandPrompt();
+      triggerCommandPrompt(false);
     }
   }, [recording, isListeningActive, stopAndSendRecording, triggerCommandPrompt]);
 
@@ -829,6 +824,7 @@ function AppMain() {
           playsInSilentModeIOS: true,
           shouldDuckAndroid: true,
           staysActiveInBackground: true,
+          playThroughEarpieceAndroid: false,
           interruptionModeIOS: 2,
           interruptionModeAndroid: 2,
         });
@@ -966,10 +962,37 @@ function AppMain() {
     };
     checkWakeWord();
 
-    const handleAppStateChange = (nextAppState: any) => {
+    const handleAppStateChange = async (nextAppState: any) => {
       const isForeground = nextAppState === 'active';
       if (WakeWord?.setForegroundVoiceTabActive) {
         WakeWord.setForegroundVoiceTabActive(isForeground);
+      }
+
+      try {
+        if (WakeWord?.getWakeWordStatus) {
+          const wakeStatus = await WakeWord.getWakeWordStatus();
+          const isEnabledInSettings = Boolean(wakeStatus?.enabled);
+
+          if (isForeground) {
+             // App opened: Pause the native background service so frontend can take over
+             if (isEnabledInSettings && WakeWord.pauseVosk) {
+                 await WakeWord.pauseVosk();
+             }
+             // Start the frontend listener if we are not already doing something else
+             if (modeRef.current === 'wake') {
+                await startListening([...WAKE_PHRASES, ...EXIT_PHRASES], 'en-US', true);
+             }
+          } else {
+             // App backgrounded: Stop frontend listener
+             await stopListening();
+             // Resume native background service if enabled
+             if (isEnabledInSettings && WakeWord.resumeVosk) {
+                 await WakeWord.resumeVosk();
+             }
+          }
+        }
+      } catch (e) {
+         console.warn("[App] handleAppStateChange error:", e);
       }
     };
 
@@ -978,7 +1001,7 @@ function AppMain() {
 
     const wakeWordSubscription = DeviceEventEmitter.addListener('onWakeWordDetected', (event) => {
       console.log('[App] Native wake word detected event:', event);
-      triggerCommandPrompt();
+      triggerCommandPrompt(event?.nativeWakeTonePlayed === true);
     });
 
     return () => {

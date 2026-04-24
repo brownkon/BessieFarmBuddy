@@ -36,6 +36,13 @@ const SettingsSection = ({
       await WakeWord.setWakeWordEnabled(val);
       if (val) {
         await WakeWord.startListening();
+        // Since we are actively in the app, we must immediately pause Vosk 
+        // after starting the service, so it doesn't steal the mic from the frontend!
+        if (WakeWord.pauseVosk) {
+            setTimeout(async () => {
+               await WakeWord.pauseVosk();
+            }, 1000);
+        }
       } else {
         await WakeWord.stopListening();
       }

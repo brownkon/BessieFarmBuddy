@@ -18,7 +18,9 @@ export type WakeWordDetectedEvent = {
 type WakeWordNativeModule = {
   startListening: () => Promise<boolean>;
   stopListening: () => Promise<boolean>;
-  pauseListening?: () => Promise<boolean>;
+  pauseVosk?: () => Promise<boolean>;
+  resumeVosk?: () => Promise<boolean>;
+  releaseAudio?: () => Promise<boolean>;
   setWakeWordEnabled?: (enabled: boolean) => Promise<boolean>;
   setForegroundVoiceTabActive?: (active: boolean) => Promise<boolean>;
   getWakeWordStatus?: () => Promise<WakeWordStatus>;
@@ -74,15 +76,37 @@ export async function stopListening(): Promise<boolean> {
   return didStop;
 }
 
-export async function pauseListening(): Promise<boolean> {
+export async function pauseVosk(): Promise<boolean> {
   if (Platform.OS !== 'android') {
     return false;
   }
   const module = WakeWord as WakeWordNativeModule;
-  if (!module.pauseListening) {
+  if (!module.pauseVosk) {
     return false;
   }
-  return await module.pauseListening();
+  return await module.pauseVosk();
+}
+
+export async function resumeVosk(): Promise<boolean> {
+  if (Platform.OS !== 'android') {
+    return false;
+  }
+  const module = WakeWord as WakeWordNativeModule;
+  if (!module.resumeVosk) {
+    return false;
+  }
+  return await module.resumeVosk();
+}
+
+export async function releaseAudio(): Promise<boolean> {
+  if (Platform.OS !== 'android') {
+    return false;
+  }
+  const module = WakeWord as WakeWordNativeModule;
+  if (!module.releaseAudio) {
+    return false;
+  }
+  return await module.releaseAudio();
 }
 
 export async function setWakeWordEnabled(enabled: boolean): Promise<boolean> {
