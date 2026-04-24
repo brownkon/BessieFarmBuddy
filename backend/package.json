@@ -7,6 +7,7 @@
     "dev": "tsx watch index.ts",
     "build": "tsc",
     "test": "tsx --test tests/*.test.ts",
+    "sync": "tsx scripts/sync-data.ts",
     "deploy:prod": "fly deploy --depot=false"
   },
   "keywords": [],

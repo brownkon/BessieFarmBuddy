@@ -53,6 +53,7 @@ interface CowRecord {
   milk_frequency?: number | null;
   milkings?: number | null;
   failures?: number | null;
+  failed_milking?: boolean;
   interval_exceeded?: number | null;
   time_away?: string | null;
   too_late_for_milking?: boolean;
@@ -108,6 +109,8 @@ export class DataProcessor {
     });
 
     const cowMap = new Map<number, CowRecord>();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
     records.forEach((r: any) => {
       const rawAnimalNumber = (r['Animal Number'] || r['Animal Tag Id'] || '').trim();
@@ -116,64 +119,75 @@ export class DataProcessor {
       const animalNumber = parseInt(rawAnimalNumber, 10);
       const cleanedSensors = mapSensorData(r['Sensor'] || '', r['Value'] || '', r['Severeness'] || '');
 
+      // Calculate Days Pregnant from 'Pregnant since' if possible
+      let daysPregnant = cleanNumber(r['Days Pregnant']);
+      if (!daysPregnant && r['Pregnant since']) {
+        const psDate = new Date(r['Pregnant since']);
+        if (!isNaN(psDate.getTime())) {
+          const diffMs = today.getTime() - psDate.getTime();
+          daysPregnant = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        }
+      }
+
       const data: CowRecord = {
         organization_id: orgId,
         animal_number: animalNumber,
-        animal_tag_id: r['Animal Tag Id'] || null,
-        animal_name: r['Animal Name'] || null,
-        cow_group: r['Group'] || r['Group Number'] || null,
-        location: r['Location'] || null,
-        robot: r['Robot'] || null,
+        animal_tag_id: r['Animal Tag Id'],
+        animal_name: r['Animal Name'],
+        cow_group: r['Group'],
+        location: r['Location'],
+        robot: r['Robot'],
         age: cleanNumber(r['Age']),
-        lactation_no: cleanNumber(r['Lactation No.']) || cleanNumber(r['Lactation Number']) || cleanNumber(r['Lactation No']),
-        lactation_days: cleanNumber(r['Lactation days']) || cleanNumber(r['Lactation Days']),
+        lactation_no: cleanNumber(r['Lactation Number']),
+        lactation_days: cleanNumber(r['Lactation Days']),
         lactation_day_category: parseRomanToNumber(r['Lactation day category']),
-        days_pregnant: cleanNumber(r['Days Pregnant']),
-        reproduction_status: r['Reproduction Status'] || r['Status'] || null,
-        days_since_heat: cleanNumber(r['Days Since Heat']) || cleanNumber(r['Days since heat']),
+        days_pregnant: daysPregnant,
+        reproduction_status: r['Reproduction Status'] || r['Status'],
+        days_since_heat: cleanNumber(r['Days since heat']),
         last_heat: formatDate(r['Last Heat']),
         last_insemination: formatDate(r['Last Insemination']),
-        insemination_no: cleanNumber(r['Insemination No.']) || cleanNumber(r['Insemination number']),
+        insemination_no: cleanNumber(r['Insemination Number']) || cleanNumber(r['Insemination number']),
         days_since_insemination: cleanNumber(r['Since Insemination']),
-        heat_probability_max: cleanNumber(r['Heat Probability Max.']) || cleanNumber(r['heat prob max']) || cleanNumber(r['Heat prob max']),
-        optimum_insemination_moment: extractOptimumMoment(r['Optimum Insemination Moment']) || extractOptimumMoment(r['optimum insemination moment']),
+        heat_probability_max: cleanNumber(r['Heat Probability Max.']),
+        optimum_insemination_moment: extractOptimumMoment(r['Optimum Insemination Moment']),
         on_set_of_heat: r['On set of heat'] || null,
         hours_since_heat: cleanNumber(r['Hours since heat']),
-        sire: r['Sire'] || null,
-        expected_calving_date: formatDate(r['Expected Calving Date'] || r['Date']),
-        pregnancy_remark: r['Pregnancy Remark'] || null,
-        calving_remark: r['Calving Remark'] || null,
-        health_remark: r['Health remark'] || null,
-        insemination_moment: r['Insemination moment'] || null,
-        remarks: r['Remarks'] || null,
+        sire: r['Sire'],
+        expected_calving_date: formatDate(r['Expected Calving Date']) || formatDate(r['Date']),
+        pregnancy_remark: r['Pregnancy Remark'],
+        calving_remark: r['Calving Remark'],
+        health_remark: r['Health remark'],
+        insemination_moment: r['Insemination moment'],
+        remarks: r['Remarks'],
         day_production: cleanNumber(r['Day Production']) || cleanNumber(r['day production']),
         day_production_deviation: cleanNumber(r['day production deviation']),
-        milk_yield_expected: cleanNumber(r['Milk yield expected']),
+        milk_yield_expected: cleanNumber(r['Milk Yield Expected']),
         milk_frequency: cleanNumber(r['Milk frequency']),
         milkings: cleanNumber(r['milkings']),
         failures: cleanNumber(r['failures']),
-        interval_exceeded: cleanNumber(r['Interval exceeded']),
-        time_away: r['Time away'] || r['away'] || null,
-        too_late_for_milking: parseBoolean(r['too_late_for_milking']),
+        failed_milking: parseBoolean(r['Failed Milking']),
+        interval_exceeded: cleanNumber(r['Interval Exceed']),
+        time_away: r['Away'],
+        too_late_for_milking: parseBoolean(r['Too Late for Milking']),
         activity: parseBoolean(r['Activity']),
         sick_chance: parseBoolean(r['Sick Chance']),
-        disease_name: r['Disease Name'] || r['Disease Name (With Milk Separation)'] || r['Disease Name (Health Report)'] || null,
-        milk_separation_status: r['Milk Separation Status'] || null,
-        milk_separation_type: r['Milk Separation Type'] || null,
-        milk_separation_tank: r['Milk Separation Tank'] || null,
+        disease_name: r['Disease Name'],
+        milk_separation_status: r['Milk Separation Status'],
+        milk_separation_type: r['Milk Separation Type'],
+        milk_separation_tank: r['Milk Separation Tank'],
         milk_separation_start_date: formatDate(r['Milk Separation Start Date']),
         milk_separation_end_date: formatDate(r['Milk Separation End Date']),
         milk_separation_remaining_days: cleanNumber(r['Milk Separation Remaining Days']),
         hot_rinse_activated: parseBoolean(r['Hot Rinse Activated']),
-        medicine_name: r['Medicine Name'] || null,
+        medicine_name: r['Medicine Name'],
         medicine_dosage: cleanNumber(r['Medicine Dosage']),
-        dosage_unit: r['Dosage Unit'] || null,
-        treatment_plan_name: r['Treatment Plan Name'] || null,
-        treatment_description: r['Description'] || null,
+        dosage_unit: r['Dosage Unit'],
+        treatment_plan_name: r['Treatment Plan Name'],
+        treatment_description: r['Description'],
         expected_application_date: formatDate(r['Expected application done date time']),
-        route_of_administration: r['Route of Administration'] || null,
-        claw_teat: r['Claw/Teat'] || null,
-        last_routing_visit_direction: r['Last Routing Visit Direction'] || null,
+        route_of_administration: r['Route of Administration'],
+        claw_teat: r['Claw/Teat'],
+        last_routing_visit_direction: r['Last Routing Visit Direction'],
         mus_id: cleanNumber(r['MusId']),
 
         sensors: Object.keys(cleanedSensors.sensors).length > 0 ? cleanedSensors.sensors : null,
@@ -228,6 +242,27 @@ export class DataProcessor {
 
       const allCows = Array.from(masterMap.values());
       console.log(`[DataProcessor] Syncing ${allCows.length} cows...`);
+
+      // Identify columns that are all null
+      if (allCows.length > 0) {
+        const firstCow = allCows[0];
+        const allKeys = Object.keys(firstCow) as (keyof CowRecord)[];
+        const nonNullKeys = new Set<keyof CowRecord>();
+
+        allCows.forEach(cow => {
+          allKeys.forEach(key => {
+            const val = cow[key];
+            if (val !== null && val !== undefined && val !== '') {
+              nonNullKeys.add(key);
+            }
+          });
+        });
+
+        const allNullKeys = allKeys.filter(k => !nonNullKeys.has(k));
+        if (allNullKeys.length > 0) {
+          console.log(`[DataProcessor] Warning: The following columns are empty across all records: ${allNullKeys.join(', ')}`);
+        }
+      }
 
       const { error } = await (supabase as any)
         .from('cow_data')

@@ -51,6 +51,7 @@ CREATE TABLE public.cow_data (
   milk_frequency float,
   milkings int,
   failures int,
+  failed_milking boolean,
   interval_exceeded int,
   time_away text,
   too_late_for_milking boolean,
