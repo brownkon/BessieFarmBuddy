@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Switch, NativeModules } from 'react-native';
+import { View, Text, TouchableOpacity, Switch, NativeModules, AppState } from 'react-native';
 import styles from '../../styles/AppStyles';
 
 const { WakeWord } = NativeModules;
@@ -35,13 +35,11 @@ const SettingsSection = ({
     if (WakeWord) {
       await WakeWord.setWakeWordEnabled(val);
       if (val) {
-        await WakeWord.startListening();
-        // Since we are actively in the app, we must immediately pause Vosk 
-        // after starting the service, so it doesn't steal the mic from the frontend!
-        if (WakeWord.pauseVosk) {
-            setTimeout(async () => {
-               await WakeWord.pauseVosk();
-            }, 1000);
+        // If we're actively in the app, we don't want to start the background service immediately
+        // because it will steal the mic from the frontend listener. 
+        // App.tsx's handleAppStateChange will naturally start it when the app goes to the background.
+        if (AppState.currentState !== 'active') {
+          await WakeWord.startListening();
         }
       } else {
         await WakeWord.stopListening();

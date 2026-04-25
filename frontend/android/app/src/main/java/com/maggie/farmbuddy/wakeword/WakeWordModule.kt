@@ -138,6 +138,7 @@ class WakeWordModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
         }
     }
 
+
     @ReactMethod
     fun stopListening(promise: Promise) {
         val context = reactApplicationContext

@@ -974,9 +974,11 @@ function AppMain() {
           const isEnabledInSettings = Boolean(wakeStatus?.enabled);
 
           if (isForeground) {
-             // App opened: Pause the native background service so frontend can take over
-             if (isEnabledInSettings && WakeWord.pauseVosk) {
-                 await WakeWord.pauseVosk();
+             // App opened: Completely tear down the native background service so frontend can take over.
+             // We use stopListening() instead of pauseVosk() to ensure the mic is released
+             // regardless of native app rebuild state.
+             if (isEnabledInSettings && WakeWord.stopListening) {
+                 await WakeWord.stopListening();
              }
              // Start the frontend listener if we are not already doing something else
              if (modeRef.current === 'wake') {
@@ -985,9 +987,9 @@ function AppMain() {
           } else {
              // App backgrounded: Stop frontend listener
              await stopListening();
-             // Resume native background service if enabled
-             if (isEnabledInSettings && WakeWord.resumeVosk) {
-                 await WakeWord.resumeVosk();
+             // Spin up native background service if enabled
+             if (isEnabledInSettings && WakeWord.startListening) {
+                 await WakeWord.startListening();
              }
           }
         }

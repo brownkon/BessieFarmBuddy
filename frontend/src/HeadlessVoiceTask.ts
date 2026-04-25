@@ -1,6 +1,6 @@
 import { Audio } from 'expo-av';
 import * as Location from 'expo-location';
-import { NativeModules } from 'react-native';
+import { NativeModules, AppState } from 'react-native';
 import { loadCachedGpsPayload, saveCachedGpsPayload } from './lib/location-cache';
 import { supabase } from './lib/supabase';
 import { startVoiceStream, startEarlyCapture, EarlyCaptureHandle } from './lib/voiceStreamClient';
@@ -293,7 +293,13 @@ export default async function HeadlessVoiceTask(taskData: any) {
         await WakeWord.updateNotification("Listening for 'Hey Bovi / Ok Bovi'");
       }
       await WakeWord.releaseAudio();
-      await WakeWord.resumeVosk();
+      
+      // Only restart the background listener if the app is still in the background!
+      // If the user opened the app while the AI was talking, the app is in the foreground
+      // and it wants the mic. We shouldn't steal it back.
+      if (AppState.currentState !== 'active' && WakeWord.startListening) {
+        await WakeWord.startListening();
+      }
     } catch (e) {
       console.error('Failed to cleanup native audio state', e);
     }

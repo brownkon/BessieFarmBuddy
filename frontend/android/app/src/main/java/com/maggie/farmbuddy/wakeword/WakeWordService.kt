@@ -145,7 +145,11 @@ class WakeWordService : Service(), RecognitionListener {
         StorageService.unpack(this, "model", "model-en-us", // Use new targeted cache name to bypass corrupted cache!
             { model ->
                 this.model = model
-                startRecognition()
+                if (model != null && !isVoiceTabActiveInForeground) {
+                    startRecognition()
+                } else if (model != null && isVoiceTabActiveInForeground) {
+                    Log.d(TAG, "Model loaded, but app is in foreground. Skipping startRecognition.")
+                }
             },
             { exception ->
                 val emsg = exception.message ?: exception.toString()
@@ -212,7 +216,7 @@ class WakeWordService : Service(), RecognitionListener {
             return START_NOT_STICKY
         } else if (intent?.action == ACTION_RESUME_VOSK) {
             Log.d(TAG, "Resume Vosk Action Received.")
-            if (speechService == null && model != null) {
+            if (speechService == null && model != null && !isVoiceTabActiveInForeground) {
                 startRecognition()
             }
         } else if (intent?.action == ACTION_PAUSE_VOSK) {
