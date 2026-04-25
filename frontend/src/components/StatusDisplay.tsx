@@ -1,29 +1,35 @@
 import React from 'react';
 import { StyleSheet, View, Text, ActivityIndicator } from 'react-native';
-import Visualizer from './Visualizer';
 
-const StatusDisplay = ({ 
-  status, 
-  transcript, 
-  mode, 
-  recognizing, 
-  loading, 
-  recording, 
-  volume,
-  compact = false
-}) => {
-  const showRecording = !!recording || mode === 'command';
+const StatusDisplay = ({ agentState, compact = false }) => {
+  const config = {
+    IDLE: { text: 'Say "Hey Dairy" to start...', color: '#6b7280', icon: '💤' },
+    WAKE_WORD_DETECTED: { text: 'Listening...', color: '#ef4444', icon: '🎤' },
+    PROCESSING: { text: 'Thinking...', color: '#f59e0b', icon: null },
+    SPEAKING: { text: 'Speaking...', color: '#3b82f6', icon: '🔊' },
+    ERROR: { text: 'Error occurred', color: '#ef4444', icon: '⚠️' },
+  };
+
+  const { text, color, icon } = config[agentState] || config.IDLE;
 
   if (compact) {
     return (
       <View style={styles.compactBox}>
-        {showRecording ? (
+        {agentState === 'PROCESSING' ? (
+          <View style={styles.centerRowCompact}>
+            <ActivityIndicator color="#f59e0b" size="small" />
+            <Text style={[styles.statusTextCompact, { color }]}>{text}</Text>
+          </View>
+        ) : agentState === 'WAKE_WORD_DETECTED' ? (
           <View style={styles.centerRowCompact}>
             <View style={styles.redDotCompact} />
             <Text style={styles.recordingLabelCompact}>RECORDING AUDIO...</Text>
           </View>
         ) : (
-          <Text style={styles.statusTextCompact}>{status}</Text>
+          <View style={styles.centerRowCompact}>
+            {icon && <Text style={{ fontSize: 12 }}>{icon}</Text>}
+            <Text style={[styles.statusTextCompact, { color }]}>{text}</Text>
+          </View>
         )}
       </View>
     );
@@ -32,14 +38,18 @@ const StatusDisplay = ({
   return (
     <View style={styles.statusBox}>
       <Text style={styles.statusLabel}>STATUS</Text>
-      <Text style={styles.statusText}>{status}</Text>
-      {mode !== 'transition' && transcript.length > 0 && (
-        <View style={styles.transcriptContainer}>
-          <Text style={styles.partialTranscript}>“{transcript}”</Text>
+      {agentState === 'PROCESSING' ? (
+        <View style={styles.centerRow}>
+          <ActivityIndicator color="#f59e0b" size="small" />
+          <Text style={[styles.statusText, { color }]}>{text}</Text>
+        </View>
+      ) : (
+        <View style={styles.centerRow}>
+          {icon && <Text style={{ fontSize: 20, marginRight: 8 }}>{icon}</Text>}
+          <Text style={[styles.statusText, { color }]}>{text}</Text>
         </View>
       )}
-
-      {showRecording && (
+      {agentState === 'WAKE_WORD_DETECTED' && (
         <View style={styles.centerRow}>
           <View style={styles.redDot} />
           <Text style={styles.recordingLabel}>RECORDING AUDIO...</Text>
@@ -50,27 +60,27 @@ const StatusDisplay = ({
 };
 
 const styles = StyleSheet.create({
-  statusBox: { 
-    backgroundColor: '#1f2937', 
-    borderRadius: 16, 
-    padding: 20, 
-    width: '100%', 
-    alignItems: 'center', 
-    marginBottom: 20, 
-    borderWidth: 1, 
-    borderColor: '#374151' 
+  statusBox: {
+    backgroundColor: '#1f2937',
+    borderRadius: 16,
+    padding: 20,
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#374151'
   },
-  statusLabel: { 
-    fontSize: 11, 
-    color: '#6b7280', 
-    letterSpacing: 2, 
-    marginBottom: 8, 
-    textTransform: 'uppercase' 
+  statusLabel: {
+    fontSize: 11,
+    color: '#6b7280',
+    letterSpacing: 2,
+    marginBottom: 8,
+    textTransform: 'uppercase'
   },
-  statusText: { 
-    fontSize: 16, 
-    color: '#e5e7eb', 
-    textAlign: 'center' 
+  statusText: {
+    fontSize: 16,
+    color: '#e5e7eb',
+    textAlign: 'center'
   },
   compactBox: {
     height: 30,
@@ -86,17 +96,12 @@ const styles = StyleSheet.create({
   centerRowCompact: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10
+    gap: 8
   },
-  partialTranscriptCompact: {
-    fontSize: 13,
-    color: '#4ade80',
-    fontStyle: 'italic',
-  },
-  centerRow: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'center', 
+  centerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 10,
     gap: 8
   },
@@ -123,18 +128,6 @@ const styles = StyleSheet.create({
     color: '#ef4444',
     fontWeight: 'bold',
     letterSpacing: 1.5
-  },
-  transcriptContainer: { 
-    width: '100%', 
-    marginTop: 8, 
-    alignItems: 'center' 
-  },
-  partialTranscript: { 
-    fontSize: 14, 
-    color: '#4ade80', 
-    fontStyle: 'italic', 
-    textAlign: 'center', 
-    paddingHorizontal: 12 
   },
 });
 

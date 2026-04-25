@@ -9,17 +9,38 @@ const ManualTextInput = ({
   placeholder = "Type a message...",
   disabled = false,
   isRecording = false,
+  agentState = 'IDLE',
   onFocus,
   onBlur
 }) => {
+  const getMicIcon = () => {
+    switch (agentState) {
+      case 'WAKE_WORD_DETECTED': return '⏺️';
+      case 'PROCESSING': return '⏳';
+      case 'SPEAKING': return '🔊';
+      default: return '🎙️';
+    }
+  };
+
+  const isActive = agentState === 'WAKE_WORD_DETECTED' || agentState === 'PROCESSING' || agentState === 'SPEAKING';
+
   return (
     <View style={styles.inputContainer}>
       <TouchableOpacity 
-        style={[styles.voiceButton, isRecording && styles.voiceButtonActive]} 
+        style={[
+          styles.voiceButton, 
+          agentState === 'WAKE_WORD_DETECTED' && styles.voiceButtonRecording,
+          agentState === 'PROCESSING' && styles.voiceButtonProcessing,
+          agentState === 'SPEAKING' && styles.voiceButtonSpeaking,
+        ]} 
         onPress={onVoicePress}
-        disabled={disabled && !isRecording}
+        disabled={disabled && !isActive}
       >
-        <Text style={styles.voiceButtonText}>{isRecording ? '⏺️' : '🎙️'}</Text>
+        {agentState === 'PROCESSING' ? (
+          <ActivityIndicator color="#f59e0b" size="small" />
+        ) : (
+          <Text style={styles.voiceButtonText}>{getMicIcon()}</Text>
+        )}
       </TouchableOpacity>
       <TextInput
         style={styles.keyboardInput}
@@ -75,9 +96,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#374151'
   },
-  voiceButtonActive: {
+  voiceButtonRecording: {
     backgroundColor: '#991b1b',
     borderColor: '#ef4444'
+  },
+  voiceButtonProcessing: {
+    backgroundColor: '#78350f',
+    borderColor: '#f59e0b'
+  },
+  voiceButtonSpeaking: {
+    backgroundColor: '#1e3a5f',
+    borderColor: '#3b82f6'
   },
   voiceButtonText: {
     fontSize: 20

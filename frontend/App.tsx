@@ -18,27 +18,18 @@ import {
 } from 'react-native';
 import { registerRootComponent } from 'expo';
 import { StatusBar } from 'expo-status-bar';
-import * as Speech from 'expo-speech';
-import { Audio } from 'expo-av';
 
 import { AuthProvider, useAuth } from './src/context/AuthContext';
+import { AgentProvider, useAgent } from './src/context/AgentContext';
 import AuthScreen from './src/screens/Auth/AuthScreen';
 import { supabase } from './src/services/supabase';
 
 import {
-  WAKE_PHRASES,
-  EXIT_PHRASES,
-  FILLER_WORDS,
   LANGUAGES,
   configuredBackendUrl,
   getBackendCandidates,
   getAccentLabel
 } from './src/config/constants';
-
-import { useNativeSpeech } from './src/hooks/useNativeSpeech';
-import { useAudioRecording } from './src/hooks/useAudioRecording';
-import { useWhisperApi } from './src/hooks/useWhisperApi';
-import { startDucking, stopDucking, cleanupAudio } from './src/utils/audioUtils';
 
 import styles from './src/styles/AppStyles';
 
@@ -55,23 +46,30 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 function AppMain() {
   const { session, user } = useAuth();
-  const [gpsLocation, setGpsLocation] = useState(null);
+  const {
+    agentState,
+    userTranscript,
+    assistantText,
+    serviceRunning,
+    startService,
+    stopService,
+    startListening,
+    stopAndCancel,
+    updateAuthToken,
+    updateSessionId,
+  } = useAgent();
+
+  const [activeBackendUrl, setActiveBackendUrl] = useState(configuredBackendUrl);
   const [activeSessionId, setActiveSessionId] = useState(null);
   const activeSessionIdRef = useRef(null);
   const setActiveSession = useCallback((id) => {
     activeSessionIdRef.current = id;
     setActiveSessionId(id);
-  }, []);
+    if (serviceRunning) updateSessionId(id);
+  }, [serviceRunning, updateSessionId]);
+
   const [voiceTranscript, setVoiceTranscript] = useState('');
-  const transcriptRef = useRef('');
-  const [activeBackendUrl, setActiveBackendUrl] = useState(configuredBackendUrl);
-  const activeBackendUrlRef = useRef(configuredBackendUrl);
-
-  const [preferredVoice, setPreferredVoice] = useState(null);
-  const preferredVoiceRef = useRef(null);
-  const [availableVoices, setAvailableVoices] = useState([]);
   const [selectedLanguage, setSelectedLanguage] = useState(LANGUAGES[0]);
-
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isLangModalVisible, setIsLangModalVisible] = useState(false);
   const [isNotesModalVisible, setIsNotesModalVisible] = useState(false);
@@ -80,16 +78,16 @@ function AppMain() {
   ]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isChatTtsEnabled, setIsChatTtsEnabled] = useState(true);
-  const [isListeningActive, setIsListeningActive] = useState(true);
-  const isListeningActiveRef = useRef(true);
-  const [isSpeaking, setIsSpeaking] = useState(false);
   const [ttsRate, setTtsRate] = useState(1.0);
   const [ttsVolume, setTtsVolume] = useState(1.0);
-  const speechQueueRef = useRef([]);
-  const streamingSentenceBufferRef = useRef('');
+  const [preferredVoice, setPreferredVoice] = useState(null);
+  const [availableVoices, setAvailableVoices] = useState([]);
+  const [isTextLoading, setIsTextLoading] = useState(false);
+  const [gpsLocation, setGpsLocation] = useState(null);
 
   const menuAnim = useRef(new Animated.Value(-SCREEN_WIDTH * 0.8)).current;
   const scrollRef = useRef(null);
+  const prevTranscriptRef = useRef({ user: '', assistant: '' });
   const swipeResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (evt, gestureState) => {
@@ -114,608 +112,224 @@ function AppMain() {
     })
   ).current;
 
-  const modeRef = useRef('wake');
-  const isSpeakingRef = useRef(false);
-  const isStartingRef = useRef(false);
-  const isProcessingRef = useRef(false);
-  const shouldTerminateRef = useRef(false);
-  const checkDoneIntervalRef = useRef(null);
-  const silentSoundRef = useRef(null);
-  const speakTimeoutRef = useRef(null);
-  const restartTimerRef = useRef(null);
-  const terminationRestartTimerRef = useRef(null);
-  const speechEndTimeoutRef = useRef(null);
-  const commandStartTimeRef = useRef(0);
-
-  // Sync refs
-  useEffect(() => { preferredVoiceRef.current = preferredVoice; }, [preferredVoice]);
-  useEffect(() => { activeBackendUrlRef.current = activeBackendUrl; }, [activeBackendUrl]);
-  useEffect(() => { isListeningActiveRef.current = isListeningActive; }, [isListeningActive]);
-
-  const {
-    loading,
-    streamText,
-    streamAudio
-  } = useWhisperApi(activeBackendUrl);
-
-  const getFormattedHistory = useCallback((limit = 8) => {
-    // Exclude the initial greeting if it's the first message
-    const filteredMessages = messages.filter(m => m.id !== 'initial');
-    return filteredMessages
-      .slice(-limit)
-      .map(m => ({ role: m.role, content: m.text }));
-  }, [messages]);
-
-
-
-  const loadSession = useCallback(async (sessionId) => {
-    try {
-      setStatus('Loading chat...');
-      const { data: { session: freshSession } } = await supabase.auth.getSession();
-      const token = freshSession?.access_token;
-
-      const response = await fetch(`${activeBackendUrl}/api/chat-sessions/${sessionId}/messages`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-
-      if (data.messages) {
-        const formattedMessages = data.messages.map(m => ([
-          { id: `${m.id}_u`, role: 'user', text: m.prompt },
-          { id: `${m.id}_a`, role: 'assistant', text: m.response }
-        ])).flat();
-
-        setMessages([
-          { id: 'initial', role: 'assistant', text: 'Hello! I am Bessie, your farm assistant. How can I help you today?' },
-          ...formattedMessages
-        ]);
-        setActiveSession(sessionId);
-        setStatus('Ready');
-      }
-    } catch (error) {
-      console.error('Error loading session:', error);
-      Alert.alert('Error', 'Failed to load chat history');
+  // ── Sync native transcript events to messages ───────────────────
+  useEffect(() => {
+    if (userTranscript && userTranscript !== prevTranscriptRef.current.user) {
+      prevTranscriptRef.current.user = userTranscript;
+      setMessages(prev => [...prev, {
+        id: Date.now().toString(),
+        role: 'user',
+        text: userTranscript
+      }]);
     }
-  }, [activeBackendUrl]);
+  }, [userTranscript]);
 
-  const onWakeWord = useCallback((phrase) => {
-    // Ignore wake words if we are already in a command or transitioning
-    if (modeRef.current === 'command' || modeRef.current === 'thinking' || isStartingRef.current) {
-      console.log('[App] Wake word detected during active session, ignoring:', phrase);
-      return;
-    }
-
-    console.log('[App] Wake word detected, triggering command prompt:', phrase);
-    // @ts-ignore: Circular dependency allowed in callbacks
-    triggerCommandPrompt();
-    // @ts-ignore
-  }, [triggerCommandPrompt]);
-
-  const onExit = useCallback((phrase) => {
-    // Ignore exit words if we are already in a command or transitioning
-    if (modeRef.current === 'command' || modeRef.current === 'thinking' || isStartingRef.current) {
-      console.log('[App] Exit word detected during active session, ignoring:', phrase);
-      return;
-    }
-
-    console.log('[App] Exit word detected, stopping chat:', phrase);
-    // @ts-ignore: Circular dependency allowed in callbacks
-    handleStopChat();
-    // @ts-ignore
-  }, [handleStopChat]);
-
-  const onPartial = useCallback((_txt) => { }, []);
-  const onResult = useCallback((txt) => {
-    transcriptRef.current = txt;
-  }, []);
-
-  const handleSpeechStart = useCallback(() => {
-    if (modeRef.current === 'command') {
-      clearTimeout(speechEndTimeoutRef.current);
-      // @ts-ignore: Circular dependency allowed in callbacks
-      resetSilenceTimer();
-    }
-    // @ts-ignore
-  }, [resetSilenceTimer]);
-
-  const handleSpeechEnd = useCallback(() => {
-    if (modeRef.current === 'command') {
-      clearTimeout(speechEndTimeoutRef.current);
-      speechEndTimeoutRef.current = setTimeout(() => {
-        if (modeRef.current === 'command') {
-          // @ts-ignore: Circular dependency allowed in callbacks
-          stopAndSendRecording('Native VAD');
+  useEffect(() => {
+    if (assistantText && assistantText !== prevTranscriptRef.current.assistant) {
+      prevTranscriptRef.current.assistant = assistantText;
+      setMessages(prev => {
+        // Update last assistant message or add new one
+        const last = prev[prev.length - 1];
+        if (last?.role === 'assistant' && last.id?.endsWith('_native')) {
+          return prev.map(m => m.id === last.id ? { ...m, text: assistantText } : m);
         }
-      }, 1000);
+        return [...prev, {
+          id: Date.now().toString() + '_native',
+          role: 'assistant',
+          text: assistantText
+        }];
+      });
     }
-    // @ts-ignore
-  }, [stopAndSendRecording]);
+  }, [assistantText]);
 
-  const {
-    status,
-    setStatus,
-    isReady,
-    recognizing,
-    setRecognizing: setNativeRecognizing,
-    startListening,
-    stopListening
-  } = useNativeSpeech(onWakeWord, onExit, (txt) => {
-    // Show live partial results in the UI as feedback
-    if (modeRef.current === 'command') {
-      setVoiceTranscript(txt);
-      clearTimeout(speechEndTimeoutRef.current);
-      resetSilenceTimer();
+  // Clear transcript refs when state returns to IDLE
+  useEffect(() => {
+    if (agentState === 'IDLE') {
+      prevTranscriptRef.current = { user: '', assistant: '' };
     }
-    onPartial(txt);
-  }, (txt) => {
-    // On final native result, update transcriptRef for fallback but stay in UI
-    if (modeRef.current === 'command') {
-      setVoiceTranscript(txt);
-    }
-    onResult(txt);
-  }, handleSpeechStart, handleSpeechEnd);
+  }, [agentState]);
 
-  const onSilence = useCallback(() => {
-    console.log('[Audio] Silence Timed Out.');
-    // @ts-ignore: Circular dependency allowed in callbacks
-    stopAndSendRecording('Manual Silence Fallback');
-    // @ts-ignore
-  }, [stopAndSendRecording]);
+  // ── Start/stop service with auth ────────────────────────────────
+  // Poll for auth token since Supabase session restore is async
+  useEffect(() => {
+    if (!user || !activeBackendUrl) return;
 
-  const {
-    recording,
-    volume,
-    setVolume,
-    startRecording,
-    stopRecordingManual,
-    stopAndGetURI,
-    resetSilenceTimer,
-    recordingRef
-  } = useAudioRecording(onSilence, undefined);
+    let interval: any = null;
+    let mounted = true;
 
-  // --- ACTIONS ---
-  const startWakeWordListening = useCallback(async (force = false) => {
-    if (!isListeningActiveRef.current) {
-      setStatus('Listening Disabled');
-      return;
-    }
-
-    if (isStartingRef.current && !force) {
-      console.log('[App] Already starting wake word listening, skipping redundant call.');
-      return;
-    }
-
-    isStartingRef.current = true;
-    console.log('[App] Starting Wake Word Listening (force=' + force + ')...');
-
-    try {
-      modeRef.current = 'wake';
-      setStatus('Waking up...');
-
-      // Stop any active recognition
-      await Promise.race([
-        stopListening(),
-        new Promise(resolve => setTimeout(resolve, 500))
-      ]).catch(() => { });
-
-      await cleanupAudio(recordingRef, null, { stopRecognition: null });
-
-      await Promise.race([
-        stopDucking(silentSoundRef),
-        new Promise(resolve => setTimeout(resolve, 1500))
-      ]).catch(() => { });
-
-      await new Promise(resolve => setTimeout(resolve, 300));
-
-      setStatus('Say "Hey Dairy" to start...');
-      setVoiceTranscript('');
-      transcriptRef.current = '';
-      setNativeRecognizing(true);
-
-      // Pass wake=true + full vocabulary so the hook auto-restarts and biases toward farm terms
-      await startListening([...WAKE_PHRASES, ...EXIT_PHRASES], 'en-US', true);
-      console.log('[App] Wake word listening active.');
-    } catch (err) {
-      console.error('[App] Error in startWakeWordListening:', err);
-      setNativeRecognizing(false);
-      if (!force) setTimeout(() => startWakeWordListening(true), 1500);
-    } finally {
-      isStartingRef.current = false;
-    }
-  }, [startListening, stopListening, recordingRef, silentSoundRef]);
-
-  const triggerCommandPrompt = useCallback(async () => {
-    console.log('[App] Interrupted by wake word, resetting state...');
-
-    // Cancel any pending termination restart
-    clearTimeout(terminationRestartTimerRef.current);
-
-    // Stop everything immediately
-    Speech.stop();
-    isProcessingRef.current = false;
-    shouldTerminateRef.current = false;
-    clearTimeout(speakTimeoutRef.current);
-    clearInterval(checkDoneIntervalRef.current);
-    speechQueueRef.current = [];
-    streamingSentenceBufferRef.current = '';
-    setIsSpeaking(false);
-    isSpeakingRef.current = false;
-
-    await stopRecordingManual();
-    await stopListening();
-    clearTimeout(speechEndTimeoutRef.current);
-
-    isStartingRef.current = false;
-    modeRef.current = 'transition';
-    setStatus('Readying...');
-    setVoiceTranscript('');
-    transcriptRef.current = '';
-
-    await new Promise(r => setTimeout(r, 100));
-
-    const beepDone = () => {
-      clearTimeout(safetyBeepTimeout);
-      // @ts-ignore: Block-scoped declaration order
-      setTimeout(() => startCommandListening(), 300);
+    const tryPushToken = async () => {
+      try {
+        const { data: { session: freshSession } } = await supabase.auth.getSession();
+        const token = freshSession?.access_token || '';
+        if (token && mounted) {
+          console.log('[App] Got token, length:', token.length);
+          updateAuthToken(token);
+          startService({
+            backendUrl: activeBackendUrl,
+            authToken: token,
+            sessionId: activeSessionIdRef.current || undefined,
+          });
+          if (interval) clearInterval(interval);
+          return true;
+        }
+      } catch (e) {
+        console.warn('[App] Token fetch error:', e);
+      }
+      return false;
     };
 
-    const safetyBeepTimeout = setTimeout(beepDone, 1500);
+    // Try immediately, then retry every 2s
+    tryPushToken();
+    interval = setInterval(() => tryPushToken(), 2000);
 
-    Speech.speak('Moooo', {
-      rate: ttsRate,
-      volume: ttsVolume,
-      voice: preferredVoiceRef.current,
-      onDone: beepDone,
-      onError: beepDone
-    });
-    // @ts-ignore
-  }, [stopListening, stopRecordingManual, startCommandListening, ttsRate, ttsVolume]);
+    return () => {
+      mounted = false;
+      if (interval) clearInterval(interval);
+    };
+  }, [user?.id, activeBackendUrl]);
 
-  const startCommandListening = useCallback(async (isFollowUp = false) => {
-    modeRef.current = 'command';
-    setStatus(isFollowUp ? 'Listening...' : 'Listening...');
-    clearTimeout(speechEndTimeoutRef.current);
-
-    await cleanupAudio(recordingRef, null, { stopRecognition: stopListening });
-    // Start in non-wake mode — pass null to disable all vocabulary biasing during the command
-    // this ensures we only use the native module for VAD/SpeechEnd detection.
-    await startListening(null, 'en-US', false);
-    await startRecording();
-    commandStartTimeRef.current = Date.now();
-  }, [startListening, stopListening, startRecording, recordingRef]);
-
-  const speakNextSentence = useCallback(() => {
-    if (isSpeaking || speechQueueRef.current.length === 0) return;
-
-    const sentence = speechQueueRef.current.shift();
-    if (!sentence || sentence.trim().length === 0) {
-      speakNextSentence();
-      return;
+  // Also push token whenever React session state updates
+  useEffect(() => {
+    if (session?.access_token) {
+      updateAuthToken(session.access_token);
     }
+  }, [session?.access_token]);
 
-    setIsSpeaking(true);
-    isSpeakingRef.current = true;
-    const bestVoiceMatch = availableVoices.find(v => v.language.startsWith(selectedLanguage.voicePrefix));
-    const voiceId = bestVoiceMatch ? bestVoiceMatch.identifier : preferredVoiceRef.current;
-
-    Speech.speak(sentence, {
-      rate: ttsRate,
-      volume: ttsVolume,
-      voice: voiceId,
-      onDone: () => {
-        setTimeout(() => {
-          setIsSpeaking(false);
-          isSpeakingRef.current = false;
-          speakNextSentence();
-        }, 50);
-      },
-      onError: () => {
-        setIsSpeaking(false);
-        isSpeakingRef.current = false;
-        speakNextSentence();
-      },
-    });
-  }, [isSpeaking, availableVoices, selectedLanguage.voicePrefix, preferredVoiceRef, ttsRate, ttsVolume]);
-
-  const stopAndSendRecording = useCallback(async (reason = 'unknown') => {
-    if (isProcessingRef.current) return;
-
-    // Enforce 2s minimum duration for automatically triggered stops
-    const elapsed = Date.now() - commandStartTimeRef.current;
-    if (elapsed < 2000 && reason !== 'Manual Stop') {
-      console.log(`[App] Stop request too early (${elapsed}ms) for reason: ${reason}. Waiting for min duration...`);
-      setTimeout(() => stopAndSendRecording(reason), 2000 - elapsed);
-      return;
-    }
-
-    console.log(`[App] stopAndSendRecording triggered. Reason: ${reason} (Duration: ${elapsed}ms)`);
-    isProcessingRef.current = true;
-    try {
-      const uri = await stopAndGetURI();
-      if (!uri) { startWakeWordListening(); return; }
-
-      void startDucking(silentSoundRef);
-      modeRef.current = 'thinking';
-      setStatus('Reading...');
-      shouldTerminateRef.current = false;
-
-      // Ensure native speech is still listening for "Hey Bessie" while thinking/speaking
-      await startListening([...WAKE_PHRASES, ...EXIT_PHRASES], 'en-US', true);
-
-      const assistantId = Date.now().toString() + '_ai';
-      setMessages(prev => [...prev, { id: assistantId, role: 'assistant', text: '' }]);
-
-      let fullResponse = '';
-      streamingSentenceBufferRef.current = '';
-      speechQueueRef.current = [];
-
-      // Ensure we have a fresh session token
-      const { data: { session: freshSession } } = await supabase.auth.getSession();
-      const token = freshSession?.access_token || session?.access_token;
-
-      if (!token) {
-        throw new Error('You must be logged in to use voice chat.');
-      }
-
-      await streamAudio(uri, selectedLanguage.code, getFormattedHistory(8),
-        (parsed) => {
-          const chunk = parsed.content || '';
-          if (parsed.terminate) shouldTerminateRef.current = true;
-
-          fullResponse += chunk;
-          streamingSentenceBufferRef.current += chunk;
-          setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, text: fullResponse } : m));
-
-          let match;
-          while ((match = streamingSentenceBufferRef.current.match(/^(.*?[.!?\n])(.*)$/s))) {
-            const toSpeak = match[1].trim();
-            streamingSentenceBufferRef.current = match[2];
-            if (toSpeak) {
-              speechQueueRef.current.push(toSpeak);
-              speakNextSentence();
-            }
-          }
-        },
-        (transcript) => {
-          setMessages(prev => {
-            const userMsg = { id: Date.now().toString(), role: 'user', text: transcript };
-            const list = [...prev];
-            list.splice(list.length - 1, 0, userMsg);
-            return list;
-          });
-        },
-        null,
-        {
-          headers: { 'Authorization': `Bearer ${token}` },
-          location: gpsLocation,
-          sessionId: activeSessionIdRef.current,
-          onSessionCreated: (id) => setActiveSession(id)
-        }
-      );
-
-      if (streamingSentenceBufferRef.current.trim()) {
-        speechQueueRef.current.push(streamingSentenceBufferRef.current.trim());
-        speakNextSentence();
-      }
-
-      clearInterval(checkDoneIntervalRef.current);
-      checkDoneIntervalRef.current = setInterval(() => {
-        const queueEmpty = speechQueueRef.current.length === 0;
-        if (!isSpeakingRef.current && queueEmpty) {
-          setTimeout(async () => {
-            const reallyDone = !isSpeakingRef.current && speechQueueRef.current.length === 0 && !(await Speech.isSpeakingAsync());
-            if (reallyDone) {
-              clearInterval(checkDoneIntervalRef.current);
-              void stopDucking(silentSoundRef);
-              if (!shouldTerminateRef.current) {
-                speakTimeoutRef.current = setTimeout(() => startCommandListening(true), 100);
-              } else {
-                void handleStopChat('Talk soon!');
-              }
-            }
-          }, 800);
-        }
-      }, 1000);
-
-    } catch (error) {
-      void stopDucking(silentSoundRef);
-      Alert.alert('Voice API failed', error.message);
-      startWakeWordListening();
-    } finally {
-      isProcessingRef.current = false;
-    }
-  }, [stopAndGetURI, streamAudio, selectedLanguage.code, startWakeWordListening, startCommandListening, getFormattedHistory, speakNextSentence, session, gpsLocation]);
-
+  // ── Manual text send (stays in RN) ──────────────────────────────
   const handleSendManualText = async () => {
-    if (isProcessingRef.current || !voiceTranscript.trim()) return;
-    isProcessingRef.current = true;
+    if (isTextLoading || !voiceTranscript.trim()) return;
+    setIsTextLoading(true);
     const textToSend = voiceTranscript.trim();
     setVoiceTranscript('');
     Keyboard.dismiss();
 
     try {
-      setStatus('Reading...');
-      modeRef.current = 'thinking';
-      shouldTerminateRef.current = false;
       const userMsg = { id: Date.now().toString(), role: 'user', text: textToSend };
       setMessages(prev => [...prev, userMsg]);
 
-      await cleanupAudio(recordingRef, null, { stopRecognition: stopListening });
-      if (isChatTtsEnabled) {
-        await startDucking(silentSoundRef);
-      }
-
-      // Ensure native speech is still listening for "Hey Bessie" during text-based conversations
-      await startListening([...WAKE_PHRASES, ...EXIT_PHRASES], 'en-US', true);
+      const { data: { session: freshSession } } = await supabase.auth.getSession();
+      const token = freshSession?.access_token || session?.access_token;
+      if (!token) throw new Error('You must be logged in to send messages.');
 
       const assistantId = Date.now().toString() + '_ai';
       setMessages(prev => [...prev, { id: assistantId, role: 'assistant', text: '' }]);
 
       let fullResponse = '';
-      streamingSentenceBufferRef.current = '';
-      speechQueueRef.current = [];
+      const history = messages.filter(m => m.id !== 'initial').slice(-8).map(m => ({ role: m.role, content: m.text }));
 
-      // Ensure we have a fresh session token
-      const { data: { session: freshSession } } = await supabase.auth.getSession();
-      const token = freshSession?.access_token || session?.access_token;
+      // Use XHR for streaming text (same as before)
+      await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `${activeBackendUrl}/api/chat`);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
 
-      if (!token) {
-        throw new Error('You must be logged in to send messages.');
-      }
-
-      await streamText(textToSend, getFormattedHistory(8), selectedLanguage.code, (parsed) => {
-        const chunk = parsed.content || '';
-        if (parsed.terminate) shouldTerminateRef.current = true;
-
-        fullResponse += chunk;
-        streamingSentenceBufferRef.current += chunk;
-        setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, text: fullResponse } : m));
-
-        if (isChatTtsEnabled) {
-          let match;
-          while ((match = streamingSentenceBufferRef.current.match(/^(.*?[.!?\n])(.*)$/s))) {
-            const toSpeak = match[1].trim();
-            streamingSentenceBufferRef.current = match[2];
-            if (toSpeak) {
-              speechQueueRef.current.push(toSpeak);
-              speakNextSentence();
-            }
-          }
-        }
-      }, {
-        headers: { 'Authorization': `Bearer ${token}` },
-        location: gpsLocation,
-        sessionId: activeSessionIdRef.current,
-        onSessionCreated: (id) => setActiveSession(id)
-      });
-
-      if (isChatTtsEnabled && streamingSentenceBufferRef.current.trim()) {
-        speechQueueRef.current.push(streamingSentenceBufferRef.current.trim());
-        speakNextSentence();
-      }
-
-      clearInterval(checkDoneIntervalRef.current);
-      checkDoneIntervalRef.current = setInterval(() => {
-        const queueEmpty = speechQueueRef.current.length === 0;
-        if (!isChatTtsEnabled || (!isSpeakingRef.current && queueEmpty)) {
-          setTimeout(async () => {
-            const reallyDone = !isChatTtsEnabled || (!isSpeakingRef.current && speechQueueRef.current.length === 0 && !(await Speech.isSpeakingAsync()));
-            if (reallyDone) {
-              clearInterval(checkDoneIntervalRef.current);
-              void stopDucking(silentSoundRef);
-              if (!shouldTerminateRef.current) {
-                startWakeWordListening();
-              } else {
-                void handleStopChat('Talk soon!');
+        let seenBytes = 0;
+        xhr.onreadystatechange = () => {
+          if (xhr.readyState === 3 || xhr.readyState === 4) {
+            const newData = xhr.responseText.substring(seenBytes);
+            seenBytes = xhr.responseText.length;
+            const lines = newData.split('\n');
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                const dataStr = line.replace('data: ', '').trim();
+                if (dataStr === '[DONE]') { resolve(); continue; }
+                try {
+                  const parsed = JSON.parse(dataStr);
+                  if (parsed.sessionId && !activeSessionIdRef.current) {
+                    setActiveSession(parsed.sessionId);
+                  }
+                  if (parsed.content) {
+                    fullResponse += parsed.content;
+                    setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, text: fullResponse } : m));
+                  }
+                } catch (e) {}
               }
             }
-          }, 800);
-        }
-      }, 1000);
+          }
+          if (xhr.readyState === 4) resolve();
+        };
+        xhr.onerror = () => reject(new Error('Network error'));
+        xhr.send(JSON.stringify({
+          text: textToSend,
+          history,
+          language: selectedLanguage.code,
+          location: gpsLocation,
+          sessionId: activeSessionIdRef.current,
+        }));
+      });
+
     } catch (error) {
-      void stopDucking(silentSoundRef);
       Alert.alert('Text API failed', error.message);
-      startWakeWordListening();
     } finally {
-      isProcessingRef.current = false;
+      setIsTextLoading(false);
     }
   };
 
   const handleMicPress = useCallback(() => {
-    if (!isListeningActiveRef.current) {
-      setIsListeningActive(true);
-      isListeningActiveRef.current = true;
-      setTimeout(() => triggerCommandPrompt(), 50);
-      return;
-    }
-    if (recording) {
-      stopAndSendRecording('Manual Stop');
+    if (agentState === 'WAKE_WORD_DETECTED' || agentState === 'PROCESSING') {
+      stopAndCancel();
     } else {
-      triggerCommandPrompt();
+      startListening();
     }
-  }, [recording, isListeningActive, stopAndSendRecording, triggerCommandPrompt]);
+  }, [agentState, startListening, stopAndCancel]);
 
-  const handleStopChat = useCallback(async (finalStatus = null) => {
-    console.log('[App] handleStopChat called, finalStatus:', finalStatus);
-    isStartingRef.current = false; // Reset the starting flag
+  const handleStopChat = useCallback(async () => {
+    stopAndCancel();
+  }, [stopAndCancel]);
 
-    clearTimeout(restartTimerRef.current);
-    clearTimeout(speakTimeoutRef.current);
-    clearTimeout(terminationRestartTimerRef.current);
-    Speech.stop();
-
-    // Only stop recording here; let startWakeWordListening handle Vosk reset
-    await stopRecordingManual().catch(() => { });
-
-    modeRef.current = 'wake';
-    if (finalStatus) {
-      setStatus(finalStatus);
-    } else {
-      setStatus(isListeningActiveRef.current ? 'Stopped' : 'Listening Disabled');
-    }
-
-    setVolume(0);
-    setVoiceTranscript('');
-    transcriptRef.current = '';
-
-    const delay = finalStatus ? 800 : 300;
-    terminationRestartTimerRef.current = setTimeout(() => {
-      if (isListeningActiveRef.current) {
-        startWakeWordListening(true);
+  // ── Session management ──────────────────────────────────────────
+  const loadSession = useCallback(async (sessionId) => {
+    try {
+      const { data: { session: freshSession } } = await supabase.auth.getSession();
+      const token = freshSession?.access_token;
+      const response = await fetch(`${activeBackendUrl}/api/chat-sessions/${sessionId}/messages`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (data.messages) {
+        const formattedMessages = data.messages.map(m => ([
+          { id: `${m.id}_u`, role: 'user', text: m.prompt },
+          { id: `${m.id}_a`, role: 'assistant', text: m.response }
+        ])).flat();
+        setMessages([
+          { id: 'initial', role: 'assistant', text: 'Hello! I am Bessie, your farm assistant. How can I help you today?' },
+          ...formattedMessages
+        ]);
+        setActiveSession(sessionId);
       }
-    }, delay);
-  }, [stopRecordingManual, startWakeWordListening]);
-
-  const toggleListening = useCallback(async () => {
-    const nextState = !isListeningActive;
-    setIsListeningActive(nextState);
-    isListeningActiveRef.current = nextState;
-
-    if (!nextState) {
-      await handleStopChat();
-    } else {
-      startWakeWordListening();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to load chat history');
     }
-  }, [isListeningActive, handleStopChat, startWakeWordListening]);
+  }, [activeBackendUrl]);
 
   const createNewChatSession = useCallback(async (isInitial = false) => {
     try {
-      if (!isInitial) setStatus('Creating session...');
       const { data: { session: freshSession } } = await supabase.auth.getSession();
       const token = freshSession?.access_token;
-
       if (!token) return;
-
       const response = await fetch(`${activeBackendUrl}/api/chat-sessions`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ title: 'New Chat' })
       });
       const data = await response.json();
-
       if (data.session) {
         setActiveSession(data.session.id);
         setMessages([
           { id: 'initial', role: 'assistant', text: 'Hello! I am Bessie, your farm assistant. How can I help you today?' }
         ]);
-        if (!isInitial) {
-          startWakeWordListening(true);
-        }
       }
     } catch (error) {
-      console.error('Error creating session:', error);
       if (!isInitial) Alert.alert('Error', 'Failed to create new chat session');
     }
-  }, [activeBackendUrl, startWakeWordListening, setActiveSession]);
+  }, [activeBackendUrl, setActiveSession]);
 
   const startNewChat = useCallback(() => {
     createNewChatSession();
   }, [createNewChatSession]);
 
-
+  // ── Menu ────────────────────────────────────────────────────────
   const toggleMenu = (open) => {
     setIsMenuOpen(open);
     Animated.timing(menuAnim, {
@@ -725,82 +339,45 @@ function AppMain() {
     }).start();
   };
 
+  const toggleListening = useCallback(() => {
+    if (serviceRunning) {
+      stopService();
+    } else {
+      startService({
+        backendUrl: activeBackendUrl,
+        authToken: session?.access_token || '',
+        sessionId: activeSessionIdRef.current || undefined,
+      });
+    }
+  }, [serviceRunning, stopService, startService, activeBackendUrl, session]);
+
+  // ── Init ────────────────────────────────────────────────────────
   useEffect(() => {
-    // Location tracking removed as per user request
+    LogBox.ignoreLogs([
+      '`new NativeEventEmitter()` was called with a non-null argument without the required `addListener` method',
+    ]);
     setGpsLocation(null);
-  }, []);
 
-  // --- INITIALIZATION ---
-  useEffect(() => {
-    const setup = async () => {
-      LogBox.ignoreLogs([
-        '`new NativeEventEmitter()` was called with a non-null argument without the required `addListener` method',
-      ]);
-
-      try {
-        await Audio.setAudioModeAsync({
-          allowsRecordingIOS: true,
-          playsInSilentModeIOS: true,
-          shouldDuckAndroid: true,
-          staysActiveInBackground: true,
-          interruptionModeIOS: 2,
-          interruptionModeAndroid: 2,
-        });
-
-        const { sound } = await Audio.Sound.createAsync(
-          { uri: 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==' },
-          { isLooping: true, volume: 1.0 }
-        );
-        silentSoundRef.current = sound;
-      } catch (err) { console.warn(err); }
-
+    // Backend discovery
+    (async () => {
       for (const candidate of getBackendCandidates()) {
         try {
           const res = await fetch(`${candidate}/health`);
           if (res.ok) { setActiveBackendUrl(candidate); break; }
-        } catch (e) { }
+        } catch (e) {}
       }
-
-      try {
-        const voices = await Speech.getAvailableVoicesAsync();
-        const englishVoices = voices
-          .filter(v => v.language.toLowerCase().startsWith('en'))
-          .map(v => ({ ...v, accentLabel: getAccentLabel(v.language) }))
-          .sort((a, b) => a.name.localeCompare(b.name));
-
-        setAvailableVoices(englishVoices);
-        if (englishVoices.length > 0) {
-          const topVoice = englishVoices.find(v => v.identifier.toLowerCase().includes('premium')) || englishVoices[0];
-          setPreferredVoice(topVoice.identifier);
-        }
-      } catch (err) { }
-    };
-
-    setup();
-    return () => {
-      clearTimeout(restartTimerRef.current);
-      stopListening();
-      if (silentSoundRef.current) silentSoundRef.current.unloadAsync();
-    };
+    })();
   }, []);
 
-  // Start listening as soon as permissions are granted (isReady)
   useEffect(() => {
-    if (isReady) {
-      startWakeWordListening();
+    if (user && !activeSessionId) {
+      createNewChatSession(true);
     }
-  }, [isReady]);
-
-  // Reset session when user changes
-  useEffect(() => {
-    if (user && isReady) {
-      if (!activeSessionId) {
-        createNewChatSession(true);
-      }
-    }
-  }, [user?.id, isReady, activeSessionId, createNewChatSession]);
+  }, [user?.id, activeSessionId, createNewChatSession]);
 
   if (!user) return <AuthScreen />;
+
+  const isLoading = agentState === 'PROCESSING' || isTextLoading;
 
   return (
     <SafeAreaView style={styles.container} {...swipeResponder.panHandlers}>
@@ -818,20 +395,14 @@ function AppMain() {
               </TouchableOpacity>
               <Text style={styles.headerSmall}>🐄 Bessie</Text>
               <TouchableOpacity onPress={toggleListening}>
-                <Text style={[styles.stopButtonTextSmall, !isListeningActive && styles.stopButtonDisabledText]}>
-                  {isListeningActive ? '🟢 LISTENING' : '🔘 SILENCED'}
+                <Text style={[styles.stopButtonTextSmall, !serviceRunning && styles.stopButtonDisabledText]}>
+                  {serviceRunning ? '🟢 LISTENING' : '🔘 SILENCED'}
                 </Text>
               </TouchableOpacity>
             </View>
 
             <StatusDisplay
-              status={status}
-              mode={modeRef.current}
-              recognizing={recognizing}
-              loading={loading}
-              recording={recording}
-              volume={volume}
-              transcript={voiceTranscript}
+              agentState={agentState}
               compact
             />
 
@@ -842,7 +413,7 @@ function AppMain() {
               onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
             >
               {messages.map((msg) => (
-                <ChatMessage key={msg.id} msg={msg} loading={loading} />
+                <ChatMessage key={msg.id} msg={msg} loading={isLoading} />
               ))}
             </ScrollView>
 
@@ -852,8 +423,9 @@ function AppMain() {
                 onChangeText={setVoiceTranscript}
                 onSend={handleSendManualText}
                 onVoicePress={handleMicPress}
-                disabled={loading}
-                isRecording={!!recording}
+                disabled={isLoading}
+                isRecording={agentState === 'WAKE_WORD_DETECTED'}
+                agentState={agentState}
                 onFocus={() => {}}
                 onBlur={() => {}}
               />
@@ -900,7 +472,7 @@ function AppMain() {
         isVisible={isModalVisible}
         availableVoices={availableVoices}
         preferredVoice={preferredVoice}
-        onSelect={(id) => { setPreferredVoice(id); setIsModalVisible(false); Speech.speak("Voice selected.", { voice: id, rate: ttsRate, volume: ttsVolume }); }}
+        onSelect={(id) => { setPreferredVoice(id); setIsModalVisible(false); }}
         onClose={() => setIsModalVisible(false)}
       />
     </SafeAreaView>
@@ -910,7 +482,9 @@ function AppMain() {
 export default function App() {
   return (
     <AuthProvider>
-      <AppMain />
+      <AgentProvider>
+        <AppMain />
+      </AgentProvider>
     </AuthProvider>
   );
 }

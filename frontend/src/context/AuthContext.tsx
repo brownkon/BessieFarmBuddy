@@ -1,5 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { NativeModules, Platform } from 'react-native';
 import { supabase } from '../services/supabase';
+
+const { VoiceAssistantModule } = NativeModules;
 
 const AuthContext = createContext({
   session: null,
@@ -8,6 +11,17 @@ const AuthContext = createContext({
   signOut: () => { },
   setAuthLocked: () => { },
 });
+
+// Push token to native SharedPreferences the moment we have it
+const pushTokenToNative = (token: string) => {
+  if (Platform.OS === 'android' && VoiceAssistantModule && token) {
+    try {
+      VoiceAssistantModule.updateAuthToken(token);
+    } catch (e) {
+      console.warn('[Auth] Failed to push token to native:', e);
+    }
+  }
+};
 
 export const AuthProvider = ({ children }) => {
   const [session, setSession] = useState(null);
@@ -26,6 +40,10 @@ export const AuthProvider = ({ children }) => {
       if (!authLockedRef.current) {
         setSession(session);
         setUser(session?.user ?? null);
+        // Push token to native immediately
+        if (session?.access_token) {
+          pushTokenToNative(session.access_token);
+        }
       }
       setLoading(false);
     });
@@ -35,6 +53,10 @@ export const AuthProvider = ({ children }) => {
       if (!authLockedRef.current) {
         setSession(session);
         setUser(session?.user ?? null);
+        // Push token to native on every auth state change
+        if (session?.access_token) {
+          pushTokenToNative(session.access_token);
+        }
       }
       setLoading(false);
     });
@@ -47,6 +69,9 @@ export const AuthProvider = ({ children }) => {
       supabase.auth.getSession().then(({ data: { session } }) => {
         setSession(session);
         setUser(session?.user ?? null);
+        if (session?.access_token) {
+          pushTokenToNative(session.access_token);
+        }
       });
     }
   }, [authLocked]);
