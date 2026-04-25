@@ -37,6 +37,8 @@ class VoiceAssistantService : Service(), TextToSpeech.OnInitListener {
         var backendUrl: String = ""
         var authToken: String = ""
         var sessionId: String? = null
+        var language: String = "en"
+        var location: String? = null
 
         // Static instance so the RN module can call methods directly
         var instance: VoiceAssistantService? = null
@@ -56,18 +58,7 @@ class VoiceAssistantService : Service(), TextToSpeech.OnInitListener {
     private var isSpeakingUtterance = false
     private var ttsReady = false
 
-    // Audio recording
-    private var audioRecord: AudioRecord? = null
-    private var recordingThread: Thread? = null
-    private var isRecording = AtomicBoolean(false)
-    private var recordingFile: File? = null
-    private var silenceStartMs: Long = 0
-    private val SILENCE_THRESHOLD_DB = 45.0  // PCM 16-bit RMS: silence ~40dB, speech ~60-70dB
-    private val SILENCE_TIMEOUT_MS = 1200L   // 1.2s of silence after speech = done
-    private val SPEECH_THRESHOLD_DB = 55.0   // Must see this level to know user started talking
-    private val MIN_RECORDING_MS = 500L
-    private var recordingStartMs: Long = 0
-    private var speechDetected = false
+    private var commandTextToSend: String = ""
 
     private val actionReceiver = object : BroadcastReceiver() {
         override fun onReceive(ctx: Context?, intent: Intent?) {
@@ -84,17 +75,24 @@ class VoiceAssistantService : Service(), TextToSpeech.OnInitListener {
         }
     }
 
-    // Read token from SharedPreferences (set by RN module)
+    // Read token and config from SharedPreferences
     private fun refreshTokenFromPrefs() {
         val prefs = getSharedPreferences("bessie_voice_prefs", 0)
         val storedToken = prefs.getString("authToken", "") ?: ""
         val storedUrl = prefs.getString("backendUrl", "") ?: ""
+        val storedLang = prefs.getString("language", "en") ?: "en"
+        val storedLoc = prefs.getString("location", "") ?: ""
+        
         if (storedToken.isNotEmpty()) {
             authToken = storedToken
             Log.i(TAG, "Token refreshed from prefs, length: ${storedToken.length}")
         }
         if (storedUrl.isNotEmpty()) {
             backendUrl = storedUrl
+        }
+        language = storedLang
+        if (storedLoc.isNotEmpty()) {
+            location = storedLoc
         }
     }
 
@@ -167,23 +165,22 @@ class VoiceAssistantService : Service(), TextToSpeech.OnInitListener {
         when (newState) {
             AgentState.IDLE -> {
                 releaseAudioFocus()
-                if (!isMuted.get()) startWakeWordListening()
+                if (!isMuted.get()) {
+                    mainHandler.postDelayed({
+                        if (currentState == AgentState.IDLE) startWakeWordListening()
+                    }, 500)
+                }
             }
             AgentState.WAKE_WORD_DETECTED -> {
                 requestAudioFocus()
-                playEarcon(R.raw.transition_up) {} // Fire and forget
-                startCommandRecording() // Start recording immediately
+                startCommandListening() // Start speech recognizer for command
             }
             AgentState.PROCESSING -> {
-                playEarcon(R.raw.celebration) {
-                    sendRecordingToServer()
-                }
+                sendTextToServer()
             }
             AgentState.SPEAKING -> { /* TTS queue handles speaking */ }
             AgentState.ERROR -> {
-                playEarcon(R.raw.caution) {
-                    mainHandler.postDelayed({ transitionTo(AgentState.IDLE) }, 2000)
-                }
+                mainHandler.postDelayed({ transitionTo(AgentState.IDLE) }, 2000)
             }
         }
     }
@@ -279,168 +276,89 @@ class VoiceAssistantService : Service(), TextToSpeech.OnInitListener {
         tts?.stop()
         speechQueue.clear()
         isSpeakingUtterance = false
-        stopRecording()
         stopWakeWordListening()
         transitionTo(AgentState.IDLE)
     }
 
-    // ── Audio Recording ───────────────────────────────────────────
+    // ── Command Dictation (SpeechRecognizer) ──────────────────────
 
-    private fun startCommandRecording() {
-        isRecording.set(true)
-        recordingStartMs = System.currentTimeMillis()
-        silenceStartMs = 0
-        speechDetected = false
+    private val commandListener = object : RecognitionListener {
+        override fun onReadyForSpeech(params: Bundle?) {}
+        override fun onBeginningOfSpeech() {}
+        override fun onRmsChanged(rmsdB: Float) {}
+        override fun onBufferReceived(buffer: ByteArray?) {}
+        override fun onEndOfSpeech() {}
 
-        val sampleRate = 16000
-        val bufferSize = AudioRecord.getMinBufferSize(sampleRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
-
-        try {
-            audioRecord = AudioRecord(
-                MediaRecorder.AudioSource.MIC, sampleRate,
-                AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT,
-                bufferSize * 2
-            )
-        } catch (e: SecurityException) {
-            Log.e(TAG, "Mic permission denied", e)
-            transitionTo(AgentState.ERROR)
-            return
-        }
-
-        recordingFile = File(cacheDir, "command_${System.currentTimeMillis()}.pcm")
-
-        recordingThread = Thread {
-            val buffer = ShortArray(bufferSize / 2)
-            val outputStream = FileOutputStream(recordingFile!!)
-            audioRecord?.startRecording()
-
-            while (isRecording.get()) {
-                val read = audioRecord?.read(buffer, 0, buffer.size) ?: -1
-                if (read > 0) {
-                    // Write PCM data
-                    val byteBuffer = ByteArray(read * 2)
-                    for (i in 0 until read) {
-                        byteBuffer[i * 2] = (buffer[i].toInt() and 0xFF).toByte()
-                        byteBuffer[i * 2 + 1] = (buffer[i].toInt() shr 8 and 0xFF).toByte()
-                    }
-                    outputStream.write(byteBuffer)
-
-                    // Silence detection
-                    val rms = calculateRMS(buffer, read)
-                    val db = if (rms > 0) 20 * Math.log10(rms.toDouble()) else 0.0
-                    val elapsed = System.currentTimeMillis() - recordingStartMs
-
-                    // First detect that user has started speaking
-                    if (!speechDetected && db >= SPEECH_THRESHOLD_DB) {
-                        speechDetected = true
-                        Log.i(TAG, "Speech detected at ${elapsed}ms, dB=${"%.1f".format(db)}")
-                    }
-
-                    // After speech detected + minimum time, watch for silence
-                    if (speechDetected && elapsed > MIN_RECORDING_MS) {
-                        if (db < SILENCE_THRESHOLD_DB) {
-                            if (silenceStartMs == 0L) silenceStartMs = System.currentTimeMillis()
-                            else if (System.currentTimeMillis() - silenceStartMs > SILENCE_TIMEOUT_MS) {
-                                Log.i(TAG, "Silence after speech, stopping recording at ${elapsed}ms")
-                                isRecording.set(false)
-                            }
-                        } else {
-                            silenceStartMs = 0
-                        }
-                    }
-
-                    // Safety timeout 10s
-                    if (elapsed > 10000) {
-                        Log.i(TAG, "Max recording time reached at ${elapsed}ms")
-                        isRecording.set(false)
-                    }
-                }
+        override fun onError(error: Int) {
+            Log.e(TAG, "Command recognizer error: $error")
+            // If no match or timeout, just go back to IDLE
+            if (error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) {
+                mainHandler.post { transitionTo(AgentState.IDLE) }
+            } else {
+                mainHandler.post { transitionTo(AgentState.ERROR) }
             }
-
-            outputStream.close()
-            audioRecord?.stop()
-            audioRecord?.release()
-            audioRecord = null
-
-            // Convert PCM to WAV then transition
-            val wavFile = File(cacheDir, "command_${System.currentTimeMillis()}.wav")
-            pcmToWav(recordingFile!!, wavFile, sampleRate)
-            recordingFile?.delete()
-            recordingFile = wavFile
-
-            mainHandler.post { transitionTo(AgentState.PROCESSING) }
         }
-        recordingThread?.start()
-    }
 
-    private fun stopRecording() {
-        isRecording.set(false)
-        recordingThread?.join(2000)
-        recordingThread = null
-        audioRecord?.let {
-            try { it.stop(); it.release() } catch (_: Exception) {}
+        override fun onResults(results: Bundle?) {
+            val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+            val finalText = matches?.firstOrNull() ?: ""
+            Log.i(TAG, "Command recognized: $finalText")
+            if (finalText.isNotBlank()) {
+                emitTranscript("user", finalText)
+                mainHandler.post {
+                    commandTextToSend = finalText
+                    transitionTo(AgentState.PROCESSING)
+                }
+            } else {
+                mainHandler.post { transitionTo(AgentState.IDLE) }
+            }
         }
-        audioRecord = null
-    }
 
-    private fun calculateRMS(buffer: ShortArray, length: Int): Double {
-        var sum = 0.0
-        for (i in 0 until length) { sum += buffer[i].toDouble() * buffer[i].toDouble() }
-        return Math.sqrt(sum / length)
-    }
-
-    private fun pcmToWav(pcmFile: File, wavFile: File, sampleRate: Int) {
-        val pcmData = pcmFile.readBytes()
-        val totalDataLen = pcmData.size + 36
-        val channels = 1
-        val bitsPerSample = 16
-        val byteRate = sampleRate * channels * bitsPerSample / 8
-
-        FileOutputStream(wavFile).use { out ->
-            // RIFF header
-            out.write("RIFF".toByteArray())
-            out.write(intToByteArray(totalDataLen))
-            out.write("WAVE".toByteArray())
-            // fmt chunk
-            out.write("fmt ".toByteArray())
-            out.write(intToByteArray(16))
-            out.write(shortToByteArray(1)) // PCM
-            out.write(shortToByteArray(channels.toShort()))
-            out.write(intToByteArray(sampleRate))
-            out.write(intToByteArray(byteRate))
-            out.write(shortToByteArray((channels * bitsPerSample / 8).toShort()))
-            out.write(shortToByteArray(bitsPerSample.toShort()))
-            // data chunk
-            out.write("data".toByteArray())
-            out.write(intToByteArray(pcmData.size))
-            out.write(pcmData)
+        override fun onPartialResults(partialResults: Bundle?) {
+            val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+            val partialText = matches?.firstOrNull() ?: ""
+            if (partialText.isNotBlank()) {
+                emitTranscript("user_partial", partialText)
+            }
         }
+
+        override fun onEvent(eventType: Int, params: Bundle?) {}
     }
 
-    private fun intToByteArray(value: Int): ByteArray {
-        return byteArrayOf(
-            (value and 0xFF).toByte(), (value shr 8 and 0xFF).toByte(),
-            (value shr 16 and 0xFF).toByte(), (value shr 24 and 0xFF).toByte()
-        )
-    }
-
-    private fun shortToByteArray(value: Short): ByteArray {
-        return byteArrayOf((value.toInt() and 0xFF).toByte(), (value.toInt() shr 8 and 0xFF).toByte())
+    private fun startCommandListening() {
+        mainHandler.post {
+            try {
+                speechRecognizer?.destroy()
+                speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
+                speechRecognizer?.setRecognitionListener(commandListener)
+                val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                    putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-US")
+                    putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+                    putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+                }
+                speechRecognizer?.startListening(intent)
+                Log.i(TAG, "Command listening started")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to start command listening", e)
+                transitionTo(AgentState.ERROR)
+            }
+        }
     }
 
     // ── API Client ────────────────────────────────────────────────
 
-    private fun sendRecordingToServer() {
-        val file = recordingFile ?: run {
-            Log.e(TAG, "No recording file")
-            transitionTo(AgentState.ERROR)
+    private fun sendTextToServer() {
+        val text = commandTextToSend
+        if (text.isBlank()) {
+            mainHandler.post { transitionTo(AgentState.IDLE) }
             return
         }
 
         // Always refresh token from SharedPreferences before API call
         refreshTokenFromPrefs()
 
-        Log.i(TAG, "Sending recording to server: ${file.absolutePath} (${file.length()} bytes)")
+        Log.i(TAG, "Sending text to server: $text")
         Log.i(TAG, "Backend URL: $backendUrl, Token length: ${authToken.length}")
 
         if (backendUrl.isBlank()) {
@@ -458,28 +376,52 @@ class VoiceAssistantService : Service(), TextToSpeech.OnInitListener {
 
         Thread {
             try {
-                val body = MultipartBody.Builder().setType(MultipartBody.FORM)
-                    .addFormDataPart("audio", "command.wav", file.asRequestBody("audio/wav".toMediaType()))
-                    .addFormDataPart("language", "en")
-                    .addFormDataPart("history", "[]")
-                    .apply { sessionId?.let { addFormDataPart("sessionId", it) } }
-                    .build()
+                val jsonObject = org.json.JSONObject().apply {
+                    put("message", text)
+                    put("language", language)
+                    sessionId?.let { put("sessionId", it) }
+                    location?.let { put("location", it) }
+                }
+
+                val body = okhttp3.RequestBody.create("application/json".toMediaType(), jsonObject.toString())
 
                 val request = Request.Builder()
-                    .url("$backendUrl/api/voice-chat")
+                    .url("$backendUrl/api/chat")
                     .addHeader("Authorization", "Bearer $authToken")
                     .post(body)
                     .build()
 
-                Log.i(TAG, "Sending request to: $backendUrl/api/voice-chat")
+                Log.i(TAG, "Sending request to: $backendUrl/api/chat")
                 val response = httpClient.newCall(request).execute()
-                Log.i(TAG, "Response code: ${response.code}")
+                val contentType = response.header("Content-Type") ?: ""
+                Log.i(TAG, "Response code: ${response.code}, Content-Type: $contentType")
 
                 if (!response.isSuccessful) {
                     val errorBody = response.body?.string() ?: "no body"
                     Log.e(TAG, "API error ${response.code}: $errorBody")
                     emitTranscript("assistant", "Server error (${response.code})")
                     mainHandler.post { transitionTo(AgentState.ERROR) }
+                    return@Thread
+                }
+
+                if (!contentType.contains("text/event-stream")) {
+                    val rawBody = response.body?.string() ?: ""
+                    Log.w(TAG, "Response is not SSE! Body: $rawBody")
+                    // If it's a plain JSON response containing 'response' or 'content'
+                    try {
+                        val json = org.json.JSONObject(rawBody)
+                        if (json.has("transcript")) emitTranscript("user", json.getString("transcript"))
+                        if (json.has("sessionId")) sessionId = json.getString("sessionId")
+                        val content = if (json.has("content")) json.getString("content") else if (json.has("response")) json.getString("response") else rawBody
+                        emitTranscript("assistant", content)
+                        synchronized(speechQueue) { speechQueue.add(content) }
+                        mainHandler.post { 
+                            if (currentState == AgentState.PROCESSING) transitionTo(AgentState.SPEAKING)
+                            speakNextSentence() 
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to parse non-SSE JSON", e)
+                    }
                     return@Thread
                 }
 
@@ -504,6 +446,9 @@ class VoiceAssistantService : Service(), TextToSpeech.OnInitListener {
                                 val chunk = json.getString("content")
                                 fullResponse += chunk
                                 sentenceBuffer.append(chunk)
+                                
+                                // Stream to UI instantly
+                                emitTranscript("assistant", fullResponse)
 
                                 // Split on sentence boundaries
                                 val regex = Regex("^(.*?[.!?\\n])(.*)\$", RegexOption.DOT_MATCHES_ALL)
@@ -536,7 +481,6 @@ class VoiceAssistantService : Service(), TextToSpeech.OnInitListener {
                 if (fullResponse.isNotEmpty()) {
                     emitTranscript("assistant", fullResponse)
                 }
-                file.delete()
 
                 if (currentState == AgentState.PROCESSING) {
                     mainHandler.post { transitionTo(AgentState.SPEAKING) }
@@ -696,7 +640,6 @@ class VoiceAssistantService : Service(), TextToSpeech.OnInitListener {
 
     override fun onDestroy() {
         instance = null
-        stopRecording()
         stopWakeWordListening()
         tts?.stop()
         tts?.shutdown()

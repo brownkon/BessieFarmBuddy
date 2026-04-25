@@ -17,17 +17,23 @@ class VoiceAssistantModule(private val reactContext: ReactApplicationContext) :
     fun startService(config: ReadableMap) {
         val token = config.getString("authToken") ?: ""
         val url = config.getString("backendUrl") ?: ""
+        val language = if (config.hasKey("language")) config.getString("language") ?: "en" else "en"
+        val location = if (config.hasKey("location")) config.getString("location") else null
         android.util.Log.i("VoiceAssistantService", "[Module] startService called, token length: ${token.length}, url: $url")
 
-        // Store in SharedPreferences so service can always read latest token
+        // Store in SharedPreferences so service can always read latest config
         prefs().edit()
             .putString("authToken", token)
             .putString("backendUrl", url)
-            .apply()
+            .putString("language", language)
+            .putString("location", location ?: "")
+            .commit()
 
         // Also set on companion directly
         VoiceAssistantService.authToken = token
         VoiceAssistantService.backendUrl = url
+        VoiceAssistantService.language = language
+        VoiceAssistantService.location = location
 
         val intent = Intent(reactContext, VoiceAssistantService::class.java).apply {
             putExtra("backendUrl", url)
@@ -76,7 +82,7 @@ class VoiceAssistantModule(private val reactContext: ReactApplicationContext) :
     fun updateAuthToken(token: String) {
         android.util.Log.i("VoiceAssistantService", "[Module] updateAuthToken called, length: ${token.length}")
         VoiceAssistantService.authToken = token
-        prefs().edit().putString("authToken", token).apply()
+        prefs().edit().putString("authToken", token).commit()
     }
 
     @ReactMethod

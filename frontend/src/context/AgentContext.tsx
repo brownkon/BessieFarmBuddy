@@ -7,16 +7,17 @@ const { VoiceAssistantModule } = NativeModules;
 type AgentState = 'IDLE' | 'WAKE_WORD_DETECTED' | 'PROCESSING' | 'SPEAKING' | 'ERROR';
 
 interface TranscriptEvent {
-  type: 'user' | 'assistant';
+  type: 'user' | 'assistant' | 'user_partial';
   text: string;
 }
 
 interface AgentContextValue {
   agentState: AgentState;
   userTranscript: string;
+  userPartial: string;
   assistantText: string;
   serviceRunning: boolean;
-  startService: (config: { backendUrl: string; authToken: string; sessionId?: string }) => void;
+  startService: (config: { backendUrl: string; authToken: string; sessionId?: string; language?: string; location?: any }) => void;
   stopService: () => void;
   startListening: () => void;
   stopAndCancel: () => void;
@@ -27,6 +28,7 @@ interface AgentContextValue {
 interface State {
   agentState: AgentState;
   userTranscript: string;
+  userPartial: string;
   assistantText: string;
   serviceRunning: boolean;
 }
@@ -45,11 +47,14 @@ function agentReducer(state: State, action: Action): State {
         ...state,
         agentState: action.payload,
         // Clear transcripts when going back to IDLE
-        ...(action.payload === 'IDLE' ? { userTranscript: '', assistantText: '' } : {}),
+        ...(action.payload === 'IDLE' ? { userTranscript: '', userPartial: '', assistantText: '' } : {}),
       };
     case 'SET_TRANSCRIPT':
+      if (action.payload.type === 'user_partial') {
+        return { ...state, userPartial: action.payload.text };
+      }
       if (action.payload.type === 'user') {
-        return { ...state, userTranscript: action.payload.text };
+        return { ...state, userTranscript: action.payload.text, userPartial: '' };
       }
       return { ...state, assistantText: action.payload.text };
     case 'SET_SERVICE_RUNNING':
@@ -64,6 +69,7 @@ function agentReducer(state: State, action: Action): State {
 const initialState: State = {
   agentState: 'IDLE',
   userTranscript: '',
+  userPartial: '',
   assistantText: '',
   serviceRunning: false,
 };
@@ -98,7 +104,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const startService = useCallback((config: { backendUrl: string; authToken: string; sessionId?: string }) => {
+  const startService = useCallback((config: { backendUrl: string; authToken: string; sessionId?: string; language?: string; location?: any }) => {
     if (!VoiceAssistantModule) return;
     VoiceAssistantModule.startService(config);
     dispatch({ type: 'SET_SERVICE_RUNNING', payload: true });

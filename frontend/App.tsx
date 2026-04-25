@@ -49,6 +49,7 @@ function AppMain() {
   const {
     agentState,
     userTranscript,
+    userPartial,
     assistantText,
     serviceRunning,
     startService,
@@ -142,6 +143,20 @@ function AppMain() {
     }
   }, [assistantText]);
 
+  // Show partial text in the input box
+  useEffect(() => {
+    if (agentState === 'WAKE_WORD_DETECTED' && userPartial) {
+      setVoiceTranscript(userPartial);
+    }
+  }, [userPartial, agentState]);
+
+  // Clear input when we transition out
+  useEffect(() => {
+    if (agentState !== 'WAKE_WORD_DETECTED' && voiceTranscript === userPartial && userPartial) {
+      setVoiceTranscript('');
+    }
+  }, [agentState, userPartial]);
+
   // Clear transcript refs when state returns to IDLE
   useEffect(() => {
     if (agentState === 'IDLE') {
@@ -168,6 +183,8 @@ function AppMain() {
             backendUrl: activeBackendUrl,
             authToken: token,
             sessionId: activeSessionIdRef.current || undefined,
+            language: selectedLanguage.code,
+            location: gpsLocation ? JSON.stringify(gpsLocation) : undefined,
           });
           if (interval) clearInterval(interval);
           return true;
@@ -218,7 +235,7 @@ function AppMain() {
       const history = messages.filter(m => m.id !== 'initial').slice(-8).map(m => ({ role: m.role, content: m.text }));
 
       // Use XHR for streaming text (same as before)
-      await new Promise((resolve, reject) => {
+      await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open('POST', `${activeBackendUrl}/api/chat`);
         xhr.setRequestHeader('Content-Type', 'application/json');
@@ -266,13 +283,22 @@ function AppMain() {
     }
   };
 
-  const handleMicPress = useCallback(() => {
+  const handleMicPress = useCallback(async () => {
     if (agentState === 'WAKE_WORD_DETECTED' || agentState === 'PROCESSING') {
       stopAndCancel();
+      setVoiceTranscript('');
     } else {
+      try {
+        const { data: { session: freshSession } } = await supabase.auth.getSession();
+        if (freshSession?.access_token) {
+          updateAuthToken(freshSession.access_token);
+        }
+      } catch (e) {
+        console.warn('Failed to refresh token before listening', e);
+      }
       startListening();
     }
-  }, [agentState, startListening, stopAndCancel]);
+  }, [agentState, startListening, stopAndCancel, updateAuthToken]);
 
   const handleStopChat = useCallback(async () => {
     stopAndCancel();
@@ -339,17 +365,29 @@ function AppMain() {
     }).start();
   };
 
-  const toggleListening = useCallback(() => {
+  const toggleListening = useCallback(async () => {
     if (serviceRunning) {
       stopService();
     } else {
-      startService({
-        backendUrl: activeBackendUrl,
-        authToken: session?.access_token || '',
-        sessionId: activeSessionIdRef.current || undefined,
-      });
+      try {
+        const { data: { session: freshSession } } = await supabase.auth.getSession();
+        const token = freshSession?.access_token || session?.access_token;
+        if (!token) {
+          Alert.alert('Error', 'No auth token available. Please log in again.');
+          return;
+        }
+        startService({
+          backendUrl: activeBackendUrl,
+          authToken: token,
+          sessionId: activeSessionIdRef.current || undefined,
+          language: selectedLanguage.code,
+          location: gpsLocation ? JSON.stringify(gpsLocation) : undefined,
+        });
+      } catch (e) {
+        console.warn('Failed to start service due to token error', e);
+      }
     }
-  }, [serviceRunning, stopService, startService, activeBackendUrl, session]);
+  }, [serviceRunning, stopService, startService, activeBackendUrl, session, selectedLanguage.code, gpsLocation]);
 
   // ── Init ────────────────────────────────────────────────────────
   useEffect(() => {

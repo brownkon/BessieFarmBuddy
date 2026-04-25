@@ -44,12 +44,13 @@ const ManualTextInput = ({
       </TouchableOpacity>
       <TextInput
         style={styles.keyboardInput}
-        placeholder={placeholder}
-        placeholderTextColor="#6b7280"
+        placeholder={isRecording ? "🎙️ Recording your command..." : placeholder}
+        placeholderTextColor={isRecording ? "#ef4444" : "#6b7280"}
         value={value}
         onChangeText={onChangeText}
         onSubmitEditing={onSend}
         keyboardAppearance="dark"
+        editable={!isRecording}
         onFocus={onFocus}
         onBlur={onBlur}
       />
