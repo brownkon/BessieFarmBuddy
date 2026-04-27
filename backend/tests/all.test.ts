@@ -78,7 +78,7 @@ test('OpenAI: Orchestration with Router', async () => {
   const decision = await classifyRequest(mockOpenAI, 'Hi', []);
   assert.strictEqual(decision.should_call_tool, false);
 
-  const stream = await streamResponse({ openai: mockOpenAI, messages: [], needsTool: false });
+  const stream = await streamResponse({ client: mockOpenAI, messages: [], needsTool: false });
   let result = "";
   for await (const chunk of (stream as any)) result += chunk.content || "";
   assert.strictEqual(result, "Direct Answer");

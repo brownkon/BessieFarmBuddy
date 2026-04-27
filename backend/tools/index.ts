@@ -4,6 +4,7 @@ import * as metricsTools from './metrics.tools';
 import * as reproductionTools from './reproduction.tools';
 import * as notesTools from './notes.tools';
 import * as conversationTools from './conversation.tools';
+import * as reportsTools from './reports.tools';
 
 /**
  * Registry of all AI tools, mapping tool names to their 
@@ -15,7 +16,8 @@ export const tools: Record<string, any> = {
   ...metricsTools,
   ...reproductionTools,
   ...notesTools,
-  ...conversationTools
+  ...conversationTools,
+  ...reportsTools
 };
 
 /**
