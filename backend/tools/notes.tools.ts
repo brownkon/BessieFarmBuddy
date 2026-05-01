@@ -1,17 +1,17 @@
 import supabase from '../services/supabase';
-import { getUserOrganization, formatAllDates } from '../services/data-prep/utils';
+import { getUserOrganization, formatAllDates, stripNulls } from '../services/data-prep/utils';
 
 export const record_note = {
   definition: {
     type: "function",
     function: {
       name: "record_note",
-      description: "Record a note or discussion point for the farmer to review later.",
+      description: "Record a note or discussion point for the farmer to review later. Returns confirmation with the saved content. Use when the farmer asks to save, record, or remember something.",
       parameters: {
         type: "object",
         properties: {
-          note_content: { type: "string", description: "The content of the note." },
-          animal_number: { type: "string", description: "Optional cow ID if the note is specific to one cow." }
+          note_content: { type: "string", description: "The content of the note to save." },
+          animal_number: { type: "string", description: "Optional cow number if the note is specific to one cow." }
         },
         required: ["note_content"]
       }
@@ -24,7 +24,7 @@ export const record_note = {
     const orgId = await getUserOrganization(context.userId);
     if (!orgId) return "Organization not found for user.";
 
-    const { error } = await (supabase as any)
+    const { data, error } = await (supabase as any)
       .from('farmer_notes')
       .insert([
         {
@@ -33,10 +33,17 @@ export const record_note = {
           content: note_content,
           animal_number: animal_number || null
         }
-      ]);
+      ])
+      .select('content, animal_number, created_at')
+      .single();
 
     if (error) return `Error recording note: ${error.message}`;
-    return "Note recorded successfully.";
+    return {
+      status: "saved",
+      content: data?.content || note_content,
+      animal_number: animal_number || null,
+      saved_at: data?.created_at || new Date().toISOString()
+    };
   }
 };
 
@@ -45,17 +52,17 @@ export const get_recent_notes = {
     type: "function",
     function: {
       name: "get_recent_notes",
-      description: "Get recent notes recorded by the farmer.",
+      description: "Get recent notes recorded by the farmer. Defaults to the last 7 days, limited to 20 results. Can filter by cow number. Use when the farmer asks to see their notes, reminders, or past discussions.",
       parameters: {
         type: "object",
         properties: {
-          animal_number: { type: "string", description: "Optional cow ID to filter notes." },
-          days_back: { type: "integer", description: "Number of days back to look. Defaults to 1 (today)." }
+          animal_number: { type: "string", description: "Optional cow number to filter notes for a specific cow." },
+          days_back: { type: "integer", description: "Number of days back to search. Defaults to 7." }
         }
       }
     }
   },
-  async handler({ animal_number, days_back = 1 }: { animal_number?: string, days_back?: number }, context: any = {}) {
+  async handler({ animal_number, days_back = 7 }: { animal_number?: string, days_back?: number }, context: any = {}) {
     if (!supabase) return "Supabase not initialized.";
     const orgId = context.userId ? await getUserOrganization(context.userId) : null;
     if (!orgId) return "Organization not found for user.";
@@ -67,15 +74,15 @@ export const get_recent_notes = {
       .select('content, animal_number, created_at')
       .eq('organization_id', orgId)
       .gte('created_at', dateLimit.toISOString())
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(20);
 
     if (animal_number) query = query.eq('animal_number', animal_number.toString());
 
     const { data, error } = await query;
     if (error) return `Error retrieving notes: ${error.message}`;
-    if (data.length === 0) return "No recent notes found.";
+    if (!data || data.length === 0) return `No notes found in the last ${days_back} days.`;
 
-    // Automatically format all date strings (including created_at)
-    return formatAllDates(data);
+    return stripNulls(formatAllDates(data));
   }
 };

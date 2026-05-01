@@ -1,4 +1,4 @@
-import { formatAllDates } from '../services/data-prep/utils';
+import { formatAllDates, stripNulls, stripHtmlFromValues, omitFields } from '../services/data-prep/utils';
 import supabase from '../services/supabase';
 
 export const get_cow_info = {
@@ -6,11 +6,11 @@ export const get_cow_info = {
     type: "function",
     function: {
       name: "get_cow_info",
-      description: "Get detailed health and production info for a specific cow.",
+      description: "Get detailed health, production, and reproduction info for a specific cow by number. Returns all relevant fields: production (kg/day), lactation info, reproduction status, health alerts, sensor data, milking stats, and treatment details. Use when the farmer asks about a specific cow.",
       parameters: {
         type: "object",
         properties: {
-          animalNumber: { type: "string", description: "The cow's ID number." }
+          animalNumber: { type: "string", description: "The cow's animal number (e.g., '250')." }
         },
         required: ["animalNumber"]
       }
@@ -18,6 +18,7 @@ export const get_cow_info = {
   },
   async handler({ animalNumber }: { animalNumber: string }) {
     if (!supabase) return "Supabase not initialized.";
+
     const { data, error } = await (supabase as any)
       .from('cow_data')
       .select('*')
@@ -29,8 +30,7 @@ export const get_cow_info = {
       return `Error retrieving cow data: ${error.message}`;
     }
 
-    // Automatically format all date strings in the data
-    return formatAllDates(data);
+    return stripNulls(stripHtmlFromValues(omitFields(formatAllDates(data))));
   }
 };
 
@@ -39,11 +39,11 @@ export const get_group_status = {
     type: "function",
     function: {
       name: "get_group_status",
-      description: "Get summary for a specific group of cows (North, South, etc.)",
+      description: "Get summary stats for a cow group by group number (e.g., '3', '5') or partial name. Returns: total cows, average daily production (kg/day), cows at health risk, average lactation days, count pregnant, and count in heat. Use when the farmer asks about a group or pen.",
       parameters: {
         type: "object",
         properties: {
-          groupName: { type: "string", description: "Name of the group." }
+          groupName: { type: "string", description: "Group number or name (e.g., '3', '5', 'North')." }
         },
         required: ["groupName"]
       }
@@ -53,20 +53,26 @@ export const get_group_status = {
     if (!supabase) return "Supabase not initialized.";
     const { data, error } = await (supabase as any)
       .from('cow_data')
-      .select('animal_number, sick_chance, day_production')
+      .select('*')
       .ilike('group_number', `%${groupName}%`);
 
     if (error) return `Error fetching group status: ${error.message}`;
-    if (data.length === 0) return `No cows found in group "${groupName}".`;
+    if (!data || data.length === 0) return `No cows found in group "${groupName}".`;
 
-    const avgProduct = data.reduce((acc: number, curr: any) => acc + (curr.day_production || 0), 0) / data.length;
-    const sickCount = data.filter((c: any) => c.sick_chance > 50).length;
+    const avgProduction = data.reduce((acc: number, c: any) => acc + (c.day_production || 0), 0) / data.length;
+    const avgLactationDays = data.reduce((acc: number, c: any) => acc + (c.lactation_days || 0), 0) / data.length;
+    const sickCount = data.filter((c: any) => c.sick_chance === true).length;
+    const pregnantCount = data.filter((c: any) => c.days_pregnant && c.days_pregnant > 0).length;
+    const inHeatCount = data.filter((c: any) => c.heat_probability_max && c.heat_probability_max > 50).length;
 
-    return formatAllDates({
+    return {
       group: groupName,
       total_cows: data.length,
-      average_production: avgProduct.toFixed(2),
-      cows_at_risk: sickCount
-    });
+      average_daily_production_kg: parseFloat(avgProduction.toFixed(1)),
+      average_lactation_days: Math.round(avgLactationDays),
+      cows_at_health_risk: sickCount,
+      cows_pregnant: pregnantCount,
+      cows_in_heat: inHeatCount
+    };
   }
 };
