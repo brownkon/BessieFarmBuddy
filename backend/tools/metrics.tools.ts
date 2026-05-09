@@ -1,5 +1,5 @@
 import supabase from '../services/supabase';
-import { getUserOrganization, formatAllDates, stripNulls } from '../services/data-prep/utils';
+import { getUserOrganization, formatAllDates, stripNulls } from '../services/data-prep/utils.js';
 
 /** Whitelist of valid metric column names to prevent SQL injection. */
 const VALID_METRICS = new Set([
@@ -46,7 +46,7 @@ export const get_specific_metric = {
     if (error) return `Error retrieving metric: ${error.message}`;
     if (!data || data.length === 0) return "No cows found.";
 
-    const { pickFields } = await import('../services/data-prep/utils');
+    const { pickFields } = await import('../services/data-prep/utils.js');
     const formattedData = stripNulls(formatAllDates(pickFields(data, ['animal_number', metric_name])));
 
     // Calculate summary statistics for numeric metrics

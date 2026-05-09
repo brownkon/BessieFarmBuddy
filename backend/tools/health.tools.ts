@@ -1,4 +1,4 @@
-import { formatAllDates, stripNulls, stripHtmlFromValues, omitFields } from '../services/data-prep/utils';
+import { formatAllDates, stripNulls, stripHtmlFromValues, omitFields } from '../services/data-prep/utils.js';
 import supabase from '../services/supabase';
 
 export const get_health_alerts = {
@@ -12,7 +12,7 @@ export const get_health_alerts = {
   },
   async handler(_: any, context: any = {}) {
     if (!supabase) return "Supabase not initialized.";
-    const { getUserOrganization } = await import('../services/data-prep/utils');
+    const { getUserOrganization } = await import('../services/data-prep/utils.js');
     const orgId = context.userId ? await getUserOrganization(context.userId) : null;
 
     let query = (supabase as any)
