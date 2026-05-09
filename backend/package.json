@@ -9,6 +9,7 @@
     "test": "tsx --test tests/*.test.ts",
     "sync": "tsx scripts/sync-data.ts",
     "tool": "tsx scripts/run-tool.ts",
+    "chat": "tsx scripts/chat-cli.ts",
     "deploy:prod": "fly deploy --depot=false"
   },
   "keywords": [],
